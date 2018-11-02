@@ -22,28 +22,26 @@ all: mod
 
 mod:
 	#Build the base files for all modules
-	$(COMPILER90) $(FPPFLAGS) $(F90FLAGS) $(LDFLAGS) $(MODFLAG) -I$(NETCDFINC) module_UDMAP.F
-	$(COMPILER90) $(F90FLAGS) $(LDFLAGS) $(MODFLAG) -I$(NETCDFINC) module_groundwater_base.F
-	$(COMPILER90) $(F90FLAGS) $(LDFLAGS) $(MODFLAG) -I$(NETCDFINC) module_groundwater_static_data.F
+	$(COMPILER90) $(FPPFLAGS) $(F90FLAGS) $(LDFLAGS) $(MODFLAG) -I$(NETCDFINC) module_channel_base.F
+	$(COMPILER90) $(FPPFLAGS) $(F90FLAGS) $(LDFLAGS) $(MODFLAG) -I$(NETCDFINC) module_channel_static_data.F
 	#Copy the object files into libHydro.a
-	ar -r ../../lib/libHYDRO.a module_UDMAP.o
-	ar -r ../../lib/libHYDRO.a module_groundwater_base.o
-	ar -r ../../lib/libHYDRO.a module_groundwater_static_data.o
+	ar -r ../../lib/libHYDRO.a module_channel_base.o
+	ar -r ../../lib/libHYDRO.a module_channel_static_data.o
 
 	cp *.mod  ../../mod
 
 	#Build the modules
-	make -C bucket
-	make -C nhd
-	make -C simple
-test: mod
-	$(COMPILER90) $(F90FLAGS) $(MODFLAG)  groundwater_tests.F
+	make -C waterbody
+	make -C hydrologic
+	make -C hydrualic
+test:
+	$(COMPILER90) $(F90FLAGS) $(MODFLAG)  channel_tests.F
 	$(COMPILER90) $(F90FLAGS) $(MODFLAG)  hydro_stop.F
 	$(COMPILER90) $(NETCDFLIB) -o groundwater_tests \
-		nhd/module_groundwater_base.o \
-		nhd/module_nhd_properties.o \
-		nhd/module_nhd_state.o \
-		nhd/module_nhd_basin.o \
+		module_channel_base.o \
+		module_nhd_properties.o \
+		module_nhd_state.o \
+		module_nhd_basin.o \
 		module_groundwater_static_data.o \
 		module_nhd_data.o \
 		module_UDMAP.o \
@@ -56,8 +54,8 @@ test: mod
 clean:
 	rm -f *.o
 	rm -f *.mod
-	rm -f groundwater_tests
 
-	make -C bucket clean
-	make -C nhd clean
-	make -C simple clean
+	make -C waterbody clean
+	make -C hydrologic clean
+	make -C hydrualic clean
+

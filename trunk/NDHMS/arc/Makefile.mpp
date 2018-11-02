@@ -10,6 +10,7 @@ BASIC:
 	make -C Routing/Subsurface
 	make -C Debug_Utilities/
 	make -C Routing/Groundwater
+	make -C Routing/Channels
 	(cd Data_Rec     ; make -f Makefile)
 	(cd Routing; make -f Makefile)
 	(cd HYDRO_drv;   make -f Makefile)
@@ -18,6 +19,8 @@ clean:
 	(cd utils   ; make -f Makefile clean)
 	make -C Routing/Overland clean
 	make -C Routing/Subsurface clean
+	make -C Routing/Groundwater clean
+	make -C ROuting/Channels clean
 	(cd Data_Rec; make -f Makefile clean)
 	(cd HYDRO_drv; make -f Makefile clean)
 	(cd MPP; make -f Makefile clean)
