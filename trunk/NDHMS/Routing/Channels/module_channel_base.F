@@ -36,13 +36,13 @@ module module_channel_base
 
     !> @breif class that holds input data needed by the physics code that processes channel base objects
     type channel_base_input
-        double precision :: accumulated_surface_lateral_runnoff !< accumulated surface runnoff for this link
+        double precision :: accumulated_surface_lateral_runnoff  !< accumulated surface runnoff for this link
         double precision :: accumulated_bucket_flux              !< accumulated groundwater flux for this link
     end type
 
     !> @breif class that holds output data produced by the physics code that processes channel base objects
     type channel_base_output
-        real :: surface_lateral_flux !< lateral surface flux from this link
+        real :: surface_lateral_flux  !< lateral surface flux from this link
         real :: bucket_flux           !< flux to groundwater from this link
     end type
 
@@ -50,8 +50,11 @@ module module_channel_base
     !  and waterbody types
     type, abstract :: channel_base_struct
 
-        type (channel_geometry), pointer :: geometry !< structure that holds variables that describe channel geometry
-        type (channel_base_state), pointer :: state  !< structure that holds the state of channel objects
+        type (channel_geometry), pointer :: geometry          !< structure that holds variables that describe channel geometry
+        type (channel_base_state), pointer :: state           !< structure that holds the state of channel objects
+        type (channel_base_properties), pointer :: properties !< structure that holds properties of the channel object
+        type (channel_base_input), pointer :: input           !< structure that holds the input data for a channel object
+        type (channel_base_output), pointer :: output         !< structure that holds the output data for a channel object
 
 
     end type channel_base_struct
