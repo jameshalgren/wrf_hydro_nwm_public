@@ -14,7 +14,7 @@ module module_muskingum_cunge_channel
 
     type, extends(hydrologic_channel_base_struct) :: muskingum_cunge_channel_struct
 
-        type(channel_base_geometry), target :: my_geometry
+        type(channel_base_geometry), pointer :: my_geometry
 
     contains
 

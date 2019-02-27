@@ -1,4 +1,9 @@
 cmake_minimum_required (VERSION 2.8)
+
+#set(CMAKE_C_COMPILER "mpicc")
+#set(CMAKE_CXX_COMPILER "mpic++")
+#set(CMAKE_Fortran_COMPILER "mpif90")
+
 project (National_Water_Model)
 
 #set versions number
@@ -10,6 +15,16 @@ enable_language (Fortran)
 
 #try to find the installed MPI library
 find_package(MPI REQUIRED)
+#message ("-- MPI Include directories: " ${MPI_INCLUDE_PATH} )
+#message ("-- MPI C COMPILER : " ${MPI_C_COMPILER} )
+#message ("-- MPI CXX COMPILER : " ${MPI_CXX_COMPILER} )
+#message ("-- MPI Fortran COMPILER : " ${MPI_Fortran_COMPILER} )
+#message ("-- MPI COMPILE FLAGS : " ${MPI_COMPILE_FLAGS} )
+#message ("-- MPI LINK FLAGS : " ${MPI_LINK_FLAGS} )
+#message ("-- MPI Fortran LINK FLAGS : " ${MPI_Fortran_LINK_FLAGS} )
+#message ("-- MPI LIBRARY : " ${MPI_LIBRARY} )
+#message ("-- MPI EXTRA LIBRARY : " ${MPI_EXTRA_LIBRARY} )
+#message ("-- MPI LIBRARIES : " ${MPI_LIBRARIES} )
 
 # netcdf does not have a built in package locator so add custom module directory
 # that contains FindNetCDF.cmake
@@ -30,24 +45,23 @@ if ("${NWM_LSM}" STREQUAL "")
 	message ("-- Setting LSM to: NoahMP")
 endif("${NWM_LSM}" STREQUAL "")
 
-#set compile flags based on compiler
-get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
+#set compile flags based on compiler id
 
-if (Fortran_COMPILER_NAME MATCHES "gfortran.*")
+if (CMAKE_Fortran_COMPILER_ID MATCHES "GNU.*")
     # set compile flags for gfortran
     message ( "-- Using gfortran")
-    set (FPP_FLAGS "-DMPP_LAND -DSPATIAL_SOIL -DWRFIO_NCD_LARGE_FILE_SUPPORT -DWRF_HYDRO_NUDGING")
+    set (FPP_FLAGS "-DMPP_LAND -DHYDRO_D -DWRF_HYDRO -DSPATIAL_SOIL -DWRFIO_NCD_LARGE_FILE_SUPPORT -DWRF_HYDRO_NUDGING")
     set (CMAKE_Fortran_FLAGS " ${FPP_FLAGS} -O2 -w -c -ffree-form -ffree-line-length-none -fconvert=big-endian -frecord-marker=4")
-elseif (Fortran_COMPILER_NAME MATCHES "ifort.*")
+elseif (CMAKE_Fortran_COMPILER_ID MATCHES "Intel.*")
     # set compile flags for ifort
     message ( "Using ifort")
-else (Fortran_COMPILER_NAME MATCHES "gfortran.*")
+else (CMAKE_Fortran_COMPILER_ID MATCHES "GNU.*")
     message ("CMAKE_Fortran_COMPILER full path: " ${CMAKE_Fortran_COMPILER})
     message ("Fortran compiler: " ${Fortran_COMPILER_NAME})
     message ("No optimized Fortran compiler flags are known, we just try -O2...")
     set (CMAKE_Fortran_FLAGS_RELEASE "-O2")
     set (CMAKE_Fortran_FLAGS_DEBUG   "-O0 -g")
-endif ( Fortran_COMPILER_NAME MATCHES "gfortran.*" )
+endif ( CMAKE_Fortran_COMPILER_ID MATCHES "GNU.*" )
 
 #set output directories for libraries binaries and fortran .mod files
 set(CMAKE_BINARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
@@ -75,7 +89,7 @@ add_subdirectory("HYDRO_drv")
 
 if (NWM_LSM MATCHES "NoahMP")
 	message ("-- Building NoahMP LSM")
-#	add_subdirectory("Land_models/NoahMP")	
+	add_subdirectory("Land_models/NoahMP")	
 elseif(NWM_LSM MATCHES "Noah")
 	message ("-- Building Noah LSM")
 else()
