@@ -1,8 +1,8 @@
 cmake_minimum_required (VERSION 2.8)
 
-#set(CMAKE_C_COMPILER "mpicc")
-#set(CMAKE_CXX_COMPILER "mpic++")
-#set(CMAKE_Fortran_COMPILER "mpif90")
+set(CMAKE_C_COMPILER "mpicc")
+set(CMAKE_CXX_COMPILER "mpic++")
+set(CMAKE_Fortran_COMPILER "mpif90")
 
 project (National_Water_Model)
 
@@ -45,13 +45,60 @@ if ("${NWM_LSM}" STREQUAL "")
 	message ("-- Setting LSM to: NoahMP")
 endif("${NWM_LSM}" STREQUAL "")
 
+#get the variables defined by setEnvar.sh
+set (WRF_HYDRO $ENV{WRF_HYDRO} CACHE String "WRF Enviorment vairable allways set to 1 for WRF-Hydro")
+set (HYDRO_D $ENV{HYDRO_D} CACHE String "Print additonal debug information in WRF-Hydro")
+set (SPATIAL_SOIL $ENV{SPATIAL_SOIL} CACHE String "Spatial Soil Parameters for Noah MP 0=off 1=on")
+set (WRFIO_NCD_LARGE_FILE_SUPPORT $ENV{WRFIO_NCD_LARGE_FILE_SUPPORT} CACHE String "Large netcdf file support 0=off, 1=on")
+set (NCEP_WCOSS $ENV{NCEP_WCOSS} CACHE String "WCOSS file units 0=off 1=on")
+set (WRF_HYDRO_NUDGING $ENV{WRF_HYDRO_NUDGING} CACHE String "Streamflow nudging 0=off 1=on")
+
+# add preprocessor defines using env variables
+
+message ("=============================================================")
+message ("-- Start of WRF-Hydro Env VARIABLES" )
+
+#always use -DMPP_LAND
+add_definitions(-DMPP_LAND)
+
+# set -DWRF_HYDRO from env
+message ("WRF_HYDRO = " ${WRF_HYDRO} )
+if (WRF_HYDRO STREQUAL "1" )
+	add_definitions(-DWRF_HYDRO)
+endif (WRF_HYDRO STREQUAL "1") 
+
+#set -DHYDRO_D from env
+message ("HYDRO_D = " ${HYDRO_D} )
+if (HYDRO_D STREQUAL "1" )
+	add_definitions(-DHYDRO_D)
+endif (HYDRO_D STREQUAL "1") 
+
+#set -DSPATIAL_SOIL from env
+message ("SPATIAL_SOIL = " ${SPATIAL_SOIL} )
+if (SPATIAL_SOIL STREQUAL "1" )
+	add_definitions(-DSPATIAL_SOIL)
+endif (SPATIAL_SOIL STREQUAL "1")
+
+#set -DSPATIAL_SOIL from env
+message ("WRFIO_NCD_LARGE_FILE_SUPPORT = " ${WRFIO_NCD_LARGE_FILE_SUPPORT} )
+if (WRFIO_NCD_LARGE_FILE_SUPPORT STREQUAL "1" )
+	add_definitions(-DWRFIO_NCD_LARGE_FILE_SUPPORT)
+endif (WRFIO_NCD_LARGE_FILE_SUPPORT STREQUAL "1") 
+
+#set -DSPATIAL_SOIL from env
+message ("WRF_HYDRO_NUDGING = " ${WRF_HYDRO_NUDGING} )
+if (WRF_HYDRO_NUDGING STREQUAL "1" )
+	add_definitions(-DWRF_HYDRO_NUDGING)
+endif (WRF_HYDRO_NUDGING STREQUAL "1") 
+
+message("=============================================================")
+
 #set compile flags based on compiler id
 
 if (CMAKE_Fortran_COMPILER_ID MATCHES "GNU.*")
     # set compile flags for gfortran
     message ( "-- Using gfortran")
-    set (FPP_FLAGS "-DMPP_LAND -DHYDRO_D -DWRF_HYDRO -DSPATIAL_SOIL -DWRFIO_NCD_LARGE_FILE_SUPPORT -DWRF_HYDRO_NUDGING")
-    set (CMAKE_Fortran_FLAGS " ${FPP_FLAGS} -O2 -w -c -ffree-form -ffree-line-length-none -fconvert=big-endian -frecord-marker=4")
+    set (CMAKE_Fortran_FLAGS " -O2 -w -ffree-form -ffree-line-length-none -fconvert=big-endian -frecord-marker=4")
 elseif (CMAKE_Fortran_COMPILER_ID MATCHES "Intel.*")
     # set compile flags for ifort
     message ( "Using ifort")
@@ -87,9 +134,91 @@ add_subdirectory("nudging")
 add_subdirectory("Routing")
 add_subdirectory("HYDRO_drv")
 
+# add module dependencies
+add_dependencies(nwm_debug_utils nwm_mpp) 
+
+add_dependencies(nwm_routing nwm_mpp)
+add_dependencies(nwm_routing nwm_routing_overland)
+add_dependencies(nwm_routing nwm_routing_subsurface)
+add_dependencies(nwm_routing nwm_routing_groundwater)
+add_dependencies(nwm_routing nwm_routing_groundwater_bucket)
+add_dependencies(nwm_routing nwm_routing_groundwater_nhd)
+add_dependencies(nwm_routing nwm_routing_groundwater_simple)
+add_dependencies(nwm_routing nwm_utils)
+
+add_dependencies(nwm_routing_groundwater nwm_mpp)
+
+add_dependencies(nwm_routing_groundwater_bucket nwm_routing_groundwater)
+
+add_dependencies(nwm_routing_groundwater_simple nwm_routing_groundwater)
+add_dependencies(nwm_routing_groundwater_simple nwm_routing_groundwater_bucket)
+  
+add_dependencies(nwm_routing_groundwater_nhd nwm_routing_groundwater)
+add_dependencies(nwm_routing_groundwater_nhd nwm_routing_groundwater_bucket)
+
+add_dependencies(nwm_driver nwm_routing)
+add_dependencies(nwm_driver nwm_nudging)
+add_dependencies(nwm_driver nwm_debug_utils)
+
+add_dependencies(nwm_data_rec nwm_routing_overland)
+add_dependencies(nwm_data_rec nwm_routing_subsurface)
+add_dependencies(nwm_data_rec nwm_routing_groundwater)
+add_dependencies(nwm_data_rec nwm_routing_groundwater_bucket)
+add_dependencies(nwm_data_rec nwm_routing_groundwater_simple)
+add_dependencies(nwm_data_rec nwm_routing_groundwater_nhd)
+
+
 if (NWM_LSM MATCHES "NoahMP")
 	message ("-- Building NoahMP LSM")
-	add_subdirectory("Land_models/NoahMP")	
+	add_subdirectory("Land_models/NoahMP")
+	
+	add_subdirectory("CPL/NoahMP_cpl")
+	add_dependencies(nwm_noahmp_cpl nwm_routing)
+	add_dependencies(nwm_noahmp_cpl nwm_mpp )
+	add_dependencies(nwm_noahmp_cpl nwm_driver )
+	
+	
+	add_executable(wrfhydro.exe
+		Land_models/NoahMP/IO_code/main_hrldas_driver.F
+		Land_models/NoahMP/IO_code/module_hrldas_netcdf_io.F
+		Land_models/NoahMP/IO_code/module_NoahMP_hrldas_driver.F
+	)
+	
+	target_link_libraries(wrfhydro.exe nwm_utils)
+	target_link_libraries(wrfhydro.exe nwm_mpp)
+	target_link_libraries(wrfhydro.exe nwm_debug_utils)
+	target_link_libraries(wrfhydro.exe nwm_routing_overland)
+	target_link_libraries(wrfhydro.exe nwm_routing_subsurface)
+	target_link_libraries(wrfhydro.exe nwm_routing_groundwater)
+	target_link_libraries(wrfhydro.exe nwm_routing_groundwater_bucket)
+	target_link_libraries(wrfhydro.exe nwm_routing_groundwater_nhd)
+	target_link_libraries(wrfhydro.exe nwm_routing_groundwater_simple)
+	target_link_libraries(wrfhydro.exe nwm_data_rec)
+	target_link_libraries(wrfhydro.exe nwm_nudging)
+	target_link_libraries(wrfhydro.exe nwm_routing)
+	target_link_libraries(wrfhydro.exe nwm_driver)
+	target_link_libraries(wrfhydro.exe noahmp_util)
+	target_link_libraries(wrfhydro.exe noahmp_phys)
+	target_link_libraries(wrfhydro.exe nwm_noahmp_cpl)
+	target_link_libraries(wrfhydro.exe ${NETCDF_LIBRARIES})
+	
+	add_dependencies(wrfhydro.exe nwm_utils)
+	add_dependencies(wrfhydro.exe nwm_mpp)
+	add_dependencies(wrfhydro.exe nwm_debug_utils)
+	add_dependencies(wrfhydro.exe nwm_routing_overland)
+	add_dependencies(wrfhydro.exe nwm_routing_subsurface)
+	add_dependencies(wrfhydro.exe nwm_routing_groundwater)
+	add_dependencies(wrfhydro.exe nwm_routing_groundwater_bucket)
+	add_dependencies(wrfhydro.exe nwm_routing_groundwater_nhd)
+	add_dependencies(wrfhydro.exe nwm_routing_groundwater_simple)
+	add_dependencies(wrfhydro.exe nwm_data_rec)
+	add_dependencies(wrfhydro.exe nwm_nudging)
+	add_dependencies(wrfhydro.exe nwm_routing)
+	add_dependencies(wrfhydro.exe nwm_driver)
+	add_dependencies(wrfhydro.exe noahmp_util)
+	add_dependencies(wrfhydro.exe noahmp_phys)
+	add_dependencies(wrfhydro.exe nwm_noahmp_cpl)	
+		
 elseif(NWM_LSM MATCHES "Noah")
 	message ("-- Building Noah LSM")
 else()

@@ -7,3 +7,6 @@ add_library(nwm_nudging STATIC
 	module_nudging_utils.F
 	module_stream_nudging.F
 )
+
+target_link_libraries(nwm_nudging PUBLIC nwm_mpp)
+target_link_libraries(nwm_nudging PUBLIC nwm_data_rec)

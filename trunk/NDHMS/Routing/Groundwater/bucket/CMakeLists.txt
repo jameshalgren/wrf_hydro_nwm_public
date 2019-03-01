@@ -5,3 +5,5 @@ add_library(nwm_routing_groundwater_bucket STATIC
 	module_bucket_properties.F
 	module_bucket_state.F              
 )
+
+target_link_libraries(nwm_routing_groundwater_bucket PUBLIC nwm_routing_groundwater)

@@ -10,3 +10,5 @@ add_library(nwm_routing_subsurface STATIC
 	module_subsurface.F 
 )
 
+target_link_libraries(nwm_routing_subsurface PUBLIC nwm_routing_overland)
+

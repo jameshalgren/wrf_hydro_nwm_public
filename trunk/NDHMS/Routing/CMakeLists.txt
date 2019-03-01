@@ -17,3 +17,13 @@ add_library(nwm_routing STATIC
 	Noah_distr_routing_overland.F
 	Noah_distr_routing_subsurface.F        
 )
+
+target_link_libraries(nwm_routing PUBLIC nwm_mpp)
+target_link_libraries(nwm_routing PUBLIC nwm_utils)
+target_link_libraries(nwm_routing PUBLIC nwm_routing_overland)
+target_link_libraries(nwm_routing PUBLIC nwm_routing_subsurface)
+target_link_libraries(nwm_routing PUBLIC nwm_routing_groundwater)
+target_link_libraries(nwm_routing PUBLIC nwm_routing_groundwater_bucket)
+target_link_libraries(nwm_routing PUBLIC nwm_routing_groundwater_nhd)
+target_link_libraries(nwm_routing PUBLIC nwm_routing_groundwater_simple)
+target_link_libraries(nwm_routing PUBLIC nwm_data_rec)
