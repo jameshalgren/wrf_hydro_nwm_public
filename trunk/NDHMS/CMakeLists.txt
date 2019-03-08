@@ -89,7 +89,7 @@ endif (WRFIO_NCD_LARGE_FILE_SUPPORT STREQUAL "1")
 
 #set -DSPATIAL_SOIL from env
 message ("WRF_HYDRO_NUDGING = " ${WRF_HYDRO_NUDGING} )
-if (DWRF_HYDRO_NUDGING STREQUAL "1" )
+if (WRF_HYDRO_NUDGING STREQUAL "1" )
 	add_definitions(-DWRF_HYDRO_NUDGING)
 endif (WRF_HYDRO_NUDGING STREQUAL "1") 
 
@@ -100,10 +100,10 @@ if (OUTPUT_CHAN_CONN STREQUAL "1" )
 endif (OUTPUT_CHAN_CONN STREQUAL "1") 
 
 #set -DSPATIAL_SOIL from env
-message ("DPRECIP_DOUBLE = " ${DPRECIP_DOUBLE} )
-if (DPRECIP_DOUBLE STREQUAL "1" )
-	add_definitions(-DDPRECIP_DOUBLE)
-endif (DPRECIP_DOUBLE STREQUAL "1") 
+message ("PRECIP_DOUBLE = " ${PRECIP_DOUBLE} )
+if (PRECIP_DOUBLE STREQUAL "1" )
+	add_definitions(-DPRECIP_DOUBLE)
+endif (PRECIP_DOUBLE STREQUAL "1") 
 
 message("=============================================================")
 
