@@ -5,6 +5,5 @@ add_library(nwm_driver STATIC
 	module_HYDRO_drv.F
 )
 
-target_link_libraries(nwm_driver PUBLIC nwm_nudging)
 target_link_libraries(nwm_driver PUBLIC nwm_mpp)
 target_link_libraries(nwm_driver PUBLIC nwm_data_rec)
