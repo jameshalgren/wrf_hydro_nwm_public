@@ -52,6 +52,8 @@ set (SPATIAL_SOIL $ENV{SPATIAL_SOIL} CACHE String "Spatial Soil Parameters for N
 set (WRFIO_NCD_LARGE_FILE_SUPPORT $ENV{WRFIO_NCD_LARGE_FILE_SUPPORT} CACHE String "Large netcdf file support 0=off, 1=on")
 set (NCEP_WCOSS $ENV{NCEP_WCOSS} CACHE String "WCOSS file units 0=off 1=on")
 set (WRF_HYDRO_NUDGING $ENV{WRF_HYDRO_NUDGING} CACHE String "Streamflow nudging 0=off 1=on")
+set (WRF_HYDRO_NUDGING $ENV{OUTPUT_CHAN_CONN} CACHE String "Output channel connections")
+set (WRF_HYDRO_NUDGING $ENV{DPRECIP_DOUBLE} CACHE String "Precipitation as double")
 
 # add preprocessor defines using env variables
 
@@ -90,6 +92,18 @@ message ("WRF_HYDRO_NUDGING = " ${WRF_HYDRO_NUDGING} )
 if (DWRF_HYDRO_NUDGING STREQUAL "1" )
 	add_definitions(-DWRF_HYDRO_NUDGING)
 endif (WRF_HYDRO_NUDGING STREQUAL "1") 
+
+#set -DSPATIAL_SOIL from env
+message ("OUTPUT_CHAN_CONN = " ${OUTPUT_CHAN_CONN} )
+if (OUTPUT_CHAN_CONN STREQUAL "1" )
+	add_definitions(-DOUTPUT_CHAN_CONN)
+endif (OUTPUT_CHAN_CONN STREQUAL "1") 
+
+#set -DSPATIAL_SOIL from env
+message ("DPRECIP_DOUBLE = " ${DPRECIP_DOUBLE} )
+if (DPRECIP_DOUBLE STREQUAL "1" )
+	add_definitions(-DDPRECIP_DOUBLE)
+endif (DPRECIP_DOUBLE STREQUAL "1") 
 
 message("=============================================================")
 
