@@ -150,7 +150,6 @@ add_subdirectory("HYDRO_drv")
 if (WRF_HYDRO_NUDGING STREQUAL "1")
 	add_subdirectory("nudging")
 	add_dependencies(nwm_driver nwm_nudging)
-	target_link_libraries(nwm_driver PUBLIC nwm_nudging)
 endif (WRF_HYDRO_NUDGING STREQUAL "1")
 
 # add module dependencies
