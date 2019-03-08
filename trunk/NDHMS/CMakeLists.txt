@@ -55,6 +55,40 @@ set (WRF_HYDRO_NUDGING $ENV{WRF_HYDRO_NUDGING} CACHE String "Streamflow nudging 
 set (OUTPUT_CHAN_CONN $ENV{OUTPUT_CHAN_CONN} CACHE String "Output channel connections")
 set (PRECIP_DOUBLE $ENV{PRECIP_DOUBLE} CACHE String "Precipitation as double")
 
+#set default values for env variables
+if (WRF_HYDRO STREQUAL "")
+	set (WRF_HYDRO "1" CACHE String "WRF Enviorment vairable allways set to 1 for WRF-Hydro" FORCE)
+endif (WRF_HYDRO STREQUAL "")
+
+if (HYDRO_D STREQUAL "")
+	set (HYDRO_D "0" CACHE String "Print additonal debug information in WRF-Hydro" FORCE)
+endif (HYDRO_D STREQUAL "")
+
+if (SPATIAL_SOIL STREQUAL "")
+	set (SPATIAL_SOIL "0" CACHE String "Spatial Soil Parameters for Noah MP 0=off 1=on" FORCE)
+endif (SPATIAL_SOIL STREQUAL "")
+
+if (WRFIO_NCD_LARGE_FILE_SUPPORT STREQUAL "")
+	set (WRFIO_NCD_LARGE_FILE_SUPPORT "0" CACHE String "Large netcdf file support 0=off, 1=on" FORCE)
+endif (WRFIO_NCD_LARGE_FILE_SUPPORT STREQUAL "")
+
+if (NCEP_WCOSS STREQUAL "")
+	set (NCEP_WCOSS "0" CACHE String "WCOSS file units 0=off, 1=on" FORCE)
+endif (NCEP_WCOSS STREQUAL "")
+
+if (WRF_HYDRO_NUDGING STREQUAL "")
+	set (WRF_HYDRO_NUDGING "0" CACHE String "Streamflow nudging 0=off, 1=on" FORCE)
+endif (WRF_HYDRO_NUDGING STREQUAL "")
+
+if (OUTPUT_CHAN_CONN STREQUAL "")
+	set (OUTPUT_CHAN_CONN "0" CACHE String "Output channel connections" FORCE)
+endif (OUTPUT_CHAN_CONN STREQUAL "")
+
+if (PRECIP_DOUBLE STREQUAL "")
+	set (PRECIP_DOUBLE "0" CACHE String "Precipitation as double" FORCE)
+endif (PRECIP_DOUBLE STREQUAL "")
+
+
 # add preprocessor defines using env variables
 
 message ("=============================================================")
