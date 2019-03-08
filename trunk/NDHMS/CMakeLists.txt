@@ -52,8 +52,8 @@ set (SPATIAL_SOIL $ENV{SPATIAL_SOIL} CACHE String "Spatial Soil Parameters for N
 set (WRFIO_NCD_LARGE_FILE_SUPPORT $ENV{WRFIO_NCD_LARGE_FILE_SUPPORT} CACHE String "Large netcdf file support 0=off, 1=on")
 set (NCEP_WCOSS $ENV{NCEP_WCOSS} CACHE String "WCOSS file units 0=off 1=on")
 set (WRF_HYDRO_NUDGING $ENV{WRF_HYDRO_NUDGING} CACHE String "Streamflow nudging 0=off 1=on")
-set (WRF_HYDRO_NUDGING $ENV{OUTPUT_CHAN_CONN} CACHE String "Output channel connections")
-set (WRF_HYDRO_NUDGING $ENV{DPRECIP_DOUBLE} CACHE String "Precipitation as double")
+set (OUTPUT_CHAN_CONN $ENV{OUTPUT_CHAN_CONN} CACHE String "Output channel connections")
+set (PRECIP_DOUBLE $ENV{PRECIP_DOUBLE} CACHE String "Precipitation as double")
 
 # add preprocessor defines using env variables
 
@@ -147,6 +147,10 @@ add_subdirectory("Data_Rec")
 add_subdirectory("nudging")
 add_subdirectory("Routing")
 add_subdirectory("HYDRO_drv")
+
+if ( )
+
+endif
 
 # add module dependencies
 add_dependencies(nwm_debug_utils nwm_mpp) 
