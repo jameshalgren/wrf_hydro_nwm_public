@@ -49,6 +49,7 @@ endif("${NWM_LSM}" STREQUAL "")
 set (WRF_HYDRO $ENV{WRF_HYDRO} CACHE String "WRF Enviorment vairable allways set to 1 for WRF-Hydro")
 set (HYDRO_D $ENV{HYDRO_D} CACHE String "Print additonal debug information in WRF-Hydro")
 set (HYDRO_REALTIME $ENV{HYDRO_REALTIME} CACHE String "WRF Enviorment vairable for real time coupling 0=off 1=on")
+set (WRF_HYDRO_RAPID $ENV{WRF_HYDRO_RAPID} CACHE String "WRF Enviorment vairable for rapid routing 0=off 1=on")
 set (SPATIAL_SOIL $ENV{SPATIAL_SOIL} CACHE String "Spatial Soil Parameters for Noah MP 0=off 1=on")
 set (WRFIO_NCD_LARGE_FILE_SUPPORT $ENV{WRFIO_NCD_LARGE_FILE_SUPPORT} CACHE String "Large netcdf file support 0=off, 1=on")
 set (NCEP_WCOSS $ENV{NCEP_WCOSS} CACHE String "WCOSS file units 0=off 1=on")
@@ -67,7 +68,11 @@ endif (HYDRO_D STREQUAL "")
 
 if (HYDRO_REALTIME STREQUAL "")
 	set (HYDRO_REALTIME "0" CACHE String "WRF Enviorment vairable for real time coupling 0=off 1=on" FORCE)
-endif (HYDRO_D HYDRO_REALTIME "")
+endif (HYDRO_REALTIME STREQUAL "")
+
+if (WRF_HYDRO_RAPID STREQUAL "")
+	set (WRF_HYDRO_RAPID "0" CACHE String "WRF Enviorment vairable for rapid routing 0=off 1=on" FORCE)
+endif (WRF_HYDRO_RAPID STREQUAL "")
 
 if (SPATIAL_SOIL STREQUAL "")
 	set (SPATIAL_SOIL "0" CACHE String "Spatial Soil Parameters for Noah MP 0=off 1=on" FORCE)
@@ -119,6 +124,12 @@ message ("HYDRO_REALTIME = " ${HYDRO_REALTIME} )
 if (HYDRO_REALTIME STREQUAL "1" )
 	add_definitions(-DHYDRO_REALTIME)
 endif (WRF_HYDRO HYDRO_REALTIME "1") 
+
+# set -DWRF_HYDRO_RAPID from env
+message ("WRF_HYDRO_RAPID = " ${WRF_HYDRO_RAPID} )
+if (WRF_HYDRO_RAPID STREQUAL "1" )
+	add_definitions(-DWRF_HYDRO_RAPID)
+endif (WRF_HYDRO_RAPID HYDRO_REALTIME "1") 
 
 #set -DSPATIAL_SOIL from env
 message ("SPATIAL_SOIL = " ${SPATIAL_SOIL} )
