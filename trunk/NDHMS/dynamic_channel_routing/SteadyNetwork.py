@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""Just the Dummy Loop with the Inherited Class Structure examples
-
-Related source file is located at
-    https://colab.research.google.com/github/jameshalgren/wrf_hydro_nwm_public/blob/dynamic_channel_routing/trunk/NDHMS/NWM_Dynamic_Channel_DRAFT/Colaboratory/Just_the_Dummy_Loop_with_the_Inherited_Class_Structure_examples.ipynb
-"""
-
 # import required modules
 from __future__ import division
 import sys
@@ -23,6 +16,10 @@ MANNING_SI = 1.00
 MANNING_UK = 1.49
 '''Actual value: 1.4859185775 = (1 / 0.3048) ** (1/3)'''
 
+def Bernoulli_Energy(WSE, V, hl = 0, gravity = GRAVITY):
+    ''' compute flow using Manning's equation '''
+    return (WSE) + V ** 2.0 / (2 * gravity) - hl
+
 def y_direct(B, n, S0, Q):
     ''' function to compute error in depth calculation for a guessed depth compared to a calculated depth for a given flow.
         Uses scipy.optimize fmin '''
@@ -33,6 +30,9 @@ def flow_min(y, n, S0, Q, B, k = MANNING_SI):
     ''' computes the error term comparing the Manning's computed depth with the given Q '''
     epsilon = np.abs(Manning_Q(y, n, S0, B, k) - Q)
     return epsilon
+
+def Manning_Slope(A, n, Q, Rw, k = MANNING_SI):
+    return (n * Q / (k * A * Rw **2/3))
 
 def Manning_Q(y, n, S0, B, k = MANNING_SI):
     ''' compute flow using Manning's equation '''
@@ -131,7 +131,7 @@ class Network:
         new_depth = y_direct(section.bottom_width, section.manning_n_ds, section.bed_slope_ds, new_flow)
         section.time_steps.append(self.TimeStep(new_flow=new_flow, new_depth=new_depth))
 
-class DummyNetwork(Network):
+class SteadyNetwork(Network):
     #TODO: These Input and Initialize methods could be different methods within the Network class
     def input_and_initialize(self, input_opt=1, input_path=None, output_path=None, upstream_flow_ts=None, downstream_stage_ts=None):
         ''' This input option is intended to be an extremely simple channel for testing and plotting development'''
@@ -145,17 +145,18 @@ class DummyNetwork(Network):
         n_sections = 40
         I_UPSTREAM = n_sections - 1
         I_DOWNSTREAM = 0
-    
+
         station_downstream = 10000
-        station_upstream = 11000
+        station_upstream = 10000000
         stations = np.linspace(station_downstream, station_upstream, n_sections, False)
         bottom_widths = np.linspace(100, 1000, len(stations), False)
         bottom_zs = np.linspace(0,100, len(stations), False)
 
-        #print(NCOMP, len(stations))
+        # print(NCOMP, len(stations))
 
-        #/input_vars.update({"dxini": 1000})
+        input_vars.update({"dxini": 1000})
         input_vars.update({"manning_n_ds": 0.035})
+        input_vars.update({"loss_coeff": 0.3})
 
         for i, bw in enumerate(bottom_widths):
             # continue
@@ -163,17 +164,18 @@ class DummyNetwork(Network):
                                     , bottom_width=bottom_widths[i]
                                     , bottom_z = bottom_zs[i]
                                     , manning_n_ds = input_vars['manning_n_ds']))
-            #print(sections[i].bed_slope_ds, sections[i].dx_ds, sections[i].bottom_z)
+            self.sections[i].loss_coeff_ds = input_vars['loss_coeff']
+            # print(sections[i].bed_slope_ds, sections[i].dx_ds, sections[i].bottom_z)
             if i == 0:
-                # self.sections[i].dx_ds = input_vars['dxini'] #Irrelevant with the slope defined
-                self.sections[i].bed_slope_ds = .0001
+                self.sections[i].dx_ds = input_vars['dxini'] #Irrelevant with the slope defined
+                self.sections[i].bed_slope_ds = 0.0001
             else:
                 self.sections[i].dx_ds = self.sections[i].station - self.sections[i-1].station
                 self.sections[i].bed_slope_ds = (self.sections[i].bottom_z \
                                             - self.sections[i-1].bottom_z) \
                                             / self.sections[i].dx_ds
 
-        #TODO: clean up this code to generate intial upstream flow and downstream stage boundary time series 
+        #TODO: clean up this code to generate intial upstream flow and downstream stage boundary time series
         self.upstream_flow_ts = Generate_Hydrograph(len(self.time_list) , 20 , 2 , 4 , 5000)
         self.downstream_stage_ts = [y_direct(self.sections[I_DOWNSTREAM].bottom_width
                                              , self.sections[I_DOWNSTREAM].manning_n_ds
@@ -181,24 +183,109 @@ class DummyNetwork(Network):
                                              , q ) for q in self.upstream_flow_ts]
         # print(self.upstream_flow_ts)
         # print(self.downstream_stage_ts)
-        
+
         return input_vars
 
     def compute_initial_state(self):
-        ''' Compute a dummy initial state
+        ''' Compute a steady initial state (this uses the same math as the next-
+            time-step-state, only we simply assume we are using the first timestep
+            of the boundary time-series.)
         '''
-        #print(self.upstream_flow_ts)
-        #print(self.downstream_stage_ts)
-        for section in self.sections:
-            self.add_normal_depth_time_step(section, self.upstream_flow_ts[0])
+        # print(self.upstream_flow_ts)
+        # print(self.downstream_stage_ts)
+        self.add_steady_time_step(0, 0, self.sections, self.downstream_stage_ts[0], self.upstream_flow_ts[0])
 
-    def compute_next_time_step_state(self, j, upstream_flow_current, upstream_flow_next, downstream_stage_current, downstream_stage_next): 
-        ''' the Dummy Network simply copies the current channel state to the next time step
-            flow
+    def compute_next_time_step_state(self, j_current
+                                         , j_next
+                                         , upstream_flow_current
+                                         , upstream_flow_next
+                                         , downstream_stage_current
+                                         , downstream_stage_next):
+        ''' the Steady Network performs the Standard Step method to compute a steady profile
+            for each flow and downstream stage in the series.
         '''
-        for section in self.sections:
-            #print(j)
-            self.add_normal_depth_time_step(section, upstream_flow_next)
+        self.add_steady_time_step(j_current, j_next, self.sections, downstream_stage_next, upstream_flow_next)
+
+    def add_steady_time_step(self, j_current, j_next, sections, downstream_stage_next, upstream_flow_next):
+        # TODO: Ask Nick -- should this be inside the Steady Timestep class?
+
+        for i, section in enumerate(sections):
+            ''' Step through using the standard step method
+            '''
+            # print(f'dssn {downstream_stage_next}')
+            if i == 0: #Add known downstream boundary
+                section.time_steps.append(self.TimeStep(new_flow = upstream_flow_next
+                                                       ,new_depth = downstream_stage_next))
+                # print(f'stsd_jcurr {section.time_steps[j_current].depth}')
+                # print(f'sdstsd_jcurr {section_ds.time_steps[j_current].depth}')
+                # print(f's0tsd_jcurr {sections[0].time_steps[j_current].depth}')
+                # stage.append(downstream_stage_next)
+                # WS.append(section.bottom_z + stage[0])
+                # A.append(section.get_area_depth(stage[0]))
+                continue
+
+            section_ds = sections[i-1]
+            #section
+            # print(f'jnext {j_next}')
+            # print(f'jcurr {j_current}')
+            # print(f'stsd_jcurr {section.time_steps[j_current].depth}')
+            # print(f'sdstsd_jcurr {section_ds.time_steps[j_current].depth}')
+            # print(f's0tsd_jcurr {sections[0].time_steps[j_current].depth}')
+            # print(f'stsd_jnext {section.time_steps[j_next].depth}')
+            # print(f'sdstsd_jnext {section_ds.time_steps[j_next].depth}')
+            # print(f's0tsd_jnext {sections[0].time_steps[j_next].depth}')
+            #Use normal depth as an seed estimate convergence solution for standard depth
+            y_guess = y_direct(section.bottom_width, section.manning_n_ds, section.bed_slope_ds, upstream_flow_next)
+            y_standard = (self.y_standard_step(j_next, section_ds, section, upstream_flow_next, y_guess))
+
+            section.time_steps.append(self.TimeStep(new_flow = upstream_flow_next, new_depth = y_standard))
+
+    def y_standard_step(self, j, section_ds, section_us, Q, y_guess = 1.0, k=1.0, gravity=GRAVITY):
+    #TODO: Make GRAVITY and MANNING_K constants consistent with anticipated units and
+    #get them to be called/passsed consistently.
+        ''' function to compute error in depth calculation for a guessed depth compared to a calculated depth for a given flow.
+            Uses scipy.optimize fmin '''
+        y_us = y_guess
+        y_ds = section_ds.time_steps[j].depth
+        # print(f'{y_us} {y_ds}')
+        z_us = section_us.bottom_z
+        z_ds = section_ds.bottom_z
+        n_us = section_us.manning_n_ds
+        n_ds = section_ds.manning_n_ds
+
+        loss_coeff = section_us.loss_coeff_ds
+
+        Area_us = section_us.get_area_depth(y_us)
+        Area_ds = section_ds.get_area_depth(y_ds)
+        V_us = Q / Area_us
+        V_ds = Q / Area_ds
+        Pw_us = section_us.get_wetted_perimeter_depth(y_us)
+        Pw_ds = section_ds.get_wetted_perimeter_depth(y_ds)
+        Rw_us = Area_us / Pw_us
+        Rw_ds = Area_ds / Pw_ds
+        Area_mean = (Area_ds + Area_us) / 2.0
+        n_mean = (n_ds + n_us) / 2.0
+        Rw_mean = (Rw_ds + Rw_us) / 2.0
+        Sf = Manning_Slope(Q, Area_mean, Rw_mean, n_mean, k)
+        hl_us2ds = Sf * section_us.dx_ds + loss_coeff * abs(V_us ** 2.0 / (2 * gravity) -  V_ds ** 2.0 / (2 * gravity))
+        y_standard = fmin(self.stage_standard_min, y_guess, args=(y_ds, z_us, z_ds, Q, V_us, V_ds, hl_us2ds, MANNING_UK), full_output=True, disp=False)
+        return float(y_standard[0])
+
+    def stage_standard_min(self, y_us, y_ds, z_us, z_ds, Q, V_us, V_ds, hl_us2ds = 0, k = MANNING_SI, gravity = GRAVITY):
+        ''' computes the error term comparing the Manning's computed depth with the given Q '''
+        # print(y_ds, z_ds)
+        # print(y_us, z_us)
+        WSE_ds = y_ds + z_ds
+        WSE_us = y_us + z_us
+
+        epsilon = np.abs(Bernoulli_Energy(WSE_ds, V_ds) - Bernoulli_Energy(WSE_us, V_us, hl_us2ds))
+        return epsilon
+
+
+    class TimeStep(Network.TimeStep):
+        def __init__(self, *args, **kwargs):
+            # super(Network.TimeStep, self).__init__(*args, **kwargs)
+            super().__init__(*args, **kwargs)
 
 class Section:
     #TODO: The Section Class needs to be sub-classed with Different types,
@@ -217,14 +304,29 @@ class Section:
 
         #Time independent downstream reach properties
         self.dx_ds = 0 # Distance to downstream section
+        self.loss_coeff_ds = 0 # Contraction and other loss coefficients to downstream section
+                            # C in the following equation
+                            # hl = Sf * dx + C * (V1**2/2g - V2**2/2g)
         self.dbdx_ds = 0 # Distance to downstream section
         self.bed_slope_ds = 0 # Bed slope (S0) to downstream section
         #ADD NEIGHBOR Concept
 
+    def get_area_depth(self, depth):
+        return self.bottom_width * depth
+
+    def get_area_j(self, j):
+        return self.bottom_z * self.time_steps[j].depth
+
+    def get_wetted_perimeter_depth(self, depth):
+        return self.bottom_width * depth
+
+    def get_wetted_perimeter_j(self, j):
+        return self.bottom_z * self.time_steps[j].depth
+
 def main():
-    network = DummyNetwork()
+    # network = DummyNetwork()
     # network = SimpleFlowTrace() #DongHa's method.
-    # network = SteadyNetwork()
+    network = SteadyNetwork()
     # network = MuskCNetwork()
     # network = MESHDNetwork()
 
