@@ -192,7 +192,8 @@ class DummyNetwork(Network):
         for section in self.sections:
             self.add_normal_depth_time_step(section, self.upstream_flow_ts[0])
 
-    def compute_next_time_step_state(self, j
+    def compute_next_time_step_state(self, j_current
+                                         , j_next
                                          , upstream_flow_current
                                          , upstream_flow_next
                                          , downstream_stage_current
