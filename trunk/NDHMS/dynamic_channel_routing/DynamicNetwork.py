@@ -23,10 +23,10 @@ MANNING_SI = 1.00
 MANNING_UK = 1.49
 '''Actual value: 1.4859185775 = (1 / 0.3048) ** (1/3)'''
 
-def y_direct(B, n, S0, Q):
+def y_direct(B, n, S0, Q, k=MANNING_SI):
     ''' function to compute error in depth calculation for a guessed depth compared to a calculated depth for a given flow.
         Uses scipy.optimize fmin '''
-    y_optimum = fmin(flow_min, Q/B/3, args=(n, S0, Q, B, MANNING_UK), full_output=True, disp=False)
+    y_optimum = fmin(flow_min, Q/B/3, args=(n, S0, Q, B, k), full_output=True, disp=False)
     return float(y_optimum[0])
 
 def flow_min(y, n, S0, Q, B, k = MANNING_SI):
@@ -192,7 +192,11 @@ class DummyNetwork(Network):
         for section in self.sections:
             self.add_normal_depth_time_step(section, self.upstream_flow_ts[0])
 
-    def compute_next_time_step_state(self, j, upstream_flow_current, upstream_flow_next, downstream_stage_current, downstream_stage_next): 
+    def compute_next_time_step_state(self, j
+                                         , upstream_flow_current
+                                         , upstream_flow_next
+                                         , downstream_stage_current
+                                         , downstream_stage_next): 
         ''' the Dummy Network simply copies the current channel state to the next time step
             flow
         '''
@@ -213,7 +217,7 @@ class Section:
         self.bottom_z = bottom_z
         self.manning_n_ds = manning_n_ds
         self.time_steps = [] # array of values
-        self.sk = MANNING_UK
+        self.sk = MANNING_SI
 
         #Time independent downstream reach properties
         self.dx_ds = 0 # Distance to downstream section
@@ -231,7 +235,7 @@ def main():
     network.input_and_initialize()
 
     network.compute_initial_state()
-    network.compute_time_steps() #TODO: ask Nick -- should this even require an argument?
+    network.compute_time_steps()
 
     cols_for_subplots = 4
     fig, axes = plt.subplots(nrows=ceil(len(network.sections)/cols_for_subplots), ncols=cols_for_subplots, squeeze=False)
