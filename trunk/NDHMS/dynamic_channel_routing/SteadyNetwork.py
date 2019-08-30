@@ -212,6 +212,7 @@ class SteadyNetwork(Network):
 
         for i, section in enumerate(sections):
             ''' Step through using the standard step method
+            See tutorial here: https://www.youtube.com/watch?v=P4MhwS03Kl0
             '''
             # print(f'dssn {downstream_stage_next}')
             if i == 0: #Add known downstream boundary
