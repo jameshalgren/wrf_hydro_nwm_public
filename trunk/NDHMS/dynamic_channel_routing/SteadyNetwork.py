@@ -1,5 +1,7 @@
 # import required modules
 from __future__ import division
+import helpers
+import constants
 import sys
 import numpy as np
 import pandas as pd
@@ -11,45 +13,6 @@ from math import ceil
 import matplotlib.pyplot as plt
 import csv
 import os
-GRAVITY = 9.81
-MANNING_SI = 1.00
-MANNING_UK = 1.49
-'''Actual value: 1.4859185775 = (1 / 0.3048) ** (1/3)'''
-
-def Bernoulli_Energy(WSE, V, hl = 0, gravity = GRAVITY):
-    ''' compute flow using Manning's equation '''
-    return (WSE) + (V ** 2.0) / (2 * gravity) - hl
-
-def y_direct(B, n, S0, Q, k=MANNING_SI):
-    ''' function to compute error in depth calculation for a guessed depth compared to a calculated depth for a given flow.
-        Uses scipy.optimize fmin '''
-    y_optimum = fmin(flow_min, Q/B/3, args=(n, S0, Q, B, k), full_output=True, disp=False)
-    return float(y_optimum[0])
-
-def flow_min(y, n, S0, Q, B, k = MANNING_SI):
-    ''' computes the error term comparing the Manning's computed depth with the given Q '''
-    epsilon = np.abs(Manning_Q(y, n, S0, B, k) - Q)
-    return epsilon
-
-def Manning_Slope(n, Q, A, Rw, k = MANNING_SI):
-    #print(f'n * Q / (k * A * (Rw ** (2/3)))) ** 2.0 {n} * {Q} / ({k} * {A} * ({Rw} ** (2/3)))) ** 2.0')
-    return (n * Q / (k * A * (Rw ** (2.0/3.0)))) ** 2.0
-
-def Manning_Q(y, n, S0, B, k = MANNING_SI):
-    ''' compute flow using Manning's equation '''
-    return (k/n)*(S0**0.5)*((B*y)**(5/3))/((B+y)**(2/3))
-
-# Generate_Hydrograph from Maryam Asgari Lamjiri and Kelly Flint
-# NWC Summer institute coordinators 2019
-def Generate_Hydrograph (Num_TimeStep,Steady_time,width,Skewness,QMax):
-    # Steady_time += 359
-    XX = np.linspace(-5,5,Num_TimeStep)
-    Steady_t = -5 + Steady_time/Num_TimeStep*10
-    t = (XX - Steady_t)/width
-    P = 2.0 / width * stats.norm.pdf(t) * stats.norm.cdf(Skewness*t)
-    Q = (QMax-100) * P/np.max(P)+100
-    # plt.plot(np.arange(0,Num_TimeStep),Q)
-    return Q
 
 
 #########################################################
@@ -129,11 +92,13 @@ class Network:
         section.time_steps.append(self.TimeStep(new_depth = downstream_depth))
 
     def add_normal_depth_time_step(self, section, new_flow):
-        new_depth = y_direct(section.bottom_width, section.manning_n_ds, section.bed_slope_ds, new_flow)
+        new_depth = helpers.y_direct(section.bottom_width, section.manning_n_ds, section.bed_slope_ds, new_flow)
         section.time_steps.append(self.TimeStep(new_flow=new_flow, new_depth=new_depth))
 
 class SteadyNetwork(Network):
     #TODO: These Input and Initialize methods could be different methods within the Network class
+    #TODO: Make GRAVITY and MANNING_SI constants consistent with anticipated units in the input step and
+    #get them to be called/passsed consistently.
     def input_and_initialize(self, input_opt=1, input_path=None, output_path=None, upstream_flow_ts=None, downstream_stage_ts=None):
         ''' This input option is intended to be an extremely simple channel for testing and plotting development'''
         input_vars = {}
@@ -177,8 +142,8 @@ class SteadyNetwork(Network):
                                             / self.sections[i].dx_ds
 
         #TODO: clean up this code to generate intial upstream flow and downstream stage boundary time series
-        self.upstream_flow_ts = Generate_Hydrograph(len(self.time_list) , 0 , 7 , 4 , 5000)
-        self.downstream_stage_ts = [5*y_direct(self.sections[I_DOWNSTREAM].bottom_width
+        self.upstream_flow_ts = helpers.Generate_Hydrograph(len(self.time_list) , 0 , 7 , 4 , 5000)
+        self.downstream_stage_ts = [5*helpers.y_direct(self.sections[I_DOWNSTREAM].bottom_width
                                              , self.sections[I_DOWNSTREAM].manning_n_ds
                                              , self.sections[I_DOWNSTREAM].bed_slope_ds
                                              , q ) for q in self.upstream_flow_ts]
@@ -236,14 +201,12 @@ class SteadyNetwork(Network):
             # print(f'sdstsd_jnext {section_ds.time_steps[j_next].depth}')
             # print(f's0tsd_jnext {sections[0].time_steps[j_next].depth}')
             #Use normal depth as an seed estimate convergence solution for standard depth
-            y_guess = y_direct(section.bottom_width, section.manning_n_ds, section.bed_slope_ds, upstream_flow_next)
+            y_guess = helpers.y_direct(section.bottom_width, section.manning_n_ds, section.bed_slope_ds, upstream_flow_next)
             y_standard = (self.y_standard_step(j_next, section_ds, section, upstream_flow_next, y_guess))
 
             section.time_steps.append(self.TimeStep(new_flow = upstream_flow_next, new_depth = y_standard))
 
-    def y_standard_step(self, j, section_ds, section_us, Q, y_guess = 1.0, k=MANNING_SI, gravity=GRAVITY):
-    #TODO: Make GRAVITY and MANNING_K constants consistent with anticipated units and
-    #get them to be called/passsed consistently.
+    def y_standard_step(self, j, section_ds, section_us, Q, y_guess = 1.0, k = constants.MANNING_SI, gravity=constants.GRAVITY):
         ''' function to compute error in depth calculation for a guessed depth compared to a calculated depth for a given flow.
             Uses scipy.optimize fmin '''
         y_ds = section_ds.time_steps[j].depth
@@ -284,26 +247,26 @@ class SteadyNetwork(Network):
         Area_mean = (Area_ds + Area_us) / 2.0
         n_mean = (n_ds + n_us) / 2.0
         Rw_mean = (Rw_ds + Rw_us) / 2.0
-        Sf_ds = Manning_Slope(Q = Q, A = Area_ds, Rw = Rw_ds, n = n_ds, k = k)
-        Sf_us = Manning_Slope(Q = Q, A = Area_us, Rw = Rw_us, n = n_us, k = k)
-        Sf_mean = Manning_Slope(Q = Q, A = Area_mean, Rw = Rw_mean, n = n_mean, k = k)
+        Sf_ds = helpers.Manning_Slope(Q = Q, A = Area_ds, Rw = Rw_ds, n = n_ds, k = k)
+        Sf_us = helpers.Manning_Slope(Q = Q, A = Area_us, Rw = Rw_us, n = n_us, k = k)
+        Sf_mean = helpers.Manning_Slope(Q = Q, A = Area_mean, Rw = Rw_mean, n = n_mean, k = k)
         #Sf_mean = (Sf_ds + Sf_us) / 2.0
         print (f'Q {Q}')
         print(f'Sf_ds = {Sf_ds} Sf_us = {Sf_us} Sf_mean = {Sf_mean}')
         hl_us2ds = Sf_mean * dx + loss_coeff * abs(V_head_us -  V_head_ds)
         print('hl_us2ds = {hl_us2ds}')
-        print('y_us, y_guess, y_ds, z_us, z_ds, Q, V_us, V_ds, hl_us2ds, MANNING_SI')
-        print(y_us, y_guess, y_ds, z_us, z_ds, Q, V_us, V_ds, hl_us2ds, MANNING_SI)
+        print('y_us, y_guess, y_ds, z_us, z_ds, Q, V_us, V_ds, hl_us2ds, constants.MANNING_SI')
+        print(y_us, y_guess, y_ds, z_us, z_ds, Q, V_us, V_ds, hl_us2ds, constants.MANNING_SI)
         WSE_ds = y_ds + z_ds
         WSE_us = y_us + z_us
-        E_ds = Bernoulli_Energy(WSE_ds, V_ds, 0, gravity) 
-        E_us = Bernoulli_Energy(WSE_us, V_us, hl_us2ds, gravity)
+        E_ds = helpers.Bernoulli_Energy(WSE_ds, V_ds, 0, gravity) 
+        E_us = helpers.Bernoulli_Energy(WSE_us, V_us, hl_us2ds, gravity)
         print(f'E_ds: {E_ds}')
         print(f'E_us: {E_us}')
 
         return float(y_standard[0])
 
-    def stage_standard_min(self, y_us, section_us, section_ds, loss_coeff, dx, Q, y_ds, z_us, z_ds, n_us, n_ds, gravity = GRAVITY, k=MANNING_SI):
+    def stage_standard_min(self, y_us, section_us, section_ds, loss_coeff, dx, Q, y_ds, z_us, z_ds, n_us, n_ds, gravity = constants.GRAVITY, k=constants.MANNING_SI):
         ''' computes the error term comparing the Manning's computed depth with the given Q '''
         Area_us = section_us.get_area_depth(y_us)
         Area_ds = section_ds.get_area_depth(y_ds)
@@ -326,9 +289,9 @@ class SteadyNetwork(Network):
         Area_mean = (Area_ds + Area_us) / 2.0
         n_mean = (n_ds + n_us) / 2.0
         Rw_mean = (Rw_ds + Rw_us) / 2.0
-        Sf_ds = Manning_Slope(Q = Q, A = Area_ds, Rw = Rw_ds, n = n_ds, k = k)
-        Sf_us = Manning_Slope(Q = Q, A = Area_us, Rw = Rw_us, n = n_us, k = k)
-        #Sf_mean = Manning_Slope(Q = Q, A = Area_mean, Rw = Rw_mean, n = n_mean, k = k)
+        Sf_ds = helpers.Manning_Slope(Q = Q, A = Area_ds, Rw = Rw_ds, n = n_ds, k = k)
+        Sf_us = helpers.Manning_Slope(Q = Q, A = Area_us, Rw = Rw_us, n = n_us, k = k)
+        #Sf_mean = helpers.Manning_Slope(Q = Q, A = Area_mean, Rw = Rw_mean, n = n_mean, k = k)
         Sf_mean = (Sf_ds + Sf_us) / 2.0
         # print(f'Sf_ds = {Sf_ds} Sf_us = {Sf_us} Sf_mean = {Sf_mean}')
 
@@ -340,12 +303,12 @@ class SteadyNetwork(Network):
         # print(y_us, z_us)
         WSE_ds = y_ds + z_ds
         WSE_us = y_us + z_us
-        E_ds = Bernoulli_Energy(WSE_ds, V_ds, 0, gravity) 
-        E_us = Bernoulli_Energy(WSE_us, V_us, hl_us2ds, gravity)
+        E_ds = helpers.Bernoulli_Energy(WSE_ds, V_ds, 0, gravity) 
+        E_us = helpers.Bernoulli_Energy(WSE_us, V_us, hl_us2ds, gravity)
         # print(f'E_ds: {E_ds}')
         # print(f'E_us: {E_us}')
         epsilon = np.abs(E_us - E_ds)
-        #epsilon = np.abs(Bernoulli_Energy(WSE_ds, V_ds, 0, gravity) - Bernoulli_Energy(WSE_us, V_us, hl_us2ds, gravity))
+        #epsilon = np.abs(helpers.Bernoulli_Energy(WSE_ds, V_ds, 0, gravity) - helpers.Bernoulli_Energy(WSE_us, V_us, hl_us2ds, gravity))
         return epsilon
 
 
@@ -367,7 +330,7 @@ class Section:
         self.bottom_z = bottom_z
         self.manning_n_ds = manning_n_ds
         self.time_steps = [] # array of values
-        self.sk = MANNING_SI
+        self.sk = constants.MANNING_SI
 
         #Time independent downstream reach properties
         self.dx_ds = 0 # Distance to downstream section
