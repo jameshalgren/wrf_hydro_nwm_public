@@ -43,7 +43,7 @@ class DummyNetwork(Network):
 
         for i, bw in enumerate(bottom_widths):
             # continue
-            self.sections.append(Section(station=stations[i]
+            self.sections.append(Network.RectangleSection(station=stations[i]
                                     , bottom_width=bottom_widths[i]
                                     , bottom_z = bottom_zs[i]
                                     , manning_n_ds = input_vars['manning_n_ds']))
@@ -88,27 +88,6 @@ class DummyNetwork(Network):
         for section in self.sections:
             #print(j)
             self.add_normal_depth_time_step(section, upstream_flow_next)
-
-class Section:
-    #TODO: The Section Class needs to be sub-classed with Different types,
-    #e.g., SectionRectangle, SectionTrapezoid, SectionTrapFlood (for the type that
-    #currently used in the National Water Model), SectionDepthArea, SectionDepthWidth, ...
-    #def __init__(self, bottom_width, side_slope):
-    def __init__(self, bottom_width, bottom_z, comid=None, station=None, dx_ds = 10, manning_n_ds = 0.015):
-        #Time independent at-a-station properties
-        self.comid = comid
-        self.station = station
-        self.bottom_width = bottom_width
-        self.bottom_z = bottom_z
-        self.manning_n_ds = manning_n_ds
-        self.time_steps = [] # array of values
-        self.sk = constants.MANNING_SI
-
-        #Time independent downstream reach properties
-        self.dx_ds = 0 # Distance to downstream section
-        self.dbdx_ds = 0 # Distance to downstream section
-        self.bed_slope_ds = 0 # Bed slope (S0) to downstream section
-        #ADD NEIGHBOR Concept
 
 def main():
     network = DummyNetwork()

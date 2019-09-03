@@ -47,7 +47,7 @@ class SteadyNetwork(Network):
 
         for i, bw in enumerate(bottom_widths):
             # continue
-            self.sections.append(Section(station=stations[i]
+            self.sections.append(Network.RectangleSection(station=stations[i]
                                     , bottom_width=bottom_widths[i]
                                     , bottom_z = bottom_zs[i]
                                     , manning_n_ds = input_vars['manning_n_ds']))
@@ -238,42 +238,6 @@ class SteadyNetwork(Network):
         def __init__(self, *args, **kwargs):
             # super(Network.TimeStep, self).__init__(*args, **kwargs)
             super().__init__(*args, **kwargs)
-
-class Section:
-    #TODO: The Section Class needs to be sub-classed with Different types,
-    #e.g., SectionRectangle, SectionTrapezoid, SectionTrapFlood (for the type that
-    #currently used in the National Water Model), SectionDepthArea, SectionDepthWidth, ...
-    #def __init__(self, bottom_width, side_slope):
-    def __init__(self, bottom_width, bottom_z, comid=None, station=None, dx_ds = 10, manning_n_ds = 0.015):
-        #Time independent at-a-station properties
-        self.comid = comid
-        self.station = station
-        self.bottom_width = bottom_width
-        self.bottom_z = bottom_z
-        self.manning_n_ds = manning_n_ds
-        self.time_steps = [] # array of values
-        self.sk = constants.MANNING_SI
-
-        #Time independent downstream reach properties
-        self.dx_ds = 0 # Distance to downstream section
-        self.loss_coeff_ds = 0 # Contraction and other loss coefficients to downstream section
-                            # C in the following equation
-                            # hl = Sf * dx + C * (V1**2/2g - V2**2/2g)
-        self.dbdx_ds = 0 # Distance to downstream section
-        self.bed_slope_ds = 0 # Bed slope (S0) to downstream section
-        #ADD NEIGHBOR Concept
-
-    def get_area_depth(self, depth):
-        return self.bottom_width * depth
-
-    def get_area_j(self, j):
-        return self.bottom_z * self.time_steps[j].depth
-
-    def get_wetted_perimeter_depth(self, depth):
-        return self.bottom_width + 2.0 * depth
-
-    def get_wetted_perimeter_j(self, j):
-        return self.bottom_z + 2.0 * self.time_steps[j].depth
 
 def main():
     # network = DummyNetwork()

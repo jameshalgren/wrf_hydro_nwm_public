@@ -1,3 +1,4 @@
+import constants
 import helpers
 
 class Network:
@@ -93,12 +94,12 @@ class Network:
             self.bed_slope_ds = 0 # Bed slope (S0) to downstream section
             #ADD NEIGHBOR Concept
 
-
     class RectangleSection(Section):
-        def __init__(self, bottom_width, bottom_z, comid=None, station=None, dx_ds = 10, manning_n_ds = 0.015):
+        def __init__(self, bottom_width, manning_n_ds = 0.015, *args, **kwargs):
+            super().__init__(*args, **kwargs)
             self.bottom_width = bottom_width
-            self.manning_n_ds = MANNING_SI
-            #self.sk = MANNING_SI
+            self.manning_n_ds = constants.MANNING_SI
+            #self.sk = constants.MANNING_SI
 
         def get_area_depth(self, depth):
             return self.bottom_width * depth
