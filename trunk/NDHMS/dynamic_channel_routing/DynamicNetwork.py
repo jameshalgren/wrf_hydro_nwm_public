@@ -1,13 +1,7 @@
-# -*- coding: utf-8 -*-
-"""Just the Dummy Loop with the Inherited Class Structure examples
-
-Related source file is located at
-    https://colab.research.google.com/github/jameshalgren/wrf_hydro_nwm_public/blob/dynamic_channel_routing/trunk/NDHMS/NWM_Dynamic_Channel_DRAFT/Colaboratory/Just_the_Dummy_Loop_with_the_Inherited_Class_Structure_examples.ipynb
-"""
-
 # import required modules
 from __future__ import division
 import helpers
+import constants
 import sys
 import numpy as np
 import pandas as pd
@@ -97,7 +91,7 @@ class Network:
         section.time_steps.append(self.TimeStep(new_depth = downstream_depth))
 
     def add_normal_depth_time_step(self, section, new_flow):
-        new_depth = y_direct(section.bottom_width, section.manning_n_ds, section.bed_slope_ds, new_flow)
+        new_depth = helpers.y_direct(section.bottom_width, section.manning_n_ds, section.bed_slope_ds, new_flow)
         section.time_steps.append(self.TimeStep(new_flow=new_flow, new_depth=new_depth))
 
 class DummyNetwork(Network):
@@ -144,7 +138,7 @@ class DummyNetwork(Network):
 
         #TODO: clean up this code to generate intial upstream flow and downstream stage boundary time series 
         self.upstream_flow_ts = helpers.Generate_Hydrograph(len(self.time_list) , 20 , 2 , 4 , 5000)
-        self.downstream_stage_ts = [y_direct(self.sections[I_DOWNSTREAM].bottom_width
+        self.downstream_stage_ts = [helpers.y_direct(self.sections[I_DOWNSTREAM].bottom_width
                                              , self.sections[I_DOWNSTREAM].manning_n_ds
                                              , self.sections[I_DOWNSTREAM].bed_slope_ds
                                              , q ) for q in self.upstream_flow_ts]
@@ -187,7 +181,7 @@ class Section:
         self.bottom_z = bottom_z
         self.manning_n_ds = manning_n_ds
         self.time_steps = [] # array of values
-        self.sk = MANNING_SI
+        self.sk = constants.MANNING_SI
 
         #Time independent downstream reach properties
         self.dx_ds = 0 # Distance to downstream section

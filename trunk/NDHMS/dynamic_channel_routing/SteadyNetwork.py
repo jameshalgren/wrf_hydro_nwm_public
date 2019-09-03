@@ -223,27 +223,27 @@ class SteadyNetwork(Network):
 
         y_us = float(y_standard[0])
 
-        print(f'{dx}')
-        print(f'y_us: {y_us}   y_ds: {y_ds}')
-        print(f'z_us: {z_us}   z_ds: {z_ds}')
-        print(f'n_us: {n_us}   n_ds: {n_ds}')
-        print(f'{loss_coeff}')
+        # print(f'{dx}')
+        # print(f'y_us: {y_us}   y_ds: {y_ds}')
+        # print(f'z_us: {z_us}   z_ds: {z_ds}')
+        # print(f'n_us: {n_us}   n_ds: {n_ds}')
+        # print(f'{loss_coeff}')
 
         Area_us = section_us.get_area_depth(y_us)
         Area_ds = section_ds.get_area_depth(y_ds)
-        print(f'Area_us: {Area_us}   Area_ds: {Area_ds}')
+        # print(f'Area_us: {Area_us}   Area_ds: {Area_ds}')
         V_us = Q / Area_us
         V_ds = Q / Area_ds
-        print(f'V_us: {V_us}   V_ds: {V_ds}')
+        # print(f'V_us: {V_us}   V_ds: {V_ds}')
         V_head_us = V_us ** 2.0 / (2 * gravity) 
         V_head_ds = V_ds ** 2.0 / (2 * gravity)
-        print(f'V_head_us: {V_head_us}   V_head_ds: {V_head_ds}')
+        # print(f'V_head_us: {V_head_us}   V_head_ds: {V_head_ds}')
         Pw_us = section_us.get_wetted_perimeter_depth(y_us)
         Pw_ds = section_ds.get_wetted_perimeter_depth(y_ds)
-        print(f'Pw_us: {Pw_us}   Pw_ds: {Pw_ds}')
+        # print(f'Pw_us: {Pw_us}   Pw_ds: {Pw_ds}')
         Rw_us = Area_us / Pw_us
         Rw_ds = Area_ds / Pw_ds
-        print(f'Rw_us: {Rw_us}   Rw_ds: {Rw_ds}')
+        # print(f'Rw_us: {Rw_us}   Rw_ds: {Rw_ds}')
         Area_mean = (Area_ds + Area_us) / 2.0
         n_mean = (n_ds + n_us) / 2.0
         Rw_mean = (Rw_ds + Rw_us) / 2.0
@@ -251,18 +251,18 @@ class SteadyNetwork(Network):
         Sf_us = helpers.Manning_Slope(Q = Q, A = Area_us, Rw = Rw_us, n = n_us, k = k)
         Sf_mean = helpers.Manning_Slope(Q = Q, A = Area_mean, Rw = Rw_mean, n = n_mean, k = k)
         #Sf_mean = (Sf_ds + Sf_us) / 2.0
-        print (f'Q {Q}')
-        print(f'Sf_ds = {Sf_ds} Sf_us = {Sf_us} Sf_mean = {Sf_mean}')
+        # print (f'Q {Q}')
+        # print(f'Sf_ds = {Sf_ds} Sf_us = {Sf_us} Sf_mean = {Sf_mean}')
         hl_us2ds = Sf_mean * dx + loss_coeff * abs(V_head_us -  V_head_ds)
-        print('hl_us2ds = {hl_us2ds}')
-        print('y_us, y_guess, y_ds, z_us, z_ds, Q, V_us, V_ds, hl_us2ds, constants.MANNING_SI')
-        print(y_us, y_guess, y_ds, z_us, z_ds, Q, V_us, V_ds, hl_us2ds, constants.MANNING_SI)
+        # print('hl_us2ds = {hl_us2ds}')
+        # print('y_us, y_guess, y_ds, z_us, z_ds, Q, V_us, V_ds, hl_us2ds, constants.MANNING_SI')
+        # print(y_us, y_guess, y_ds, z_us, z_ds, Q, V_us, V_ds, hl_us2ds, constants.MANNING_SI)
         WSE_ds = y_ds + z_ds
         WSE_us = y_us + z_us
         E_ds = helpers.Bernoulli_Energy(WSE_ds, V_ds, 0, gravity) 
         E_us = helpers.Bernoulli_Energy(WSE_us, V_us, hl_us2ds, gravity)
-        print(f'E_ds: {E_ds}')
-        print(f'E_us: {E_us}')
+        # print(f'E_ds: {E_ds}')
+        # print(f'E_us: {E_us}')
 
         return float(y_standard[0])
 
