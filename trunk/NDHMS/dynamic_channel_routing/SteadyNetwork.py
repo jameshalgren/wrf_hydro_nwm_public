@@ -2,6 +2,7 @@
 from __future__ import division
 import helpers
 import constants
+from network import Network
 import sys
 import numpy as np
 import pandas as pd
@@ -14,86 +15,6 @@ import matplotlib.pyplot as plt
 import csv
 import os
 
-
-#########################################################
-#            FINITE DIFFERENCE METHOD                   #
-#                                                       #
-#  A program for one dimensional flow in open channels  #
-#                                                       #
-#########################################################
-
-class Network:
-    '''Class definition for reaches related as part of a computational scheme for
-       open channel routing '''
-    def __init__(self):
-        '''initialize a new Network of sections/reaches'''
-        self.sections = []
-        self.time_list = [] # TODO: this initialization could be for a datetime series to contain the timestamps
-        self.upstream_flow_ts = []
-        self.downstream_stage_ts = []
-
-    def input_and_initialize_simple(self):
-        pass
-
-    def compute_initial_state(self):
-        pass
-
-    def compute_time_steps(self):
-        '''This function can operate with
-        1) Nt and dt (number of time steps and size of time step) and a pointer to boundary information
-        2) List of times and a pointer to boundary information
-        3) an initial time, a list of time deltas, and a corresponding list of boundary conditions
-         but since they really all boil down to the last situation, we'll just
-         make it work for #3 and then have other translator methods that create these.'''
-
-        for j, t in enumerate(self.time_list):
-            # print(j+1 , len(self.time_list), len(self.upstream_flow_ts), len(self.downstream_stage_ts))
-            if j+1 < len(self.time_list):
-                self.compute_next_time_step_state(j_current = j
-                                                  , j_next = j + 1
-                                                  , upstream_flow_current = self.upstream_flow_ts[j]
-                                                  , upstream_flow_next = self.upstream_flow_ts[j+1]
-                                                  , downstream_stage_current = self.downstream_stage_ts[j]
-                                                  , downstream_stage_next = self.downstream_stage_ts[j+1])
-                # self.compute_next_time_step_state(t, j)
-
-    def compute_next_time_step_state(self, j_current
-                                         , j_next
-                                         , upstream_flow_current
-                                         , upstream_flow_next
-                                         , downstream_stage_current
-                                         , downstream_stage_next): # Will be defined in child classes
-                                         #TODO: find out how important it is to have the variables defined in this dummy function
-                                         #TODO: change the function to be dependednt on the time value instead of simply time-step index.
-
-        pass
-
-    class TimeStep:
-    #TODO: QUESTION FOR Nick
-        ''' When we are passing the time steps out to the Fortran module,
-        we only want to pass one timestep at a time and receive another one back.
-        How does that happen best? '''
-        def __init__(self, time_step = None, new_flow = None, new_depth = None):
-            # Per-time-step at-a-section properties
-            self.time = time_step
-            self.flow = new_flow
-            self.depth = new_depth
-
-            # Per-time-step downstream reach properties
-            self.friction_slope_ds = 0
-
-    def add_time_step(self, section, new_flow, new_depth):
-        section.time_steps.append(self.TimeStep(new_flow = new_flow, new_depth=new_depth))
-
-    def add_upstream_boundary_condition_time_step(self, section, upstream_flow):
-        section.time_steps.append(self.TimeStep(new_flow = upstream_flow))
-
-    def add_downstream_boundary_condition_time_step(self, section, downstream_depth):
-        section.time_steps.append(self.TimeStep(new_depth = downstream_depth))
-
-    def add_normal_depth_time_step(self, section, new_flow):
-        new_depth = helpers.y_direct(section.bottom_width, section.manning_n_ds, section.bed_slope_ds, new_flow)
-        section.time_steps.append(self.TimeStep(new_flow=new_flow, new_depth=new_depth))
 
 class SteadyNetwork(Network):
     #TODO: These Input and Initialize methods could be different methods within the Network class
@@ -236,7 +157,7 @@ class SteadyNetwork(Network):
         V_us = Q / Area_us
         V_ds = Q / Area_ds
         # print(f'V_us: {V_us}   V_ds: {V_ds}')
-        V_head_us = V_us ** 2.0 / (2 * gravity) 
+        V_head_us = V_us ** 2.0 / (2 * gravity)
         V_head_ds = V_ds ** 2.0 / (2 * gravity)
         # print(f'V_head_us: {V_head_us}   V_head_ds: {V_head_ds}')
         Pw_us = section_us.get_wetted_perimeter_depth(y_us)
@@ -260,7 +181,7 @@ class SteadyNetwork(Network):
         # print(y_us, y_guess, y_ds, z_us, z_ds, Q, V_us, V_ds, hl_us2ds, constants.MANNING_SI)
         WSE_ds = y_ds + z_ds
         WSE_us = y_us + z_us
-        E_ds = helpers.Bernoulli_Energy(WSE_ds, V_ds, 0, gravity) 
+        E_ds = helpers.Bernoulli_Energy(WSE_ds, V_ds, 0, gravity)
         E_us = helpers.Bernoulli_Energy(WSE_us, V_us, hl_us2ds, gravity)
         # print(f'E_ds: {E_ds}')
         # print(f'E_us: {E_us}')
@@ -275,7 +196,7 @@ class SteadyNetwork(Network):
         V_us = Q / Area_us
         V_ds = Q / Area_ds
         # print(f'{V_us} {V_ds}')
-        V_head_us = V_us ** 2.0 / (2 * gravity) 
+        V_head_us = V_us ** 2.0 / (2 * gravity)
         V_head_ds = V_ds ** 2.0 / (2 * gravity)
         # print(f'{V_head_us} {V_head_ds}')
         Pw_us = section_us.get_wetted_perimeter_depth(y_us)
@@ -304,7 +225,7 @@ class SteadyNetwork(Network):
         # print(y_us, z_us)
         WSE_ds = y_ds + z_ds
         WSE_us = y_us + z_us
-        E_ds = helpers.Bernoulli_Energy(WSE_ds, V_ds, 0, gravity) 
+        E_ds = helpers.Bernoulli_Energy(WSE_ds, V_ds, 0, gravity)
         E_us = helpers.Bernoulli_Energy(WSE_us, V_us, hl_us2ds, gravity)
         # print(f'E_ds: {E_ds}')
         # print(f'E_us: {E_us}')
