@@ -1,23 +1,146 @@
 import constants
 import helpers
+import numpy as np
 
 class Network:
     '''Class definition for reaches related as part of a computational scheme for
        open channel routing '''
-    def __init__(self):
+    #TODO: Somewhere, there will need to be a de-tangling of how we call and initialize a rectangular channel vs.
+    #      vs. trapezoidal, vs. generalized, etc. Perhaps that can be handled within the input files...
+    #      For now, assume rectangular
+    def __init__(self, input_type = 'simple', input_vars = None):
         '''initialize a new Network of sections/reaches'''
         self.sections = []
         self.time_list = [] # TODO: this initialization could be for a datetime series to contain the timestamps
         self.upstream_flow_ts = []
         self.downstream_stage_ts = []
 
-    def input_and_initialize_simple(self):
+        if input_vars:
+            if input_type is 'simple':
+                self.input_and_initialize_simple(**input_vars)
+                #helped by this SO post:
+                #https://stackoverflow.com/questions/334655/passing-a-dictionary-to-a-function-as-keyword-parameters
+                               #
+                               # n_sections = input_vars['n_sections']
+                               # , n_timesteps = input_vars['n_timesteps']
+                               # , station_downstream = input_vars['station_downstream']
+                               # , station_upstream = input_vars['station_upstream']
+                               # , bottom_width_downstream = input_vars['bottom_width_downstream']
+                               # , bottom_width_upstream = input_vars['bottom_width_upstream']
+                               # , bottom_z_downstream = input_vars['bottom_z_downstream']
+                               # , bottom_z_upstream = input_vars['bottom_z_upstream']
+                               # , dx_ds_boundary = input_vars['dx_ds_boundary']
+                               # , S0_ds_boundary = input_vars['S0_ds_boundary']
+                               # , manning_n_ds_all = input_vars['manning_n_ds_all']
+                               # , loss_coeff_all = input_vars['loss_coeff_all']
+                               # , hydrograph_steady_time = input_vars['hydrograph_steady_time']
+                               # , hydrograph_event_width = input_vars['hydrograph_event_width']
+                               # , hydrograph_skewness = input_vars['hydrograph_skewness']
+                               # , hydrograph_qpeak = input_vars['hydrograph_qpeak']
+                               # )
+        #TODO: Replace following psuedocode
+            elif input_type is 'file':
+                filetype = input_vars['filetype']
+                if filetype is 'json':
+                    file = read(filepath)
+                    for v in file:
+                        pass
+                elif filetype is 'mesh.py':
+                    file = read(filepath)
+                    for v in file:
+                        pass
+                else:
+                    print('not-yet-implemented input_type')
+            else: #If nothing was defined, prepare a simple network with some default parameters.
+            #TODO: This should be properly error trapped/handled.
+                self.input_and_initialize_simple(n_sections = 11
+                                            , n_timesteps = 22
+                                            , station_downstream = 0
+                                            , station_upstream = 10000000
+                                            , bottom_width_downstream = 100
+                                            , bottom_width_upstream = 1000
+                                            , bottom_z_downstream = 0
+                                            , bottom_z_upstream = 100
+                                            , dx_ds_boundary = 1000
+                                            , S0_ds_boundary = 0.0001
+                                            , manning_n_ds_all = 0.035
+                                            , loss_coeff_all = 0.01
+                                            , hydrograph_steady_time = 0
+                                            , hydrograph_event_width = 7
+                                            , hydrograph_skewness = 4
+                                            , hydrograph_qpeak = 5000)
+
+
+    def input_and_initialize(self, input_opt=1, input_path=None, output_path=None, upstream_flow_ts=None, downstream_stage_ts=None):
         pass
+    #TODO: These Input and Initialize methods could be different methods within the Network class
+    #TODO: Make GRAVITY and MANNING_SI constants consistent with anticipated units in the input step and
+    #get them to be called/passsed consistently.
+    def input_and_initialize_simple(self, n_sections = 11
+                                        , n_timesteps = 22
+                                        , station_downstream = 0
+                                        , station_upstream = 10000000
+                                        , bottom_width_downstream = 100
+                                        , bottom_width_upstream = 1000
+                                        , bottom_z_downstream = 0
+                                        , bottom_z_upstream = 100
+                                        , dx_ds_boundary = 1000
+                                        , S0_ds_boundary = 0.0001
+                                        , manning_n_ds_all = 0.035
+                                        , loss_coeff_all = 0.01
+                                        , hydrograph_steady_time = 0
+                                        , hydrograph_event_width = 7
+                                        , hydrograph_skewness = 4
+                                        , hydrograph_qpeak = 5000):
+        ''' This input option is intended to be an extremely simple channel for testing and plotting development'''
+        self.time_list = range(n_timesteps)
+        #TODO: Convert all timesteps to time_stamps
+        # import pandas as pd
+        # pandas.date_range("11:00", "21:30", freq="30min")
+        # datelist = pd.date_range(pd.datetime.today(), periods=100).tolist()
+
+        I_UPSTREAM = n_sections - 1
+        I_DOWNSTREAM = 0
+
+        stations = np.linspace(station_downstream, station_upstream, n_sections, False)
+        bottom_widths = np.linspace(bottom_width_upstream, bottom_width_downstream, len(stations), False)
+        bottom_zs = np.linspace(bottom_z_downstream,bottom_z_upstream, len(stations), False)
+
+        # print(NCOMP, len(stations))
+
+        for i, bw in enumerate(bottom_widths):
+            # continue
+            self.sections.append(Network.RectangleSection(station=stations[i]
+                                    , bottom_width=bottom_widths[i]
+                                    , bottom_z = bottom_zs[i]
+                                    , manning_n_ds = manning_n_ds_all))
+            self.sections[i].loss_coeff_ds = loss_coeff_all
+            # print(sections[i].bed_slope_ds, sections[i].dx_ds, sections[i].bottom_z)
+            if i == 0:
+                self.sections[i].dx_ds = dx_ds_boundary #Irrelevant with the slope defined
+                self.sections[i].bed_slope_ds = S0_ds_boundary
+            else:
+                self.sections[i].dx_ds = self.sections[i].station - self.sections[i-1].station
+                self.sections[i].bed_slope_ds = (self.sections[i].bottom_z \
+                                            - self.sections[i-1].bottom_z) \
+                                            / self.sections[i].dx_ds
+
+        #TODO: clean up this code to generate intial upstream flow and downstream stage boundary time series
+        self.upstream_flow_ts = helpers.Generate_Hydrograph(len(self.time_list) , hydrograph_steady_time
+                                                                                , hydrograph_event_width
+                                                                                , hydrograph_skewness
+                                                                                , hydrograph_qpeak)
+        self.downstream_stage_ts = [5*helpers.y_direct(self.sections[I_DOWNSTREAM].bottom_width
+                                             , self.sections[I_DOWNSTREAM].manning_n_ds
+                                             , self.sections[I_DOWNSTREAM].bed_slope_ds
+                                             , q ) for q in self.upstream_flow_ts]
+        # print(self.upstream_flow_ts)
+        # print(self.downstream_stage_ts)
 
     def compute_initial_state(self):
         pass
 
-    def compute_time_steps(self):
+    def compute_time_steps(self, verbose=False):
         '''This function can operate with
         1) Nt and dt (number of time steps and size of time step) and a pointer to boundary information
         2) List of times and a pointer to boundary information
@@ -26,7 +149,8 @@ class Network:
          make it work for #3 and then have other translator methods that create these.'''
 
         for j, t in enumerate(self.time_list):
-            # print(j+1 , len(self.time_list), len(self.upstream_flow_ts), len(self.downstream_stage_ts))
+            if verbose: print(j+1 , len(self.time_list), len(self.upstream_flow_ts), len(self.downstream_stage_ts))
+            if verbose: print(f'timestep {j} {t}')
             if j+1 < len(self.time_list):
                 self.compute_next_time_step_state(j_current = j
                                                   , j_next = j + 1
@@ -46,6 +170,21 @@ class Network:
                                          #TODO: change the function to be dependednt on the time value instead of simply time-step index.
 
         pass
+
+    def write_state(self, type, file):
+        output = self.output_state(type, file)
+        with open(file, 'w') as output_file:
+            output_file.write(output)
+
+    def output_state(self, type):
+        if type is 'pickle':
+            state = self.pickle_output(self.network)
+        else:
+            print("only 'pickle' output is implemented")
+        return state
+
+    def pickle_output(self, network):
+        return pickle.dumps(network.sections)
 
     class TimeStep:
     #TODO: QUESTION FOR Nick

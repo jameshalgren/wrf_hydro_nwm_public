@@ -17,62 +17,65 @@ import os
 
 
 class SteadyNetwork(Network):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
     #TODO: These Input and Initialize methods could be different methods within the Network class
     #TODO: Make GRAVITY and MANNING_SI constants consistent with anticipated units in the input step and
     #get them to be called/passsed consistently.
-    def input_and_initialize(self, input_opt=1, input_path=None, output_path=None, upstream_flow_ts=None, downstream_stage_ts=None):
-        ''' This input option is intended to be an extremely simple channel for testing and plotting development'''
-        input_vars = {}
-
-        self.time_list = range(22)
-        # import pandas as pd
-        # pandas.date_range("11:00", "21:30", freq="30min")
-        # datelist = pd.date_range(pd.datetime.today(), periods=100).tolist()
-
-        n_sections = 11
-        I_UPSTREAM = n_sections - 1
-        I_DOWNSTREAM = 0
-
-        station_downstream = 0
-        station_upstream = 1000000
-        stations = np.linspace(station_downstream, station_upstream, n_sections, False)
-        bottom_widths = np.linspace(1000, 100, len(stations), False)
-        bottom_zs = np.linspace(0,100, len(stations), False)
-
-        # print(NCOMP, len(stations))
-
-        input_vars.update({"dxini": 1000})
-        input_vars.update({"manning_n_ds": 0.035})
-        input_vars.update({"loss_coeff": 0.1})
-
-        for i, bw in enumerate(bottom_widths):
-            # continue
-            self.sections.append(Network.RectangleSection(station=stations[i]
-                                    , bottom_width=bottom_widths[i]
-                                    , bottom_z = bottom_zs[i]
-                                    , manning_n_ds = input_vars['manning_n_ds']))
-            self.sections[i].loss_coeff_ds = input_vars['loss_coeff']
-            # print(sections[i].bed_slope_ds, sections[i].dx_ds, sections[i].bottom_z)
-            if i == 0:
-                self.sections[i].dx_ds = input_vars['dxini'] #Irrelevant with the slope defined
-                self.sections[i].bed_slope_ds = 0.0001
-            else:
-                self.sections[i].dx_ds = self.sections[i].station - self.sections[i-1].station
-                self.sections[i].bed_slope_ds = (self.sections[i].bottom_z \
-                                            - self.sections[i-1].bottom_z) \
-                                            / self.sections[i].dx_ds
-
-        #TODO: clean up this code to generate intial upstream flow and downstream stage boundary time series
-        self.upstream_flow_ts = helpers.Generate_Hydrograph(len(self.time_list) , 0 , 7 , 4 , 5000)
-        self.downstream_stage_ts = [5*helpers.y_direct(self.sections[I_DOWNSTREAM].bottom_width
-                                             , self.sections[I_DOWNSTREAM].manning_n_ds
-                                             , self.sections[I_DOWNSTREAM].bed_slope_ds
-                                             , q ) for q in self.upstream_flow_ts]
-        # print(self.upstream_flow_ts)
-        # print(self.downstream_stage_ts)
-
-        return input_vars
-
+#    def input_and_initialize(self, input_opt=1, input_path=None, output_path=None, upstream_flow_ts=None, downstream_stage_ts=None):
+#        ''' This input option is intended to be an extremely simple channel for testing and plotting development'''
+#        input_vars = {}
+#
+#        self.time_list = range(22)
+#        # import pandas as pd
+#        # pandas.date_range("11:00", "21:30", freq="30min")
+#        # datelist = pd.date_range(pd.datetime.today(), periods=100).tolist()
+#
+#        n_sections = 11
+#        I_UPSTREAM = n_sections - 1
+#        I_DOWNSTREAM = 0
+#
+#        station_downstream = 0
+#        station_upstream = 1000000
+#        stations = np.linspace(station_downstream, station_upstream, n_sections, False)
+#        bottom_widths = np.linspace(1000, 100, len(stations), False)
+#        bottom_zs = np.linspace(0,100, len(stations), False)
+#
+#        # print(NCOMP, len(stations))
+#
+#        input_vars.update({"dxini": 1000})
+#        input_vars.update({"manning_n_ds": 0.035})
+#        input_vars.update({"loss_coeff": 0.1})
+#
+#        for i, bw in enumerate(bottom_widths):
+#            # continue
+#            self.sections.append(Network.RectangleSection(station=stations[i]
+#                                    , bottom_width=bottom_widths[i]
+#                                    , bottom_z = bottom_zs[i]
+#                                    , manning_n_ds = input_vars['manning_n_ds']))
+#            self.sections[i].loss_coeff_ds = input_vars['loss_coeff']
+#            # print(sections[i].bed_slope_ds, sections[i].dx_ds, sections[i].bottom_z)
+#            if i == 0:
+#                self.sections[i].dx_ds = input_vars['dxini'] #Irrelevant with the slope defined
+#                self.sections[i].bed_slope_ds = 0.0001
+#            else:
+#                self.sections[i].dx_ds = self.sections[i].station - self.sections[i-1].station
+#                self.sections[i].bed_slope_ds = (self.sections[i].bottom_z \
+#                                            - self.sections[i-1].bottom_z) \
+#                                            / self.sections[i].dx_ds
+#
+#        #TODO: clean up this code to generate intial upstream flow and downstream stage boundary time series
+#        self.upstream_flow_ts = helpers.Generate_Hydrograph(len(self.time_list) , 0 , 7 , 4 , 5000)
+#        self.downstream_stage_ts = [5*helpers.y_direct(self.sections[I_DOWNSTREAM].bottom_width
+#                                             , self.sections[I_DOWNSTREAM].manning_n_ds
+#                                             , self.sections[I_DOWNSTREAM].bed_slope_ds
+#                                             , q ) for q in self.upstream_flow_ts]
+#        # print(self.upstream_flow_ts)
+#        # print(self.downstream_stage_ts)
+#
+#        return input_vars
+#
     def compute_initial_state(self):
         ''' Compute a steady initial state (this uses the same math as the next-
             time-step-state, only we simply assume we are using the first timestep
@@ -240,15 +243,33 @@ class SteadyNetwork(Network):
             super().__init__(*args, **kwargs)
 
 def main():
+    input_type = 'simple'
+    input_vars = {}
+    input_vars['n_sections'] = 11
+    input_vars['n_timesteps'] = 22 
+    input_vars['station_downstream'] = 0
+    input_vars['station_upstream'] = 1000000
+    input_vars['bottom_width_downstream'] = 100
+    input_vars['bottom_width_upstream'] = 1000
+    input_vars['bottom_z_downstream'] = 0
+    input_vars['bottom_z_upstream'] = 100
+    input_vars['dx_ds_boundary'] = 1000
+    input_vars['S0_ds_boundary'] = 0.0001
+    input_vars['manning_n_ds_all'] = 0.035
+    input_vars['loss_coeff_all'] = 0.03
+    input_vars['hydrograph_steady_time'] = 0
+    input_vars['hydrograph_event_width'] = 7
+    input_vars['hydrograph_skewness'] = 4
+    input_vars['hydrograph_qpeak'] = 5000
     # network = DummyNetwork()
     # network = SimpleFlowTrace() #DongHa's method.
-    network = SteadyNetwork()
+    network = SteadyNetwork(input_type = input_type, input_vars = input_vars)
     # network = MuskCNetwork()
     # network = MESHDNetwork()
 
-    network.input_and_initialize()
+    #network.input_and_initialize()
     network.compute_initial_state()
-    network.compute_time_steps()
+    network.compute_time_steps(verbose = True)
 
 if __name__ == "__main__":
     main()
