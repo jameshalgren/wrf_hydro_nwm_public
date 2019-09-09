@@ -1,6 +1,7 @@
 import constants
 import helpers
 import numpy as np
+import csv
 
 class Network:
     '''Class definition for reaches related as part of a computational scheme for
@@ -38,19 +39,15 @@ class Network:
                                # , hydrograph_skewness = input_vars['hydrograph_skewness']
                                # , hydrograph_qpeak = input_vars['hydrograph_qpeak']
                                # )
-        #TODO: Replace following psuedocode
-            elif input_type is 'file':
+            elif input_type == 'file':
                 filetype = input_vars['filetype']
-                if filetype is 'json':
-                    file = read(filepath)
+                if filetype == 'json': #TODO: Replace json psuedocode
+                    file = read(input_path)
                     for v in file:
                         pass
-                elif filetype is 'mesh.py':
-                    file = read(filepath)
-                    for v in file:
-                        pass
-                else:
-                    print('not-yet-implemented input_type')
+                elif filetype == 'mesh.py':
+                    self.input_and_initialize_meshpyfile(**input_vars)
+                else: print('not-yet-implemented input_type')
             else: #If nothing was defined, prepare a simple network with some default parameters.
             #TODO: This should be properly error trapped/handled.
                 self.input_and_initialize_simple(n_sections = 11
@@ -71,8 +68,107 @@ class Network:
                                             , hydrograph_qpeak = 5000)
 
 
-    def input_and_initialize(self, input_opt=1, input_path=None, output_path=None, upstream_flow_ts=None, downstream_stage_ts=None):
-        pass
+    def input_and_initialize_meshpyfile(self, filetype = None, input_path=None):
+        with open(input_path, newline='') as f:
+    
+            # Put the first chunk of each line into a lsit
+            data = list(map(lambda x:x.split(' ')[0] , f.read().split('\n')))
+
+            #TODO: Get rid of this kludge to cast the input numbers into the right datatype
+            for i, item in enumerate (data[0:23]):
+                data[i] = float(item)
+
+            data[3] = int(data[3])
+            data[4] = int(data[4])
+
+            # Assign all the input values into the variables
+            dtini, dxini, tfin, n_sections, ntim, phi, theta, thetas, thesinv, alfa2,\
+                alfa4, f, skk, yy, qq, cfl, time_step_optimization, yw, bw, w, option, yn, qn, igate,\
+                bed_elevation_path, upstream_path, downstream_path, channel_width_path,\
+                output_path, option_dsbc, null = data
+
+        I_UPSTREAM = n_sections - 1
+        I_DOWNSTREAM = 0
+
+        # Read in bed elevation and bottom width input
+        with open(bed_elevation_path, newline='') as file1:
+            with open(channel_width_path, newline='') as file2:
+                read_data1 = list(csv.reader(file1, delimiter=' '))
+                read_data2 = list(csv.reader(file2, delimiter=' '))
+                for i in range(n_sections): # use usual convention of i as spatial dimension
+                    z = float(read_data1[i][1])
+                    y0 = z + yy #TODO: This seems like a clunky definition of the initial water surface
+                                #      Elevation and I think we can do better.
+                    b0 = float(read_data2[i][1])
+                    self.sections.append(Network.RectangleSection(i, b0, z, dxini)) # dx is a static value in the test cases
+
+        # Read hydrograph input Upstream and Downstream
+        with open(upstream_path, newline='') as file3:
+            with open(downstream_path, newline='') as file4:
+                read_data3 = list(csv.reader(file3, delimiter=' '))
+                read_data4 = list(csv.reader(file4, delimiter=' '))
+                for j in range(ntim): # use usual convention of j as time dimension
+                    self.upstream_flow_ts.append(float(read_data3[j][1]))
+                    self.downstream_stage_ts.append(float(read_data4[j][1]))
+                    self.time_list.append(j)
+                    #self.sections[I_UPSTREAM].time_steps.append(self.TimeStep(new_flow = q_upstream))
+                    #self.sections[I_DOWNSTREAM].time_steps.append(self.TimeStep(new_depth = y_downstream))
+#                else:
+#                    #TODO: Work with Nick to get this data dictionary thing passing
+#                    #into and out of this function properly
+#                    #TODO: INSERT code to generate intial sections and boundary time series
+#                    input_data.update({"dtini": 10.0})
+#                    input_data.update({"dxini": 20.0})
+#                    input_data.update({"tfin": 5000.})
+#                    input_data.update({"ncomp": 501})
+#                    input_data.update({"ntim": 5000})
+#                    input_data.update({"phi": 1.0})
+#                    input_data.update({"theta": 1.0})
+#                    input_data.update({"thetas": 1.0})
+#                    input_data.update({"thesinv": 1.0})
+#                    input_data.update({"alfa2": 0.5})
+#                    input_data.update({"alfa4": 0.1})
+#                    input_data.update({"f": 1.0})
+#                    input_data.update({"skk": 20.0 })
+#                    input_data.update({"yy": 6.0})
+#                    input_data.update({"qq": 100.0})
+#                    input_data.update({"cfl": 1.0})
+#                    input_data.update({"ots": 0.0})
+#                    input_data.update({"yw": 0.0})
+#                    input_data.update({"bw": 20.0})
+#                    input_data.update({"w": 1.1})
+#                    input_data.update({"option": 1.0})
+#                    input_data.update({"yn": 0.1000})
+#                    input_data.update({"qn": 0.0085})
+#                    input_data.update({"igate": 700})
+#
+#
+#                    time_steps = range(100)
+#                    stations = range(10000,11001, 100)
+#                    bottom_widths = range(100, 1001, 100)
+#                    bottom_zs = range(0,100,10)
+#
+#                    upstream_flows = Generate_Hydrograph(100 , 20 , 2 , 4 , 5000)
+#                    # for i, station, bottom_width, bottom_z in enumerate(stations):
+#                    #     print(f'{i} {station} {bottom_width} {bottom_z}')
+#                    # for i, flow in enumerate(upstream_flows):
+#                    #     print(f'{i} {flow}')
+#                    sections = []
+#
+#                    for i, bw in enumerate(bottom_widths):
+#                        sections.append(Section(stations[i], bottom_widths[i], bottom_zs[i]))
+#                        if i == 0:
+#                            sections[i].dx_ds = 10
+#                            sections[i].bed_slope_ds = .1
+#                        else:
+#                            sections[i].dx_ds = sections[i].station - sections[i-1].station
+#                            sections[i].bed_slope_ds = (sections[i].bottom_z - \
+#                                                        sections[i-1].bottom_z)/ \
+#                                                        sections[i].dx_ds
+#
+#
+#                    return section_arr, input_data
+#
     #TODO: These Input and Initialize methods could be different methods within the Network class
     #TODO: Make GRAVITY and MANNING_SI constants consistent with anticipated units in the input step and
     #get them to be called/passsed consistently.
@@ -130,10 +226,18 @@ class Network:
                                                                                 , hydrograph_event_width
                                                                                 , hydrograph_skewness
                                                                                 , hydrograph_qpeak)
+#        self.time_list, self.downstream_stage_ts = [zip(j, 5*helpers.y_direct(self.sections[I_DOWNSTREAM].bottom_width
+#                                             , self.sections[I_DOWNSTREAM].manning_n_ds
+#                                             , self.sections[I_DOWNSTREAM].bed_slope_ds
+#                                             , q )) for j, q in enumerate[self.upstream_flow_ts]]
+#
+        self.time_list = [j for j, _ in enumerate(self.upstream_flow_ts)]
+
         self.downstream_stage_ts = [5*helpers.y_direct(self.sections[I_DOWNSTREAM].bottom_width
-                                             , self.sections[I_DOWNSTREAM].manning_n_ds
-                                             , self.sections[I_DOWNSTREAM].bed_slope_ds
-                                             , q ) for q in self.upstream_flow_ts]
+                                              , self.sections[I_DOWNSTREAM].manning_n_ds
+                                              , self.sections[I_DOWNSTREAM].bed_slope_ds
+                                              , q ) for q in self.upstream_flow_ts]
+
         # print(self.upstream_flow_ts)
         # print(self.downstream_stage_ts)
 
@@ -148,6 +252,7 @@ class Network:
          but since they really all boil down to the last situation, we'll just
          make it work for #3 and then have other translator methods that create these.'''
 
+        # print(self.time_list)
         for j, t in enumerate(self.time_list):
             if verbose: print(j+1 , len(self.time_list), len(self.upstream_flow_ts), len(self.downstream_stage_ts))
             if verbose: print(f'timestep {j} {t}')
