@@ -229,8 +229,8 @@ class Network:
 #        self.time_list, self.downstream_stage_ts = [zip(j, 5*helpers.y_direct(self.sections[I_DOWNSTREAM].bottom_width
 #                                             , self.sections[I_DOWNSTREAM].manning_n_ds
 #                                             , self.sections[I_DOWNSTREAM].bed_slope_ds
-#                                             , q )) for j, q in enumerate[self.upstream_flow_ts]]
-#
+#                                             , q )) for j, q in enumerate(self.upstream_flow_ts)]
+
         self.time_list = [j for j, _ in enumerate(self.upstream_flow_ts)]
 
         self.downstream_stage_ts = [5*helpers.y_direct(self.sections[I_DOWNSTREAM].bottom_width
@@ -305,16 +305,16 @@ class Network:
             # Per-time-step downstream reach properties
             self.friction_slope_ds = 0
 
-    def add_time_step(self, section, new_flow, new_depth):
+    def add_time_step(self, section, new_flow, new_depth): #TODO: the Self and Section inputs are probably redundant
         section.time_steps.append(self.TimeStep(new_flow = new_flow, new_depth=new_depth))
 
-    def add_upstream_boundary_condition_time_step(self, section, upstream_flow):
+    def add_upstream_boundary_condition_time_step(self, section, upstream_flow): #TODO: The Self and Section inputs are probably redundant
         section.time_steps.append(self.TimeStep(new_flow = upstream_flow))
 
-    def add_downstream_boundary_condition_time_step(self, section, downstream_depth):
+    def add_downstream_boundary_condition_time_step(self, section, downstream_depth): #TODO: the Self and Section inputs are probably redundant
         section.time_steps.append(self.TimeStep(new_depth = downstream_depth))
 
-    def add_normal_depth_time_step(self, section, new_flow):
+    def add_normal_depth_time_step(self, section, new_flow): #TODO: the Self and Section inputs are probably redundant
         new_depth = helpers.y_direct(section.bottom_width, section.manning_n_ds, section.bed_slope_ds, new_flow)
         section.time_steps.append(self.TimeStep(new_flow=new_flow, new_depth=new_depth))
 

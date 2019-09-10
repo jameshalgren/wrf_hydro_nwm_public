@@ -67,6 +67,27 @@ class MESHpyNetwork(Network):
             # super(Network.TimeStep, self).__init__(*args, **kwargs)
             super().__init__(*args, **kwargs)
 
+            # Per-time-step at-a-section properties
+            self.flow = 0
+            self.delta_flow_corrector = 0
+            self.delta_flow_predictor = 0 
+            self.delta_area_corrector = 0 
+            self.delta_area_predictor = 0 
+            self.depth = 0
+            self.water_z = 0
+            self.flow_area = 0
+            self.ci1 = 0
+            self.hy = 0 #(temporary variable for computing co)
+            self.c0 = 0
+
+            # Per-time-step downstream reach properties
+            self.ci2_ds = 0
+            # self.friction_slope_ds = 0 # Derived from parent Class, Network.TimeStep
+            self.as0_ds = 0
+            self.gs0_ds = 0
+            self.sigma_ds = 0 # Sigma is approximately equivalent to the courant parameter, but not quite
+            self.dbdx = 0
+
 def main():
     
     input_type = 'file'
