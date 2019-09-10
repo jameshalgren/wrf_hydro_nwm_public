@@ -3,11 +3,66 @@ import helpers
 import constants
 from network import Network
 import os
-import Meshpy
+import meshfunc as meshfunc
 
 class MESHpyNetwork(Network):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+    def input_and_initialize_simple(section_arr, input_path=None, input_opt=1, output_path=None):
+        '''Override the simple input_and_initialize function from network.py'''
+        input_data = {}
+        #TODO: Work with Nick to get this data dictionary thing passing 
+        #into and out of this function properly
+        #TODO: INSERT code to generate intial sections and boundary time series 
+        input_data.update({"dtini": 10.0})
+        input_data.update({"dxini": 20.0})
+        input_data.update({"tfin": 5000.})
+        input_data.update({"ncomp": 501})
+        input_data.update({"ntim": 5000})
+        input_data.update({"phi": 1.0})
+        input_data.update({"theta": 1.0})
+        input_data.update({"thetas": 1.0})
+        input_data.update({"thesinv": 1.0})
+        input_data.update({"alfa2": 0.5})
+        input_data.update({"alfa4": 0.1})
+        input_data.update({"f": 1.0})
+        input_data.update({"skk": 20.0 })
+        input_data.update({"yy": 6.0})
+        input_data.update({"qq": 100.0})
+        input_data.update({"cfl": 1.0})
+        input_data.update({"ots": 0.0})
+        input_data.update({"yw": 0.0})
+        input_data.update({"bw": 20.0})
+        input_data.update({"w": 1.1})
+        input_data.update({"option": 1.0})
+        input_data.update({"yn": 0.1000})
+        input_data.update({"qn": 0.0085})
+        input_data.update({"igate": 700})
+
+
+        time_steps = range(100)
+        stations = range(10000,11001, 100)
+        bottom_widths = range(100, 1001, 100)
+        bottom_zs = range(0,100,10)
+
+        upstream_flows = Generate_Hydrograph(100 , 20 , 2 , 4 , 5000)
+        # for i, station, bottom_width, bottom_z in enumerate(stations):
+        #     print(f'{i} {station} {bottom_width} {bottom_z}')
+        # for i, flow in enumerate(upstream_flows):
+        #     print(f'{i} {flow}')
+        sections = []
+
+        for i, bw in enumerate(bottom_widths):
+            sections.append(Section(stations[i], bottom_widths[i], bottom_zs[i]))
+            if i == 0:
+                sections[i].dx_ds = 10
+                sections[i].bed_slope_ds = .1
+            else:
+                sections[i].dx_ds = sections[i].station - sections[i-1].station
+                sections[i].bed_slope_ds = (sections[i].bottom_z - \
+                                            sections[i-1].bottom_z)/ \
+                                            sections[i].dx_ds 
 
     def compute_initial_state(self):
         ''' Compute a steady initial state (this uses the same math as the next-
@@ -24,21 +79,57 @@ class MESHpyNetwork(Network):
                                          , upstream_flow_next
                                          , downstream_stage_current
                                          , downstream_stage_next):
-        ''' the Steady Network performs the Standard Step method to compute a steady profile
-            for each flow and downstream stage in the series.
-        '''
+
+        # secpred, apply_corrector, and matrixc should be replaced by 
+        # section, apply_predictor, and matrixp, respectively. 
+        # There would need to be a flag of some sort to handle the direction. 
+        meshfunc.compute_sections(self.sections, j_current
+                                         , j_next
+                                         , upstream_flow_current
+                                         , upstream_flow_next
+                                         , downstream_stage_current
+                                         , downstream_stage_next)
+        meshfunc.matrixp(self.sections, j_current
+                                         , j_next
+                                         , upstream_flow_current
+                                         , upstream_flow_next
+                                         , downstream_stage_current
+                                         , downstream_stage_next)
+        meshfunc.apply_predictor(self.sections, j_current
+                                         , j_next
+                                         , upstream_flow_current
+                                         , upstream_flow_next
+                                         , downstream_stage_current
+                                         , downstream_stage_next)
+        meshfunc.secpred(self.sections, j_current
+                                         , j_next
+                                         , upstream_flow_current
+                                         , upstream_flow_next
+                                         , downstream_stage_current
+                                         , downstream_stage_next)
+        meshfunc.matrixc(self.sections, j_current
+                                         , j_next
+                                         , upstream_flow_current
+                                         , upstream_flow_next
+                                         , downstream_stage_current
+                                         , downstream_stage_next)
+        meshfunc.apply_corrector(self.sections, j_current
+                                         , j_next
+                                         , upstream_flow_current
+                                         , upstream_flow_next
+                                         , downstream_stage_current
+                                         , downstream_stage_next)
+
         self.add_normal_time_step(j_current, j_next, self.sections, downstream_stage_next, upstream_flow_next)
 
     def add_normal_time_step(self, j_current, j_next, sections, downstream_stage_next, upstream_flow_next):
         # TODO: Ask Nick -- should this be inside the Steady Timestep class?
 
         for i, section in enumerate(sections):
-            ''' Step through using the standard step method
-            '''
-            # print(f'dssn {downstream_stage_next}')
+            # print(f'downstream stage next {downstream_stage_next}')
             if i == 0: #Add known downstream boundary
                 section.time_steps.append(self.TimeStep(new_flow = upstream_flow_next
-                                                       ,new_depth = downstream_stage_next))
+                                                        , new_depth = downstream_stage_next))
                 # print(f'stsd_jcurr {section.time_steps[j_current].depth}')
                 # print(f'sdstsd_jcurr {section_ds.time_steps[j_current].depth}')
                 # print(f's0tsd_jcurr {sections[0].time_steps[j_current].depth}')
@@ -61,24 +152,20 @@ class MESHpyNetwork(Network):
             y_guess = helpers.y_direct(section.bottom_width, section.manning_n_ds, section.bed_slope_ds, upstream_flow_next)
             section.time_steps.append(self.TimeStep(new_flow = upstream_flow_next, new_depth = y_guess))
 
-
-
     class TimeStep(Network.TimeStep):
         def __init__(self, *args, **kwargs):
             # super(Network.TimeStep, self).__init__(*args, **kwargs)
             super().__init__(*args, **kwargs)
 
             # Per-time-step at-a-section properties
-            self.flow = 0
             self.delta_flow_corrector = 0
             self.delta_flow_predictor = 0 
             self.delta_area_corrector = 0 
             self.delta_area_predictor = 0 
-            self.depth = 0
             self.water_z = 0
             self.flow_area = 0
             self.ci1 = 0
-            self.hy = 0 #(temporary variable for computing co)
+            self.hy = 0 # Hydraulic Radius (used to compute co)
             self.c0 = 0
 
             # Per-time-step downstream reach properties

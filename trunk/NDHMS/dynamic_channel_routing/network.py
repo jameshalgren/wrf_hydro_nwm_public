@@ -100,7 +100,12 @@ class Network:
                     y0 = z + yy #TODO: This seems like a clunky definition of the initial water surface
                                 #      Elevation and I think we can do better.
                     b0 = float(read_data2[i][1])
-                    self.sections.append(Network.RectangleSection(i, b0, z, dxini)) # dx is a static value in the test cases
+                    # print(f'b0 {b0}')
+                    self.sections.append(Network.RectangleSection(station = i
+                                         , bottom_z = z
+                                         , bottom_width = b0
+                                         , dx_ds = dxini
+                                         , manning_n_ds = 1/f)) # dx is a static value in the test cases
 
         # Read hydrograph input Upstream and Downstream
         with open(upstream_path, newline='') as file3:
@@ -189,12 +194,6 @@ class Network:
                                         , hydrograph_skewness = 4
                                         , hydrograph_qpeak = 5000):
         ''' This input option is intended to be an extremely simple channel for testing and plotting development'''
-        self.time_list = range(n_timesteps)
-        #TODO: Convert all timesteps to time_stamps
-        # import pandas as pd
-        # pandas.date_range("11:00", "21:30", freq="30min")
-        # datelist = pd.date_range(pd.datetime.today(), periods=100).tolist()
-
         I_UPSTREAM = n_sections - 1
         I_DOWNSTREAM = 0
 
@@ -222,7 +221,7 @@ class Network:
                                             / self.sections[i].dx_ds
 
         #TODO: clean up this code to generate intial upstream flow and downstream stage boundary time series
-        self.upstream_flow_ts = helpers.Generate_Hydrograph(len(self.time_list) , hydrograph_steady_time
+        self.upstream_flow_ts = helpers.Generate_Hydrograph(n_timesteps , hydrograph_steady_time
                                                                                 , hydrograph_event_width
                                                                                 , hydrograph_skewness
                                                                                 , hydrograph_qpeak)
@@ -232,6 +231,11 @@ class Network:
 #                                             , q )) for j, q in enumerate(self.upstream_flow_ts)]
 
         self.time_list = [j for j, _ in enumerate(self.upstream_flow_ts)]
+        #TODO: Convert all timesteps to time_stamps
+        # import pandas as pd
+        # pandas.date_range("11:00", "21:30", freq="30min")
+        # datelist = pd.date_range(pd.datetime.today(), periods=100).tolist()
+
 
         self.downstream_stage_ts = [5*helpers.y_direct(self.sections[I_DOWNSTREAM].bottom_width
                                               , self.sections[I_DOWNSTREAM].manning_n_ds
@@ -291,6 +295,20 @@ class Network:
     def pickle_output(self, network):
         return pickle.dumps(network.sections)
 
+    def output_writer(time_step, output_opt = 1, output_path = None):
+        ##WARNING THIS FUNCTION DOESN'T WORK at this point!
+        #TODO: convert this to Section-based code
+        if output_opt == 1:
+            # Open files for output
+            with open(f'{output_path}/flow_area.txt', 'w') as area_output: # unit 8
+                with open(f'{output_path}/flow.txt', 'w') as flow_output: # unit 9
+                    # Output initial condition
+                    area_output.write(f'{t} {" ".join((y[0][i] - z[i]) * bo[i] for i in range(n_sections))}\n')
+                    flow_output.write(f'{t}  {" ".join(q[0][i] for i in range(n_sections))}\n')
+        else:
+            print(f'{t} {" ".join((y[0][i] - z[i]) * bo[i] for i in range(n_sections))}\n')
+            print(f'{t}  {" ".join(q[0][i] for i in range(n_sections))}\n')
+
     class TimeStep:
     #TODO: QUESTION FOR Nick
         ''' When we are passing the time steps out to the Fortran module,
@@ -323,15 +341,16 @@ class Network:
         #e.g., SectionRectangle, SectionTrapezoid, SectionTrapFlood (for the type that
         #currently used in the National Water Model), SectionDepthArea, SectionDepthWidth, ...
         #def __init__(self, bottom_width, side_slope):
-        def __init__(self, bottom_z, comid=None, station=None, dx_ds = 10):
+        def __init__(self, bottom_z, comid=None, station=None, dx_ds = 10, manning_k = constants.MANNING_SI):
             #Time independent at-a-station properties
             self.comid = comid
             self.station = station
             self.bottom_z = bottom_z
+            self.manning_k = manning_k
             self.time_steps = [] # array of values
 
             #Time independent downstream reach properties
-            self.dx_ds = 0 # Distance to downstream section
+            self.dx_ds = dx_ds # Distance to downstream section
             self.loss_coeff_ds = 0 # Contraction and other loss coefficients to downstream section
                                 # C in the following equation
                                 # hl = Sf * dx + C * (V1**2/2g - V2**2/2g)
@@ -342,8 +361,8 @@ class Network:
         def __init__(self, bottom_width, manning_n_ds = 0.015, *args, **kwargs):
             super().__init__(*args, **kwargs)
             self.bottom_width = bottom_width
-            self.manning_n_ds = constants.MANNING_SI
-            #self.sk = constants.MANNING_SI
+            self.manning_n_ds = manning_n_ds
+            self.dbdx_ds = 0 # change in width to the next downstream section
 
         def get_area_depth(self, depth):
             return self.bottom_width * depth
