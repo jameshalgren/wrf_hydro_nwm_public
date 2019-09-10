@@ -3,6 +3,7 @@ import helpers
 import constants
 from network import Network
 import os
+import Meshpy
 
 class MESHpyNetwork(Network):
     def __init__(self, *args, **kwargs):
