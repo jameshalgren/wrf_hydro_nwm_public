@@ -10,22 +10,22 @@ def Bernoulli_Energy(WSE, V, hl = 0, gravity = constants.GRAVITY):
     ''' compute flow using Manning's equation '''
     return (WSE) + (V ** 2.0) / (2 * gravity) - hl
 
-def y_direct(B, n, S0, Q, k = constants.MANNING_SI):
+def y_direct(B, n, S0, Q, k = constants.MANNING_M):
     ''' function to compute error in depth calculation for a guessed depth compared to a calculated depth for a given flow.
         Uses scipy.optimize fmin '''
     y_optimum = fmin(flow_min, Q/B/3, args=(n, S0, Q, B, k), full_output=True, disp=False)
     return float(y_optimum[0])
 
-def flow_min(y, n, S0, Q, B, k = constants.MANNING_SI):
+def flow_min(y, n, S0, Q, B, k = constants.MANNING_M):
     ''' computes the error term comparing the Manning's computed depth with the given Q '''
     epsilon = np.abs(Manning_Q(y, n, S0, B, k) - Q)
     return epsilon
 
-def Manning_Slope(n, Q, A, Rw, k = constants.MANNING_SI):
+def Manning_Slope(n, Q, A, Rw, k = constants.MANNING_M):
     #print(f'n * Q / (k * A * (Rw ** (2/3)))) ** 2.0 {n} * {Q} / ({k} * {A} * ({Rw} ** (2/3)))) ** 2.0')
     return (n * Q / (k * A * (Rw ** (2.0/3.0)))) ** 2.0
 
-def Manning_Q(y, n, S0, B, k = constants.MANNING_SI):
+def Manning_Q(y, n, S0, B, k = constants.MANNING_M):
     ''' compute flow using Manning's equation '''
     return (k/n)*(S0**0.5)*((B*y)**(5/3))/((B+y)**(2/3))
 

@@ -70,7 +70,7 @@ class Network:
 
     def input_and_initialize_meshpyfile(self, filetype = None, input_path=None):
         with open(input_path, newline='') as f:
-    
+
             # Put the first chunk of each line into a lsit
             data = list(map(lambda x:x.split(' ')[0] , f.read().split('\n')))
 
@@ -175,7 +175,7 @@ class Network:
 #                    return section_arr, input_data
 #
     #TODO: These Input and Initialize methods could be different methods within the Network class
-    #TODO: Make GRAVITY and MANNING_SI constants consistent with anticipated units in the input step and
+    #TODO: Make GRAVITY and MANNING_M constants consistent with anticipated units in the input step and
     #get them to be called/passsed consistently.
     def input_and_initialize_simple(self, n_sections = 11
                                         , n_timesteps = 22
@@ -341,7 +341,7 @@ class Network:
         #e.g., SectionRectangle, SectionTrapezoid, SectionTrapFlood (for the type that
         #currently used in the National Water Model), SectionDepthArea, SectionDepthWidth, ...
         #def __init__(self, bottom_width, side_slope):
-        def __init__(self, bottom_z, comid=None, station=None, dx_ds = 10, manning_k = constants.MANNING_SI):
+        def __init__(self, bottom_z, comid=None, station=None, dx_ds = 10, manning_k = constants.MANNING_M):
             #Time independent at-a-station properties
             self.comid = comid
             self.station = station

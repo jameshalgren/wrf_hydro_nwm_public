@@ -12,9 +12,9 @@ class MESHpyNetwork(Network):
     def input_and_initialize_simple(section_arr, input_path=None, input_opt=1, output_path=None):
         '''Override the simple input_and_initialize function from network.py'''
         input_data = {}
-        #TODO: Work with Nick to get this data dictionary thing passing 
+        #TODO: Work with Nick to get this data dictionary thing passing
         #into and out of this function properly
-        #TODO: INSERT code to generate intial sections and boundary time series 
+        #TODO: INSERT code to generate intial sections and boundary time series
         input_data.update({"dtini": 10.0})
         input_data.update({"dxini": 20.0})
         input_data.update({"tfin": 5000.})
@@ -62,7 +62,7 @@ class MESHpyNetwork(Network):
                 sections[i].dx_ds = sections[i].station - sections[i-1].station
                 sections[i].bed_slope_ds = (sections[i].bottom_z - \
                                             sections[i-1].bottom_z)/ \
-                                            sections[i].dx_ds 
+                                            sections[i].dx_ds
 
     def compute_initial_state(self):
         ''' Compute a steady initial state (this uses the same math as the next-
@@ -80,9 +80,9 @@ class MESHpyNetwork(Network):
                                          , downstream_stage_current
                                          , downstream_stage_next):
 
-        # secpred, apply_corrector, and matrixc should be replaced by 
-        # section, apply_predictor, and matrixp, respectively. 
-        # There would need to be a flag of some sort to handle the direction. 
+        # secpred, apply_corrector, and matrixc should be replaced by
+        # section, apply_predictor, and matrixp, respectively.
+        # There would need to be a flag of some sort to handle the direction.
         meshfunc.compute_sections(self.sections, j_current
                                          , j_next
                                          , upstream_flow_current
@@ -159,14 +159,14 @@ class MESHpyNetwork(Network):
 
             # Per-time-step at-a-section properties
             self.delta_flow_corrector = 0
-            self.delta_flow_predictor = 0 
-            self.delta_area_corrector = 0 
-            self.delta_area_predictor = 0 
+            self.delta_flow_predictor = 0
+            self.delta_area_corrector = 0
+            self.delta_area_predictor = 0
             self.water_z = 0
             self.flow_area = 0
             self.ci1 = 0
             self.hy = 0 # Hydraulic Radius (used to compute co)
-            self.c0 = 0
+            self.conveyance = 0
 
             # Per-time-step downstream reach properties
             self.ci2_ds = 0
@@ -175,9 +175,20 @@ class MESHpyNetwork(Network):
             self.gs0_ds = 0
             self.sigma_ds = 0 # Sigma is approximately equivalent to the courant parameter, but not quite
             self.dbdx = 0
+            self.velocity = 0
+            self.celerity = 0
+            self.cour = 0
+            self.b11 = 0
+            self.b12 = 0
+            self.b21 = 0
+            self.b22 = 0
+            self.g11inv = 0
+            self.g12inv = 0
+            self.g21inv = 0
+            self.g22inv = 0
 
 def main():
-    
+
     input_type = 'file'
     input_vars = {}
     input_vars['filetype'] = 'mesh.py'
@@ -190,7 +201,7 @@ def main():
     input_path = os.path.join(This_Example_Path,'Qvar_us_2YNorm','Qvar_us_0033_5.0-10000.0_0100_0000-0004-0200_2NormalDepth',"input.txt")
     input_vars['input_path'] = input_path
     # print(input_path)
-    
+
     # if len(sys.argv) > 1:
     #     input_path = sys.argv[1]
     # else:
