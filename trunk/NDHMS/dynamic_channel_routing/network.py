@@ -370,8 +370,17 @@ class Network:
         def get_area_j(self, j):
             return self.bottom_z * self.time_steps[j].depth
 
+        def get_wetted_perimeter_area(self, area):
+            return self.bottom_width + 2.0 * area / self.bottom_width
+
         def get_wetted_perimeter_depth(self, depth):
             return self.bottom_width + 2.0 * depth
 
         def get_wetted_perimeter_j(self, j):
             return self.bottom_z + 2.0 * self.time_steps[j].depth
+    
+    class IrregularSection(Section):
+        
+        def get_wetted_perimeter_area(self, area):
+            return self.bottom_width + 2.0 * area / self.bottom_width
+

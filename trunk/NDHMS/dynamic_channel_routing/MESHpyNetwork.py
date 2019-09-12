@@ -9,6 +9,12 @@ class MESHpyNetwork(Network):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    '''#USE A Global Declaration here to manage these values'''
+    #TODO: WARNING -- NOT YET IMPLEMENTED DO NOT USE YET
+    crmax = 0.0
+    crmin = 100.0
+    secpred = False 
+
     def input_and_initialize_simple(section_arr, input_path=None, input_opt=1, output_path=None):
         '''Override the simple input_and_initialize function from network.py'''
         input_data = {}
@@ -164,6 +170,8 @@ class MESHpyNetwork(Network):
             self.delta_area_predictor = 0
             self.water_z = 0
             self.flow_area = 0
+            self.areap = 10
+            self.qp = 10
             self.ci1 = 0
             self.hy = 0 # Hydraulic Radius (used to compute co)
             self.conveyance = 0
