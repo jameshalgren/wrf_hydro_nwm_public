@@ -159,7 +159,6 @@ class MESHpyNetwork(Network):
         # Corrector steps could be numerically different -- but we don't need to
         # take advantage of that here, so theta and theta_s are set to be
         # equal.
-        self.thes = self.thetas
 
         # secpred, apply_corrector, and matrixc should be replaced by
         # section, apply_predictor, and matrixp, respectively.
@@ -168,6 +167,7 @@ class MESHpyNetwork(Network):
                                          , upstream_flow_current , upstream_flow_next
                                          , downstream_stage_current , downstream_stage_next
                                          , predictor_step = True)
+        self.thes = self.thetas
         self.matrix_pc(self.sections, j_current , j_next
                                          , upstream_flow_current , upstream_flow_next
                                          , downstream_stage_current , downstream_stage_next
@@ -179,6 +179,7 @@ class MESHpyNetwork(Network):
                                          , upstream_flow_current , upstream_flow_next
                                          , downstream_stage_current , downstream_stage_next
                                          , predictor_step = False)
+        self.thes = self.thesinv
         self.matrix_pc(self.sections, j_current , j_next
                                          , upstream_flow_current , upstream_flow_next
                                          , downstream_stage_current , downstream_stage_next
