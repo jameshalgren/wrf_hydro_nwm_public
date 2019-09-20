@@ -142,10 +142,7 @@ class MESHpyNetwork(Network):
                     #self.sections[self.I_UPSTREAM].time_steps.append(self.TimeStep(new_flow = q_upstream))
                     #self.sections[self.I_DOWNSTREAM].time_steps.append(self.TimeStep(new_depth = y_downstream))
     def compute_initial_state(self):
-        ''' Compute a steady initial state (this uses the same math as the next-
-            time-step-state, only we simply assume we are using the first timestep
-            of the boundary time-series.)
-        '''
+        ''' Initial state computed in initialization function.'''
         #print(self.upstream_flow_ts)
         #print(self.downstream_stage_ts)
         # self.add_normal_time_step(0, 0, self.sections, self.downstream_stage_ts[0], self.upstream_flow_ts[0])
@@ -278,7 +275,6 @@ class MESHpyNetwork(Network):
                     + section_j.g22inv * section_j.rhs2\
                     - c21 * section_US_j.delta_area_predictor\
                     - c22 * section_US_j.delta_flow_predictor
-
 
             #Update via predictor
             self.debug = True
@@ -843,7 +839,6 @@ class MESHpyNetwork(Network):
     class TimeStep(Network.TimeStep):
         '''MESH-specific time-step values'''
         def __init__(self, new_water_z = 0.0, *args, **kwargs):
-            # super(Network.TimeStep, self).__init__(*args, **kwargs)
             super().__init__(*args, **kwargs)
 
             # Per-time-step at-a-section properties

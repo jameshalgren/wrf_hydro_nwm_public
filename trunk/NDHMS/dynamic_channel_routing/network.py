@@ -210,10 +210,9 @@ class Network:
             print(f'{t}  {" ".join(q[0][i] for i in range(n_sections))}\n')
 
     class TimeStep:
-    #TODO: QUESTION FOR Nick
-        ''' When we are passing the time steps out to the Fortran module,
-        we only want to pass one timestep at a time and receive another one back.
-        How does that happen best? '''
+        # TODO: Juzer find how to pass the time steps out to the Fortran module,
+        # we only want to pass one timestep at a time and receive another one back.
+        # How does that happen best? '''
         def __init__(self, new_time = None, new_flow = None, new_depth = None):
             # Per-time-step at-a-section properties
             self.time = new_time
