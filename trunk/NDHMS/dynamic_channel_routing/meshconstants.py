@@ -1,9 +1,12 @@
 PHI = 1.0
 THETA = 1.0
 THETAS = 1.0
-TESINV = 1.0
+THESINV = 1.0
 ALFA2 = 0.5
 ALFA4 = 0.1
+CELERITY_EPSILON = 0.00001
+DX_TOLERANCE = 0.00001
+DEPTH_TOLERANCE = 0.00001
 '''
 1.0 =: phi           source term treatment (0:explicit, 1:implicit)
 1.0 =: theta         ?

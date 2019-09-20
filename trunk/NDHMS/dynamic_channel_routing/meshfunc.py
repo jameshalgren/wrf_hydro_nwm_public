@@ -598,17 +598,41 @@ def matrixc(section_arr
                     + constants.GRAVITY * section_j.ci1
       #      f1(i)=qp(i)
       #      f2(i)=qp(i)*qp(i)/areap(i)+grav*ci1(i)
-      #c
+
+        if i > I_DOWNSTREAM and i < I_UPSTREAM
       #      if(i.ge.2.and.i.lt.n_sections) then
+            section_DS = section_arr[i+1]
+            section_DS_j = section_DS.time_steps[j_current]
+            section_US = section_arr[i-1]
+            section_US_j = section_US.time_steps[j_current]
+            if secpred: # If we are on the second step, applying the predictors, use the areap and qp
+                area_DS = section_DS_j.areap
+                flow_DS = section_DS_j.qp
+                area_US = section_US_j.areap
+                flow_US = section_US_j.qp
+            else:
+                area_DS = section_DS_j.flow_area
+                flow_DS = section_DS_j.flow
+                area_US = section_US_j.flow_area
+                flow_US = section_US_j.flow
+            dip1 = section_DS.get_depth_area(area_DS)
       #      dip1=areap(i+1)/bo(i+1)
+            di = 2 * section.get_depth_area(area)
       #      di=2*areap(i)/bo(i)
+            dim1 = section_US.get_depth_area(area_US)
       #      dim1=areap(i-1)/bo(i-1)
+            section_j.eps2 = alfa2 * abs(dip1 - di + dim1) / (dip1 + di + dim1)
       #      eps2(i)=alfa2*abs(dip1-di+dim1)/(dip1+di+dim1)
       #      endif
       #10    continue
+        if i = I_DOWNSTREAM:
+            section_j.eps2 = section_US_j.eps2
       #      eps2(1)=eps2(2)
+        elif i = I_UPSTREAM:
+            section_j.eps2 = section_DS_j.eps2
       #      eps2(I_UPSTREAM)=eps2(I_UPSTREAM-1)
       #c
+      #TODO: WHAT IS THIS STEP --- something to do with the boundary?
       #      do 20 i=2,n_sections-1
       #        if(ityp(i).ne.1) then
       #          eps2(i)=eps2(i-1)
@@ -616,10 +640,15 @@ def matrixc(section_arr
       #        endif
       #20    continue
       #c
+    eps2max = -9999.0
+    for i, section in reversed(enumerate(section_arr)):
       #      do 40 i=n_sections-1,1,-1
+        section_j = section.time_steps[j_current]
+        eps2max = max(section_j.eps2, eps2max)
       #      eps2(i+1)=max(eps2(i+1),eps2(i))
       #c      u(i+1)=(u(i+1)+u(i))/2.0
       #c      c(i+1)=(c(i+1)+c(i))/2.0
+        section_j.eps4 = max(0.0, alfa4
       #      eps4(i+1)=max(0.,alfa4-eps2(i+1)/(u(i+1)+c(i+1)))
       #c      write(*,*)'corr',i,eps2(i)
       #40    continue
