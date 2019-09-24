@@ -7,6 +7,7 @@ ALFA4 = 0.1
 CELERITY_EPSILON = 0.00001
 DX_TOLERANCE = 0.00001
 DEPTH_TOLERANCE = 0.00001
+AREA_TOLERANCE = 0.0001
 '''
 1.0 =: phi           source term treatment (0:explicit, 1:implicit)
 1.0 =: theta         ?
