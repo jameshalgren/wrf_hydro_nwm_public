@@ -168,14 +168,6 @@ class MESHpyDUMMYNetwork(Network):
             section_j = section.time_steps[j_current]
             if predictor_step: # If we are on the second step, applying the predictors, use the areap and qp
                 section_j.depth = section.get_depth_area(section_j.flow_area)
-                area = section_j.flow_area
-                flow = section_j.flow
-                depth = section_j.depth
-            elif not predictor_step:
-                section_j.depthp = section.get_depth_area(section_j.areap)
-                area = section_j.areap # computed via 'apply_predictor' method
-                flow = section_j.qp # computed via 'apply_predictor' method
-                depth = section_j.depthp
 
     def apply_predictor(self
             , section_arr
@@ -191,17 +183,17 @@ class MESHpyDUMMYNetwork(Network):
             # Use the flow time series for the upstream boundary
             section_j = section.time_steps[j_current]
             if 1 == 1:
-                
-                
-                
-                
-                
-                
-                
-                
+
+
+
+
+
+
+
+
                 section_j.delta_flow_predictor = 25.0
 
-                
+
                 section_j.delta_area_predictor = 10.0
             section_j.areap = section_j.flow_area + section_j.delta_area_predictor
             section_j.qp = section_j.flow + section_j.delta_flow_predictor
@@ -218,16 +210,6 @@ class MESHpyDUMMYNetwork(Network):
         dt = self.time_list[j_next] - self.time_list[j_current]
         for i, section in enumerate(reversed(self.sections)):
             section_j = section.time_steps[j_current]
-            if i == self.I_UPSTREAM:
-                print(len(section.time_steps))
-            section.time_steps.append(self.TimeStep(new_time = self.time_list[0]
-                                , new_flow = self.qq
-                                , new_depth = self.yy
-                                , new_water_z = section.bottom_z + self.yy
-                                , new_area = section.get_area_depth(self.yy)))
-            section_jnext = section.time_steps[j_next]
-            if i == self.I_UPSTREAM:
-                print(len(section.time_steps), j_current, j_next)
             if 1 == 1:
                 section_j.delta_flow_corrector = section_j.delta_flow_predictor
                 section_j.delta_area_corrector = 0.0
@@ -255,7 +237,7 @@ class MESHpyDUMMYNetwork(Network):
                                 , new_flow = next_flow
                                 , new_depth = next_depth
                                 , new_water_z = section.bottom_z + next_depth
-                                , new_area = section.get_area_depth(next_depth)))
+                                , new_area = next_flow_area))
             section_jnext = section.time_steps[j_next]
             if self.debug and i == self.I_UPSTREAM:
                 print('next    depth area flow {: 10g} {: 6g} {: 6g}\n(in new array)'.format\
@@ -278,7 +260,6 @@ class MESHpyDUMMYNetwork(Network):
             self.delta_area_corrector = 0.0
             self.delta_area_predictor = 0.0
             self.water_z = new_water_z
-            self.flow_area = 0.0
             self.areap = 0.0
             self.qp = 0.0
             self.depthp = 0.0
