@@ -154,7 +154,8 @@ class MESHpyNetwork(Network):
             section.time_steps.append(self.TimeStep(new_time = self.time_list[0]
                                 , new_flow = self.qq
                                 , new_depth = self.yy
-                                , new_water_z = section.bottom_z + self.yy))
+                                , new_water_z = section.bottom_z + self.yy
+                                , new_area = section.get_area_depth(self.yy)))
                     #self.sections[self.I_UPSTREAM].time_steps.append(self.TimeStep(new_flow = q_upstream))
                     #self.sections[self.I_DOWNSTREAM].time_steps.append(self.TimeStep(new_depth = y_downstream))
         #print(self.upstream_flow_ts)
@@ -247,25 +248,29 @@ class MESHpyNetwork(Network):
             if predictor_step: # If we are on the second step, applying the predictors, use the areap and qp
                 if i == self.I_DOWNSTREAM:
                     section_j.depth = downstream_stage_current
-                    self.debug = True
                 else:
                     pass
                     # section_j.depth = section_j.water_z - section.bottom_z
-                if self.debug:
-                    print(f'depth {section_j.depth}')
-                    print(f'depthp {section_j.depthp}')
+                self.debug = False
+                if self.debug and i == self.I_DOWNSTREAM:
+                    print(f'predictor step {predictor_step} i {i}')
+                    print(f'depth {section_j.depth} depthp {section_j.depthp}')
                 self.debug = False
                 section_j.flow_area = section.get_area_depth(section_j.depth)
                 area = section_j.flow_area
                 flow = section_j.flow
                 depth = section_j.depth
             elif not predictor_step:
+                self.debug = False
+                if self.debug and i == self.I_DOWNSTREAM:
+                    print(f'corrector step i {i}')
+                    print(f'depth {section_j.depth} depthp {section_j.depthp}')
+                self.debug = False
                 section_j.depthp = section.get_depth_area(section_j.areap)
                 area = section_j.areap # computed via 'apply_predictor' method
                 flow = section_j.qp # computed via 'apply_predictor' method
                 depth = section_j.depthp
 
-            self.debug = False
             if self.debug:
                 print (f'flow_area {section_j.flow_area}')
                 print (f'i, z: {i} {section_j.water_z}')
@@ -726,18 +731,13 @@ class MESHpyNetwork(Network):
             , downstream_stage_next):
         '''docstring here'''
         dt = self.time_list[j_next] - self.time_list[j_current]
-        for i, section in enumerate(section_arr):
+        for i, section in enumerate(reversed(self.sections)):
         # do i=ncomp-1,1,-1
         #TODO: CONFIRM That the reversed array is necessary in this case (I don't think it is...)
         #     cour=dt(i)/dx(i)
             # Use the flow time series for the upstream boundary
             section_j = section.time_steps[j_current]
-            section.time_steps.append(self.TimeStep(new_time = self.time_list[0]
-                                , new_flow = self.qq
-                                , new_depth = self.yy
-                                , new_water_z = section.bottom_z + self.yy))
-            section_jnext = section.time_steps[j_next]
-            if i == self.I_UPSTREAM or i == self.I_DOWNSTREAM:
+            if i == self.I_DOWNSTREAM:
                 #Set the upstream boundary flow
                 #This is set as a delta -- a correction factor -- to work in the
                 #predictor sweep.
@@ -767,13 +767,13 @@ class MESHpyNetwork(Network):
             #     c12=g11inv(i)*b12(i+1)+g12inv(i)*b22(i+1)
             #     c21=g21inv(i)*b11(i+1)+g22inv(i)*b21(i+1)
             #     c22=g21inv(i)*b12(i+1)+g22inv(i)*b22(i+1)
-                section_j.delta_area_predictor =\
+                section_j.delta_area_corrector =\
                     section_j.g11inv * section_j.rhs1\
                     + section_j.g12inv * section_j.rhs2\
                     - c11 * section_DS_j.delta_area_corrector\
                     - c12 * section_DS_j.delta_flow_corrector
             #     dac(i)=g11inv(i)*rhs1+g12inv(i)*rhs2-c11*dac(i+1)-c12*dqc(i+1)
-                section_j.delta_flow_predictor =\
+                section_j.delta_flow_corrector =\
                     section_j.g21inv * section_j.rhs1\
                     + section_j.g22inv * section_j.rhs2\
                     - c21 * section_DS_j.delta_area_corrector\
@@ -784,22 +784,33 @@ class MESHpyNetwork(Network):
                     / 2.0
             dq = (section_j.delta_flow_predictor + section_j.delta_flow_corrector) \
                     / 2.0
-            self.debug = False
-            if self.debug:
-                print(f'da {da} flow area {section_j.flow_area}')
-            if (da + section_j.flow_area) > self.area_tolerance:
-                section_jnext.flow_area = section_j.flow_area + da
-            else:
-                section_jnext.flow_area = self.area_tolerance
-            section_jnext.depth = section.get_depth_area(section_jnext.flow_area)
             self.debug = True
-            if self.debug:
-                print(f' new depth {section_jnext.depth}')
+            # if self.debug:
+            if self.debug and i == self.I_UPSTREAM:
+                print('current depth area flow {: 10g} {: 9g} {: 9g}'.format\
+                        (section_j.depth, section_j.flow_area
+                            , section_j.flow))
+                print(f'              da    dq             {da: 9g} {dq: 9g}')
+            if (da + section_j.flow_area) > self.area_tolerance:
+                next_flow_area = section_j.flow_area + da
+            else:
+                next_flow_area = self.area_tolerance
+            next_depth = section.get_depth_area(next_flow_area)
+            next_flow = section_j.flow + dq
+            if self.debug and i == self.I_UPSTREAM:
+                print('next    depth area flow {: 10g} {: 9g} {: 9g}'.format\
+                        (next_depth, next_flow_area, next_flow))
+            section.time_steps.append(self.TimeStep(new_time = self.time_list[0]
+                                , new_flow = next_flow
+                                , new_depth = next_depth
+                                , new_water_z = section.bottom_z + next_depth
+                                , new_area = section.get_area_depth(next_depth)))
+            section_jnext = section.time_steps[j_next]
+            if self.debug and i == self.I_UPSTREAM:
+                print('next    depth area flow {: 10g} {: 9g} {: 9g}\n(in new array)'.format\
+                        (section_jnext.depth, section_jnext.flow_area
+                            , section_jnext.flow))
             self.debug = False
-            if self.debug:
-                print(f'dq {dq} flow {section_j.flow}')
-            self.debug = False
-            section_jnext.flow = section_j.flow + dq
 
     class RectangleSection(Network.RectangleSection):
         def __init__(self, *args, **kwargs):
@@ -834,17 +845,17 @@ class MESHpyNetwork(Network):
             super().__init__(*args, **kwargs)
 
             # Per-time-step at-a-section properties
-            self.delta_flow_corrector = 0
-            self.delta_flow_predictor = 0
-            self.delta_area_corrector = 0
-            self.delta_area_predictor = 0
+            self.delta_flow_corrector = 0.0
+            self.delta_flow_predictor = 0.0
+            self.delta_area_corrector = 0.0
+            self.delta_area_predictor = 0.0
             self.water_z = new_water_z
-            self.flow_area = 0
-            self.areap = 10
-            self.qp = 10
-            self.depthp = 10
-            self.ci1 = 0
-            self.hy = 0 # Hydraulic Radius (used to compute co)
+            self.flow_area = 0.0
+            self.areap = 0.0
+            self.qp = 0.0
+            self.depthp = 0.0
+            self.ci1 = 0.0
+            self.hy = 0.0 # Hydraulic Radius (used to compute co)
 
             # Per-time-step downstream reach properties
             self.conveyance_ds = 0
