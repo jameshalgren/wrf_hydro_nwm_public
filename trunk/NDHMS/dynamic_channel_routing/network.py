@@ -168,10 +168,10 @@ class Network:
                 j_next = j + 1
                 self.compute_next_time_step_state(j_current = j_current
                                                   , j_next = j_next
-                                                  , upstream_flow_current = self.upstream_flow_ts[j]
-                                                  , upstream_flow_next = self.upstream_flow_ts[j+1]
-                                                  , downstream_stage_current = self.downstream_stage_ts[j]
-                                                  , downstream_stage_next = self.downstream_stage_ts[j+1])
+                                                  , upstream_flow_current = self.upstream_flow_ts[j_current]
+                                                  , upstream_flow_next = self.upstream_flow_ts[j_next]
+                                                  , downstream_stage_current = self.downstream_stage_ts[j_current]
+                                                  , downstream_stage_next = self.downstream_stage_ts[j_next])
                 if write_output:
                     self.write_state_timestep(self.sections, j_current, output_path)
             else:
