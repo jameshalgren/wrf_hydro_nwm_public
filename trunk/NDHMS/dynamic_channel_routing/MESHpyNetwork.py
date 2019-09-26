@@ -7,6 +7,12 @@ from network import Network
 import csv
 import os
 
+'''This python module implements  (and to a degree, extends) the
+   MESH code first developed by Dr. Ehab Meselhe.
+   A number of helpful references are available to explain the
+   derivation of the method and may be requested by contacting
+   the authors or Dr. Meselhe.
+   We gratefully acknowlege his contribution to this work.'''
 class MESHpyNetwork(Network):
     '''USE Global Declarations here to manage these values'''
     # TODO Determine why these values do not persist when declared in __init__
@@ -248,15 +254,11 @@ class MESHpyNetwork(Network):
             if predictor_step: # If we are on the second step, applying the predictors, use the areap and qp
                 if i == self.I_DOWNSTREAM:
                     section_j.depth = downstream_stage_current
-                else:
-                    pass
-                    # section_j.depth = section_j.water_z - section.bottom_z
                 self.debug = False
                 if self.debug and i == self.I_DOWNSTREAM:
                     print(f'predictor step {predictor_step} i {i}')
                     print(f'depth {section_j.depth} depthp {section_j.depthp}')
                 self.debug = False
-                section_j.flow_area = section.get_area_depth(section_j.depth)
                 area = section_j.flow_area
                 flow = section_j.flow
                 depth = section_j.depth
@@ -266,7 +268,6 @@ class MESHpyNetwork(Network):
                     print(f'corrector step i {i}')
                     print(f'depth {section_j.depth} depthp {section_j.depthp}')
                 self.debug = False
-                section_j.depthp = section.get_depth_area(section_j.areap)
                 area = section_j.areap # computed via 'apply_predictor' method
                 flow = section_j.qp # computed via 'apply_predictor' method
                 depth = section_j.depthp
@@ -507,15 +508,7 @@ class MESHpyNetwork(Network):
                         + self.gravity * section_j.ci1
 
           #      if(i.ge.2.and.i.lt.n_sections) then
-            if i == self.I_DOWNSTREAM:
-                section_US = section_arr[i-1]
-                section_US_j = section_US.time_steps[j_current]
-                section_j.eps2 = section_US_j.eps2
-            elif i == self.I_UPSTREAM:
-                section_DS = section_arr[i+1]
-                section_DS_j = section_DS.time_steps[j_current]
-                section_j.eps2 = section_DS_j.eps2
-            else: # if i > self.I_DOWNSTREAM and i < self.I_UPSTREAM:
+            if i > self.I_DOWNSTREAM and i < self.I_UPSTREAM:
                 section_DS = section_arr[i+1]
                 section_DS_j = section_DS.time_steps[j_current]
                 section_US = section_arr[i-1]
@@ -538,6 +531,11 @@ class MESHpyNetwork(Network):
                     section_j.eps2 = self.depth_tolerance
                 else:
                     section_j.eps2 = self.alfa2 * abs(dip1 - di + dim1) / (dip1 + di + dim1)
+                # Assign values for eps2 at boundaries
+                if i == self.I_DOWNSTREAM - 1:
+                    section_DS_j.eps2 = section_j.eps2
+                elif i == self.I_UPSTREAM + 1:
+                    section_US_j.eps2 = section_j.eps2
 
           #c
           #TODO: WHAT IS THIS STEP --- something to do with the boundary?
@@ -566,7 +564,7 @@ class MESHpyNetwork(Network):
 
         elif not predictor_step:
             for i, section in enumerate(reversed(section_arr)):
-                if i == self.I_UPSTREAM or i == self.I_DOWNSTREAM:
+                if i == self.I_DOWNSTREAM:
                     continue
                 section_j = section.time_steps[j_current]
                 section_DS = section_arr[i+1]
@@ -603,31 +601,23 @@ class MESHpyNetwork(Network):
                     area_US = section_US_j.areap
                     flow_US = section_US_j.qp
                 ei = max(abs(section_j.velocity + section_j.celerity),
-                                    (section_j.velocity - section_j.celerity))
+                                    abs(section_j.velocity - section_j.celerity))
                 if predictor_step:
                     ei1 = max(abs(section_DS_j.velocity + section_DS_j.celerity),
-                                    (section_DS_j.velocity - section_DS_j.celerity))
+                                    abs(section_DS_j.velocity - section_DS_j.celerity))
                 elif not predictor_step:
                     ei1 = max(abs(section_US_j.velocity + section_US_j.celerity),
-                                    (section_US_j.velocity - section_US_j.celerity))
+                                    abs(section_US_j.velocity - section_US_j.celerity))
                 eia = (ei + ei1) / 2.0
               #      if(ityp(i-1).ne.1) then
               #        d1(i)=0.0
               #        d2(i)=0.0
               #      elseif(i.eq.2.or.i.eq.(n_sections-1)) then
-                if predictor_step: # This if could technically be combined with the above if statement
-                                   # but it reads more clearly to have it here.
-                    section_US = section_arr[i-1]
-                    section_US_j = section_US.time_steps[j_current]
-                    area_US = section_DS_j.flow_area
-                    flow_US = section_DS_j.flow
+                if predictor_step:
                     area_difference = area_DS - area
                     flow_difference = flow_DS - flow
-                elif not predictor_step:
-                    section_DS = section_arr[i+1]
-                    section_DS_j = section_DS.time_steps[j_current]
-                    area_DS = section_US_j.areap
-                    flow_DS = section_US_j.qp
+                elif not predictor_step: # This if could technically be combined with the above if statement
+                                   # but it reads more clearly to have it here.
                     area_difference = area - area_US
                     flow_difference = flow - flow_US
                 section_j.d1 = section_j.eps2 * eia * area_difference
@@ -635,23 +625,39 @@ class MESHpyNetwork(Network):
                 if (i > self.I_UPSTREAM + 1 and i < self.I_DOWNSTREAM - 1):
                     # print(i, self.I_DOWNSTREAM, self.I_UPSTREAM)
               #        d1(i)=eps2(i)*eia*(areap(i)-areap(i-1))
-              #        d2(i)=eps2(i)*eia*(qp(i)-qp(i-1)) #TODO: Determine if this reduction is unnecessary (i.e., Could this be replaced by simply using the next lines and letting the equation reduce automatically based on the value in eps4?
+              #        d2(i)=eps2(i)*eia*(qp(i)-qp(i-1))
+              #TODO: Determine if the reduction for the next-to-boundary sections
+              # is unnecessary (i.e., Could the if statement be replaced by simply
+              # using the next lines and letting the equation reduce automatically
+              # based on the value in eps4?
                     if predictor_step:
+                        section_US = section_arr[i-1]
+                        section_US_j = section_US.time_steps[j_current]
+                        area_US = section_US_j.flow_area
+                        flow_US = section_US_j.flow
                         section_2DS = section_arr[i+2]
                         section_2DS_j = section_DS.time_steps[j_current]
                         area_2DS = section_2DS_j.flow_area
                         flow_2DS = section_2DS_j.flow
-                        d1_eps4_diff = - 1.0 * section_j.eps4 * (area_2DS - 3.0 * area_DS + 3.0 * area - area_US)
-                        d2_eps4_diff = - 1.0 * section_j.eps4 * (flow_2DS - 3.0 * flow_DS + 3.0 * flow - flow_US)
+                        d1_eps4_diff = - 1.0 * section_j.eps4 * (area_2DS
+                                    - 3.0 * area_DS + 3.0 * area - area_US)
+                        d2_eps4_diff = - 1.0 * section_j.eps4 * (flow_2DS
+                                    - 3.0 * flow_DS + 3.0 * flow - flow_US)
                     elif not predictor_step:
+                        section_DS = section_arr[i+1]
+                        section_DS_j = section_DS.time_steps[j_current]
+                        area_DS = section_DS_j.areap
+                        flow_DS = section_DS_j.qp
                         section_2US = section_arr[i-2]
                         section_2US_j = section_2US.time_steps[j_current]
                         area_2US = section_2US_j.areap
                         flow_2US = section_2US_j.qp
-                        d1_eps4_diff = - 1.0 * section_j.eps4 * (area_DS - 3.0 * area + 3.0 * area_US - area_2US)
-                        d2_eps4_diff = - 1.0 * section_j.eps4 * (flow_DS - 3.0 * flow + 3.0 * flow_US - flow_2US)
+                        d1_eps4_diff = - 1.0 * section_j.eps4 * (area_DS
+                                - 3.0 * area + 3.0 * area_US - area_2US)
+                        d2_eps4_diff = - 1.0 * section_j.eps4 * (flow_DS
+                                - 3.0 * flow + 3.0 * flow_US - flow_2US)
                     section_j.d1 = section_j.d1 + d1_eps4_diff
-                    section_j.d2 = section_j.d1 + d2_eps4_diff
+                    section_j.d2 = section_j.d2 + d2_eps4_diff
               #      else
               #      d1(i)=eps2(i)*eia*(areap(i)-areap(i-1))-eps4(i)*
               #    1        (areap(i+1)-3*areap(i)+3*areap(i-1)-areap(i-2))
@@ -668,7 +674,7 @@ class MESHpyNetwork(Network):
             , upstream_flow_next
             , downstream_stage_current
             , downstream_stage_next):
-
+        '''docstring here'''
         dt = self.time_list[j_next] - self.time_list[j_current]
         for i, section in enumerate(section_arr):
             # Use the flow time series for the upstream boundary
@@ -680,11 +686,10 @@ class MESHpyNetwork(Network):
                 #predictor sweep.
                 #So we set the Delta Q predictor, which is set from the input
                 #time series for the upstream-most point.
-                # TODO: Confirm that DAP(1) is never used... Why not?
+                # TODO: Confirm that DAP(1) is never used... Why not? ASK EHAB
                 # section_j.delta_area_predictor = 0.0
                 section_j.delta_flow_predictor = upstream_flow_next - upstream_flow_current
             elif i == self.I_DOWNSTREAM:
-                section_j.delta_flow_predictor = upstream_flow_next - upstream_flow_current
                 section_j.delta_area_predictor = 0.0
                 #TODO: Ask Ehab why these values are touched in the predictor step
                 section_j.delta_area_corrector = 0.0
@@ -718,6 +723,7 @@ class MESHpyNetwork(Network):
             #Update via predictor
             if self.debug and (i == self.I_UPSTREAM or i == self.I_DOWNSTREAM): print (f'area {section_j.flow_area}, dap {section_j.delta_area_predictor}')
             section_j.areap = section_j.flow_area + section_j.delta_area_predictor
+            section_j.depthp = section.get_depth_area(section_j.areap)
             if self.debug and (i == self.I_UPSTREAM or i == self.I_DOWNSTREAM): print (f'flow {section_j.flow_area}, dqp {section_j.delta_flow_predictor}')
             section_j.qp = section_j.flow + section_j.delta_flow_predictor
 
@@ -743,8 +749,9 @@ class MESHpyNetwork(Network):
                 #predictor sweep.
                 #So we set the Delta Q predictor, which is set from the input
                 #time series for the upstream-most point.
-                section_j.delta_flow_corrector = section_j.delta_flow_predictor
-                section_j.delta_area_corrector = 0.0
+                pass
+                # section_j.delta_flow_corrector = section_j.delta_flow_predictor
+                # section_j.delta_area_corrector = 0.0
             else:
                 section_DS = section_arr[i+1]
                 section_DS_j = section_DS.time_steps[j_current]
@@ -800,11 +807,11 @@ class MESHpyNetwork(Network):
             if self.debug and i == self.I_UPSTREAM:
                 print('next    depth area flow {: 10g} {: 9g} {: 9g}'.format\
                         (next_depth, next_flow_area, next_flow))
-            section.time_steps.append(self.TimeStep(new_time = self.time_list[0]
+            section.time_steps.append(self.TimeStep(new_time = self.time_list[j_next]
                                 , new_flow = next_flow
                                 , new_depth = next_depth
                                 , new_water_z = section.bottom_z + next_depth
-                                , new_area = section.get_area_depth(next_depth)))
+                                , new_area = next_flow_area))
             section_jnext = section.time_steps[j_next]
             if self.debug and i == self.I_UPSTREAM:
                 print('next    depth area flow {: 10g} {: 9g} {: 9g}\n(in new array)'.format\
@@ -850,7 +857,6 @@ class MESHpyNetwork(Network):
             self.delta_area_corrector = 0.0
             self.delta_area_predictor = 0.0
             self.water_z = new_water_z
-            self.flow_area = 0.0
             self.areap = 0.0
             self.qp = 0.0
             self.depthp = 0.0
