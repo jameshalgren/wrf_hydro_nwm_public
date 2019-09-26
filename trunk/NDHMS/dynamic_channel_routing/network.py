@@ -262,11 +262,12 @@ class Network:
         # TODO: Juzer find how to pass the time steps out to the Fortran module,
         # we only want to pass one timestep at a time and receive another one back.
         # How does that happen best? '''
-        def __init__(self, new_time = None, new_flow = None, new_depth = None):
+        def __init__(self, new_time = None, new_flow = None, new_depth = None, new_area = None):
             # Per-time-step at-a-section properties
             self.time = new_time
             self.flow = new_flow
             self.depth = new_depth
+            self.flow_area = new_area
 
             # Per-time-step downstream reach properties
             self.friction_slope_ds = 0
