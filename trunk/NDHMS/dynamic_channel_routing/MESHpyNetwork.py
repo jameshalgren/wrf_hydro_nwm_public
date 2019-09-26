@@ -126,8 +126,6 @@ class MESHpyNetwork(Network):
                 read_data2 = list(csv.reader(file2, delimiter=' '))
                 for i in range(n_sections): # use usual convention of i as spatial dimension
                     z = float(read_data1[i][1])
-                    y0 = z + self.yy #TODO: This seems like a clunky definition of the initial water surface
-                                #      Elevation and I think we can do better.
                     b0 = float(read_data2[i][1])
                     # print(f'i: {i} -- b0 {b0}, z {z}')
                     self.sections.append(self.RectangleSection(station = i
@@ -155,18 +153,25 @@ class MESHpyNetwork(Network):
                                     , write_output = False
                                     , output_path = None):
         ''' Initial state computed in initialization function.'''
+        qinit = self.qq
+        yinit = self.yy
         for i, section in enumerate(self.sections):
             # print(f'yy, qq {self.yy} {self.qq}')
+            if i == self.I_UPSTREAM:
+                qinit = self.upstream_flow_ts[0]
+            elif i == self.I_DOWNSTREAM:
+                yinit = self.downstream_stage_ts[0]
             section.time_steps.append(self.TimeStep(new_time = self.time_list[0]
-                                , new_flow = self.qq
-                                , new_depth = self.yy
-                                , new_water_z = section.bottom_z + self.yy
-                                , new_area = section.get_area_depth(self.yy)))
+                                , new_flow = qinit
+                                , new_depth = yinit
+                                , new_water_z = section.bottom_z + yinit
+                                , new_area = section.get_area_depth(yinit)))
+                    # y0 = z + self.yy #TODO: This seems like a clunky definition of the initial water surface
+                    #             #      Elevation and I think we can do better.
                     #self.sections[self.I_UPSTREAM].time_steps.append(self.TimeStep(new_flow = q_upstream))
                     #self.sections[self.I_DOWNSTREAM].time_steps.append(self.TimeStep(new_depth = y_downstream))
         #print(self.upstream_flow_ts)
         #print(self.downstream_stage_ts)
-        pass
 
     def compute_next_time_step_state(self, j_current
                                          , j_next
@@ -690,7 +695,7 @@ class MESHpyNetwork(Network):
                 # section_j.delta_area_predictor = 0.0
                 section_j.delta_flow_predictor = upstream_flow_next - upstream_flow_current
             elif i == self.I_DOWNSTREAM:
-                section_j.delta_area_predictor = 0.0
+                # section_j.delta_area_predictor = 0.0
                 #TODO: Ask Ehab why these values are touched in the predictor step
                 section_j.delta_area_corrector = 0.0
                 section_j.delta_flow_corrector = section_j.delta_flow_predictor
@@ -705,10 +710,14 @@ class MESHpyNetwork(Network):
                             - section_j.d2 + section_US_j.d2)\
                         + dt * self.gravity\
                              * (section_j.ci2_ds + section_j.as0_ds)
-                c11 = section_j.g11inv * section_US_j.b11 + section_j.g12inv * section_US_j.b21
-                c12 = section_j.g11inv * section_US_j.b12 + section_j.g12inv * section_US_j.b22
-                c21 = section_j.g21inv * section_US_j.b11 + section_j.g22inv * section_US_j.b21
-                c22 = section_j.g21inv * section_US_j.b12 + section_j.g22inv * section_US_j.b22
+                c11 = section_j.g11inv * section_US_j.b11 + section_j.g12inv \
+                                                            * section_US_j.b21
+                c12 = section_j.g11inv * section_US_j.b12 + section_j.g12inv \
+                                                            * section_US_j.b22
+                c21 = section_j.g21inv * section_US_j.b11 + section_j.g22inv \
+                                                            * section_US_j.b21
+                c22 = section_j.g21inv * section_US_j.b12 + section_j.g22inv \
+                                                            * section_US_j.b22
                 section_j.delta_area_predictor =\
                     section_j.g11inv * section_j.rhs1\
                     + section_j.g12inv * section_j.rhs2\
@@ -749,9 +758,8 @@ class MESHpyNetwork(Network):
                 #predictor sweep.
                 #So we set the Delta Q predictor, which is set from the input
                 #time series for the upstream-most point.
-                pass
-                # section_j.delta_flow_corrector = section_j.delta_flow_predictor
-                # section_j.delta_area_corrector = 0.0
+                section_j.delta_area_corrector = 0.0
+                section_j.delta_flow_corrector = section_j.delta_flow_predictor
             else:
                 section_DS = section_arr[i+1]
                 section_DS_j = section_DS.time_steps[j_current]
@@ -766,10 +774,14 @@ class MESHpyNetwork(Network):
                         + dt * self.gravity\
                              * (section_j.ci2_ds + section_j.as0_ds)
             #     rhs2=-cour*(f2(i+1)-f2(i)-d2(i+1)+d2(i))+dt(i)*grav*(ci2(i)+aso(i))
-                c11 = section_j.g11inv * section_DS_j.b11 + section_j.g12inv * section_DS_j.b21
-                c12 = section_j.g11inv * section_DS_j.b12 + section_j.g12inv * section_DS_j.b22
-                c21 = section_j.g21inv * section_DS_j.b11 + section_j.g22inv * section_DS_j.b21
-                c22 = section_j.g21inv * section_DS_j.b12 + section_j.g22inv * section_DS_j.b22
+                c11 = section_j.g11inv * section_DS_j.b11 + section_j.g12inv \
+                                                            * section_DS_j.b21
+                c12 = section_j.g11inv * section_DS_j.b12 + section_j.g12inv \
+                                                            * section_DS_j.b22
+                c21 = section_j.g21inv * section_DS_j.b11 + section_j.g22inv \
+                                                            * section_DS_j.b21
+                c22 = section_j.g21inv * section_DS_j.b12 + section_j.g22inv \
+                                                            * section_DS_j.b22
             #     c11=g11inv(i)*b11(i+1)+g12inv(i)*b21(i+1)
             #     c12=g11inv(i)*b12(i+1)+g12inv(i)*b22(i+1)
             #     c21=g21inv(i)*b11(i+1)+g22inv(i)*b21(i+1)
@@ -791,29 +803,27 @@ class MESHpyNetwork(Network):
                     / 2.0
             dq = (section_j.delta_flow_predictor + section_j.delta_flow_corrector) \
                     / 2.0
-            self.debug = True
-            # if self.debug:
-            if self.debug and i == self.I_UPSTREAM:
-                print('current depth area flow {: 10g} {: 9g} {: 9g}'.format\
-                        (section_j.depth, section_j.flow_area
-                            , section_j.flow))
-                print(f'              da    dq             {da: 9g} {dq: 9g}')
             if (da + section_j.flow_area) > self.area_tolerance:
                 next_flow_area = section_j.flow_area + da
             else:
                 next_flow_area = self.area_tolerance
             next_depth = section.get_depth_area(next_flow_area)
             next_flow = section_j.flow + dq
-            if self.debug and i == self.I_UPSTREAM:
-                print('next    depth area flow {: 10g} {: 9g} {: 9g}'.format\
-                        (next_depth, next_flow_area, next_flow))
+            self.debug = True
             section.time_steps.append(self.TimeStep(new_time = self.time_list[j_next]
                                 , new_flow = next_flow
                                 , new_depth = next_depth
                                 , new_water_z = section.bottom_z + next_depth
                                 , new_area = next_flow_area))
             section_jnext = section.time_steps[j_next]
-            if self.debug and i == self.I_UPSTREAM:
+            # if self.debug:
+            if self.debug and (i == self.I_UPSTREAM or i == self.I_UPSTREAM + 1):
+                print('current depth area flow {: 10g} {: 9g} {: 9g}'.format\
+                        (section_j.depth, section_j.flow_area
+                            , section_j.flow))
+                print(f'              da    dq             {da: 9g} {dq: 9g}')
+                print('next    depth area flow {: 10g} {: 9g} {: 9g}'.format\
+                        (next_depth, next_flow_area, next_flow))
                 print('next    depth area flow {: 10g} {: 9g} {: 9g}\n(in new array)'.format\
                         (section_jnext.depth, section_jnext.flow_area
                             , section_jnext.flow))
