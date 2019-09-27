@@ -119,8 +119,6 @@ class MESHpyDUMMYNetwork(Network):
         # Corrector steps could be numerically different -- but we don't need to
         # take advantage of that here, so theta and theta_s are set to be
         # equal.
-
-        # print(f'yy {self.yy}')
         self.compute_sections(section_arr = self.sections
                         , j_current = j_current
                         , j_next = j_next
@@ -129,31 +127,6 @@ class MESHpyDUMMYNetwork(Network):
                         , downstream_stage_current = downstream_stage_current
                         , downstream_stage_next = downstream_stage_next
                         , predictor_step = True)
-        #TODO: Determine the need for thes AND thetas
-        # print(f'self.thes; self.thetas: {self.thes} {self.thetas}')
-        # self.thes = self.thetas
-        self.apply_predictor(section_arr = self.sections
-                        , j_current = j_current
-                        , j_next = j_next
-                        , upstream_flow_current = upstream_flow_current
-                        , upstream_flow_next = upstream_flow_next
-                        , downstream_stage_current = downstream_stage_current
-                        , downstream_stage_next = downstream_stage_next)
-        self.apply_corrector(section_arr = self.sections
-                        , j_current = j_current
-                        , j_next = j_next
-                        , upstream_flow_current = upstream_flow_current
-                        , upstream_flow_next = upstream_flow_next
-                        , downstream_stage_current = downstream_stage_current
-                        , downstream_stage_next = downstream_stage_next)
-
-    def dsbc():
-          # c----------------------------------------------------------------------
-          # c     Downstream boundary condition
-          #       subroutine dsbc(n)
-          # c----------------------------------------------------------------------
-        pass
-
     def compute_sections(self
             , section_arr
             , j_current
@@ -166,17 +139,11 @@ class MESHpyDUMMYNetwork(Network):
 
         for i, section in enumerate(section_arr):
             section_j = section.time_steps[j_current]
-            if predictor_step: # If we are on the second step, applying the predictors, use the areap and qp
+            if 1 == 1:
                 section_j.depth = section.get_depth_area(section_j.flow_area)
-
-    def apply_predictor(self
-            , section_arr
-            , j_current
-            , j_next
-            , upstream_flow_current
-            , upstream_flow_next
-            , downstream_stage_current
-            , downstream_stage_next):
+                area = section_j.flow_area
+                flow = section_j.flow
+                depth = section_j.depth
 
         dt = self.time_list[j_next] - self.time_list[j_current]
         for i, section in enumerate(section_arr):
@@ -195,18 +162,7 @@ class MESHpyDUMMYNetwork(Network):
 
 
                 section_j.delta_area_predictor = 10.0
-            section_j.areap = section_j.flow_area + section_j.delta_area_predictor
-            section_j.qp = section_j.flow + section_j.delta_flow_predictor
 
-    def apply_corrector(self
-            , section_arr
-            , j_current
-            , j_next
-            , upstream_flow_current
-            , upstream_flow_next
-            , downstream_stage_current
-            , downstream_stage_next):
-        '''docstring here'''
         dt = self.time_list[j_next] - self.time_list[j_current]
         for i, section in enumerate(reversed(self.sections)):
             section_j = section.time_steps[j_current]
