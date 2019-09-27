@@ -36,60 +36,6 @@ class MESHpyNetwork(Network):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def input_and_initialize_meshpysimple(section_arr, input_path=None, input_opt=1, output_path=None):
-        '''Override the simple input_and_initialize function from network.py'''
-        input_data = {}
-        #TODO: Work with Nick to get this data dictionary thing passing
-        #into and out of this function properly
-        #TODO: INSERT code to generate intial sections and boundary time series
-        input_data.update({"dtini": 10.0})
-        input_data.update({"dxini": 20.0})
-        input_data.update({"tfin": 5000.})
-        input_data.update({"ncomp": 501})
-        input_data.update({"ntim": 5000})
-        input_data.update({"phi": 1.0})
-        input_data.update({"theta": 1.0})
-        input_data.update({"thetas": 1.0})
-        input_data.update({"thesinv": 1.0})
-        input_data.update({"alfa2": 0.5})
-        input_data.update({"alfa4": 0.1})
-        input_data.update({"f": 1.0})
-        input_data.update({"skk": 20.0 })
-        input_data.update({"yy": 6.0})
-        input_data.update({"qq": 100.0})
-        input_data.update({"cfl": 1.0})
-        input_data.update({"ots": 0.0})
-        input_data.update({"yw": 0.0})
-        input_data.update({"bw": 20.0})
-        input_data.update({"w": 1.1})
-        input_data.update({"option": 1.0})
-        input_data.update({"yn": 0.1000})
-        input_data.update({"qn": 0.0085})
-        input_data.update({"igate": 700})
-
-
-        time_steps = range(100)
-        stations = range(10000,11001, 100)
-        bottom_widths = range(100, 1001, 100)
-        bottom_zs = range(0,100,10)
-
-        upstream_flows = helpers.Generate_Hydrograph(100 , 20 , 2 , 4 , 5000)
-        # for i, station, bottom_width, bottom_z in enumerate(stations):
-        #     print(f'{i} {station} {bottom_width} {bottom_z}')
-        # for i, flow in enumerate(upstream_flows):
-        #     print(f'{i} {flow}')
-
-        for i, bw in enumerate(bottom_widths):
-            self.sections.append(Section(stations[i], bottom_widths[i], bottom_zs[i]))
-            if i == self.I_DOWNSTREAM:
-                self.sections[i].dx_ds = 10
-                self.sections[i].bed_slope_ds = .1
-            else:
-                self.sections[i].dx_ds = self.sections[i].station - self.sections[i-1].station
-                self.sections[i].bed_slope_ds = (self.sections[i].bottom_z - \
-                                            self.sections[i-1].bottom_z)/ \
-                                            self.sections[i].dx_ds
-
     def input_and_initialize_meshpyfile(self, filetype = None, input_path=None):
         with open(input_path, newline='') as f:
 
@@ -110,6 +56,8 @@ class MESHpyNetwork(Network):
                 , time_step_optimization, yw, bw, w, option, yn, qn, igate\
                 , bed_elevation_path, upstream_path, downstream_path, channel_width_path\
                 , output_path, option_dsbc, null = data
+
+            print(data)
 
         self.I_UPSTREAM = 0
         self.I_DOWNSTREAM = n_sections - 1
@@ -153,23 +101,26 @@ class MESHpyNetwork(Network):
                                     , write_output = False
                                     , output_path = None):
         ''' Initial state computed in initialization function.'''
-        qinit = self.qq
-        yinit = self.yy
+        q_init = self.qq
+        y_init = self.yy
+        j_init = 0
+        t_init = self.time_list[j_init]
         for i, section in enumerate(self.sections):
             # print(f'yy, qq {self.yy} {self.qq}')
             if i == self.I_UPSTREAM:
-                qinit = self.upstream_flow_ts[0]
+                q_init = self.upstream_flow_ts[j_init]
             elif i == self.I_DOWNSTREAM:
-                yinit = self.downstream_stage_ts[0]
-            section.time_steps.append(self.TimeStep(new_time = self.time_list[0]
-                                , new_flow = qinit
-                                , new_depth = yinit
-                                , new_water_z = section.bottom_z + yinit
-                                , new_area = section.get_area_depth(yinit)))
-                    # y0 = z + self.yy #TODO: This seems like a clunky definition of the initial water surface
-                    #             #      Elevation and I think we can do better.
-                    #self.sections[self.I_UPSTREAM].time_steps.append(self.TimeStep(new_flow = q_upstream))
-                    #self.sections[self.I_DOWNSTREAM].time_steps.append(self.TimeStep(new_depth = y_downstream))
+                y_init = self.downstream_stage_ts[j_init]
+            section.time_steps.append(self.TimeStep(new_time = t_init
+                                , new_flow = q_init
+                                , new_depth = y_init
+                                , new_water_z = section.bottom_z + y_init
+                                , new_area = section.get_area_depth(y_init)))
+            if section.ds_section:
+                section.bed_slope_ds = (section.bottom_z - \
+                                section.ds_section.bottom_z) / section.dx_ds
+            else:
+                section.bed_slope_ds = .00001
         #print(self.upstream_flow_ts)
         #print(self.downstream_stage_ts)
 
@@ -258,6 +209,7 @@ class MESHpyNetwork(Network):
             section_j = section.time_steps[j_current]
             if predictor_step: # If we are on the second step, applying the predictors, use the areap and qp
                 if i == self.I_DOWNSTREAM:
+                    #TODO: Make sure we are handling the DS Boundary correctly
                     section_j.depth = downstream_stage_current
                 self.debug = False
                 if self.debug and i == self.I_DOWNSTREAM:
@@ -288,62 +240,79 @@ class MESHpyNetwork(Network):
                 print(f'next stage {downstream_stage_next}')
             section_j.ci1 = section.get_ci1_depth(depth)
             section_j.hy = area / section.get_wetted_perimeter_depth(depth)
-            section_j.conveyance_ds = self.manning_m * area * section_j.hy ** (2.0/3.0)
+            section_j.conveyance_ds = section.manning_n_ds * area * \
+                                        section_j.hy ** (2.0/3.0)
+            self.debug = True
             if self.debug:
-                print (f'ci1 {section_j.ci1}')
-                print (f'Rw {section_j.hy}')
-                print (f'conveyance {section_j.conveyance_ds}')
+                if i == self.I_UPSTREAM or i == self.I_DOWNSTREAM:
+                    print (f'ci1 {section_j.ci1: 9g} Rw {section_j.hy: 9g} conveyance {section_j.conveyance_ds: 9g}')
+                self.debug = False
             if predictor_step:
-                if i == self.I_UPSTREAM: continue
-                section_US = section_arr[i-1] #Upstream is increasing in index for our scheme
-                section_US_j = section_US.time_steps[j_current]
-                    #TODO: make ci2 compatible with generalized sections.
-                section_j.ci2_ds = \
-                    section_US.get_ci2_depth_depth_ds(section_US_j.depth, depth)
-
-                if self.debug:
-                    print('Upstream n, flow, conveyance_ds {} {} {}', \
-                                section_US.manning_n_ds\
-                                , section_US_j.flow\
-                                , section_US_j.conveyance_ds)
-                    print('This section n, flow, conveyance_ds {} {} {}', \
-                                section_US.manning_n_ds\
-                                , section_j.flow\
-                                , section_j.conveyance_ds)
-                #TODO: DongHa  Determine if we need to make the 0.5 to compute fs a variable
-                section_j.friction_slope_ds = section_US.manning_n_ds \
-                               * 0.5 * section_US_j.flow \
-                               * abs(section_US_j.flow) / (section_US_j.conveyance_ds ** 2.0) \
-                               + section_US.manning_n_ds * 0.5 * section_j.flow \
-                               * abs(section_j.flow) / (section_j.conveyance_ds ** 2.0)
-                section_j.as0_ds = (section_US_j.flow_area + section_j.flow_area) \
-                               / 2.0 * (section_US.bed_slope_ds \
-                                        - section_j.friction_slope_ds)
-                section_j.gs0_ds = self.gravity * (section_US.bed_slope_ds \
-                                        - section_j.friction_slope_ds)
-                section.dbdx_ds = (section.bottom_width - section_US.bottom_width) \
-                                      / section_US.dx_ds
+                if i == self.I_UPSTREAM:
+                    pass
+                else:
+                    section_US = section.us_section
+                    section_US_j = section_US.time_steps[j_current]
+                    #TODO: USE DBDX in Ci2 computation
+                    section_j.dbdx_ds = section_US.get_dbdx_ds_depth(section_US_j.depth, depth)                                  / section.dx_ds
+                    section_j.ci2_ds = \
+                        section_US.get_ci2_depth_depth_ds(section_US_j.depth, depth)
+                    if self.debug:
+                        print('Upstream n, flow, conveyance_ds {} {} {}', \
+                                    section_US.manning_n_ds\
+                                    , section_US_j.flow\
+                                    , section_US_j.conveyance_ds)
+                        print('This section n, flow, conveyance_ds {} {} {}', \
+                                    section.manning_n_ds\
+                                    , section_j.flow\
+                                    , section_j.conveyance_ds)
+                    #TODO: DongHa  Determine if we need to make the 0.5 to compute fs a variable
+                    #TODO: Move manning_m into conveyance calculation
+                    #TODO: consider Nazmul suggestion to combine Manning N and Manning M
+                    section_j.friction_slope_ds = 0.5 * self.manning_m * (
+                                     section_US_j.flow * abs(section_US_j.flow)
+                                   / (section_US_j.conveyance_ds ** 2.0)
+                                   + section_j.flow * abs(section_j.flow)
+                                   / (section_j.conveyance_ds ** 2.0))
+                    section_j.as0_ds = (section_US_j.flow_area + section_j.flow_area) \
+                                   / 2.0 * (section_US.bed_slope_ds \
+                                            - section_j.friction_slope_ds)
+                    section_j.gs0_ds = self.gravity * (section_US.bed_slope_ds \
+                                            - section_j.friction_slope_ds)
             if not predictor_step:
-                if i == self.I_DOWNSTREAM: continue
-                section_DS = section_arr[i+1]
-                section_DS_j = section_DS.time_steps[j_current]
-                    #TODO: not compatible with generalized sections.
-                section_j.ci2_ds = \
-                    section.get_ci2_depth_depth_ds(depth, section_DS_j.depthp)
-                section_j.friction_slope_ds = section.manning_n_ds \
-                   * 0.5 * section_j.flow \
-                   * abs(section_j.flow) / (section_j.conveyance_ds ** 2.0) \
-                   + section.manning_n_ds * 0.5 * section_DS_j.flow \
-                   * abs(section_DS_j.flow) / (section_DS_j.conveyance_ds ** 2.0)
-                section_j.as0_ds = (section_j.areap + section_DS_j.areap) \
-                       / 2.0 * (section.bed_slope_ds \
-                                - section_j.friction_slope_ds)
-                section_j.gs0_ds = self.gravity * (section.bed_slope_ds \
-                                        - section_j.friction_slope_ds)
-                #TODO: remove dbdx_ds calculation from the timestep loop: it does not change
-                section.dbdx_ds = (section_DS.bottom_width - section.bottom_width) \
-                                      / section.dx_ds
-
+                if i == self.I_DOWNSTREAM:
+                    pass
+                else:
+                    section_DS = section.ds_section
+                    section_DS_j = section_DS.time_steps[j_current]
+                    section_j.dbdx_ds = section.get_dbdx_ds_depth(depth, section_DS_j.depthp)                                  / section.dx_ds
+                    section_j.ci2_ds = \
+                        section.get_ci2_depth_depth_ds(depth, section_DS_j.depthp)
+                        #TODO: Verify that depthp is calculated in time.
+                    self.debug = True
+                    if self.debug:
+                        if  i == self.I_DOWNSTREAM or i == self.I_UPSTREAM:
+                            print ('depthp{: 9g} depthp_DS{: 9g} {: 9g}'\
+                                 .format(section_j.ci2_ds, section_j.dbdx_ds
+                                 , section_j.friction_slope_ds))
+                        self.debug = False
+                    section_j.friction_slope_ds = 0.5 * self.manning_m * (
+                                     section_j.flow * abs(section_j.flow)
+                                   / (section_j.conveyance_ds ** 2.0)
+                                   + section_DS_j.flow * abs(section_DS_j.flow)
+                                   / (section_DS_j.conveyance_ds ** 2.0))
+                    section_j.as0_ds = (section_j.areap + section_DS_j.areap) \
+                           / 2.0 * (section.bed_slope_ds \
+                                    - section_j.friction_slope_ds)
+                    section_j.gs0_ds = self.gravity * (section.bed_slope_ds \
+                                            - section_j.friction_slope_ds)
+                self.debug = True
+                if self.debug:
+                    if  i == self.I_DOWNSTREAM or i == self.I_UPSTREAM:
+                        print ('ci2 {: 9g} dbdx {: 9g} fs{: 9g}'\
+                             .format(section_j.ci2_ds, section_j.dbdx_ds
+                             , section_j.friction_slope_ds))
+                    self.debug = False
     def matrix_pc(self
             , section_arr
             , j_current
@@ -409,6 +378,7 @@ class MESHpyNetwork(Network):
             st12 = 0.0
             st21 = section.get_st21_area (area, flow, section_j.gs0_ds
                                    , section_j.conveyance_ds, dkda
+                                   , section_j.dbdx_ds
                                    , self.gravity, self .manning_m)
             # TODO: Determine if st22 is a section-property-dependent value
             # and if so, move it to a method within the RectangleSection class
@@ -416,7 +386,7 @@ class MESHpyNetwork(Network):
                  * area \
                  / section_j.conveyance_ds
 
-            section_US = section_arr[i-1]
+            section_US = section.us_section
             if predictor_step:
                 # TODO: Confirm the order of these statements with Ehab
                 # The following if statements run in reverse order in matrixp
@@ -514,9 +484,9 @@ class MESHpyNetwork(Network):
 
           #      if(i.ge.2.and.i.lt.n_sections) then
             if i > self.I_DOWNSTREAM and i < self.I_UPSTREAM:
-                section_DS = section_arr[i+1]
+                section_DS = section.ds_section
                 section_DS_j = section_DS.time_steps[j_current]
-                section_US = section_arr[i-1]
+                section_US = section.us_section
                 section_US_j = section_US.time_steps[j_current]
                 if self.predictor_step: # If we are on the second step, applying the predictors, use the areap and qp
                     area_DS = section_DS_j.flow_area
@@ -557,7 +527,7 @@ class MESHpyNetwork(Network):
                 if i == self.I_UPSTREAM or i == self.I_DOWNSTREAM:
                     continue
                 section_j = section.time_steps[j_current]
-                section_DS = section_arr[i+1]
+                section_DS = section.ds_section
                 section_DS_j = section_DS.time_steps[j_current]
                 section_j.eps2 = max(section_DS_j.eps2, section_j.eps2)
                 # print('0.0, alfa4, eps2, velocity, celerity {} {} {} {} {}'.format(0.0, self.alfa4, section_j.eps2
@@ -568,11 +538,13 @@ class MESHpyNetwork(Network):
               #c      write(*,*)'corr',i,eps2(i)
 
         elif not predictor_step:
-            for i, section in enumerate(reversed(section_arr)):
+            for k, section in enumerate(reversed(section_arr)):
+                i = self.I_DOWNSTREAM - k
+                # print(k)
                 if i == self.I_DOWNSTREAM:
                     continue
                 section_j = section.time_steps[j_current]
-                section_DS = section_arr[i+1]
+                section_DS = section.ds_section
                 section_DS_j = section_DS.time_steps[j_current]
                 section_DS_j.eps2 = max(section_DS_j.eps2, section_j.eps2)
                 # print('0.0, alfa, eps2, velocity, celerity {} {} {} {} {}'.format(0.0, self.alfa4, section_j.eps2
@@ -596,12 +568,12 @@ class MESHpyNetwork(Network):
                 section_j.d2 = 0.0
             else:
                 if predictor_step: # If we are on the second step, applying the predictors, use the areap and qp
-                    section_DS = section_arr[i+1]
+                    section_DS = section.ds_section
                     section_DS_j = section_DS.time_steps[j_current]
                     area_DS = section_DS_j.flow_area
                     flow_DS = section_DS_j.flow
                 else:
-                    section_US = section_arr[i-1]
+                    section_US = section.us_section
                     section_US_j = section_US.time_steps[j_current]
                     area_US = section_US_j.areap
                     flow_US = section_US_j.qp
@@ -636,11 +608,11 @@ class MESHpyNetwork(Network):
               # using the next lines and letting the equation reduce automatically
               # based on the value in eps4?
                     if predictor_step:
-                        section_US = section_arr[i-1]
+                        section_US = section.us_section
                         section_US_j = section_US.time_steps[j_current]
                         area_US = section_US_j.flow_area
                         flow_US = section_US_j.flow
-                        section_2DS = section_arr[i+2]
+                        section_2DS = section.ds_section.ds_section
                         section_2DS_j = section_DS.time_steps[j_current]
                         area_2DS = section_2DS_j.flow_area
                         flow_2DS = section_2DS_j.flow
@@ -649,11 +621,11 @@ class MESHpyNetwork(Network):
                         d2_eps4_diff = - 1.0 * section_j.eps4 * (flow_2DS
                                     - 3.0 * flow_DS + 3.0 * flow - flow_US)
                     elif not predictor_step:
-                        section_DS = section_arr[i+1]
+                        section_DS = section.ds_section
                         section_DS_j = section_DS.time_steps[j_current]
                         area_DS = section_DS_j.areap
                         flow_DS = section_DS_j.qp
-                        section_2US = section_arr[i-2]
+                        section_2US = section.us_section.us_section
                         section_2US_j = section_2US.time_steps[j_current]
                         area_2US = section_2US_j.areap
                         flow_2US = section_2US_j.qp
@@ -700,7 +672,7 @@ class MESHpyNetwork(Network):
                 section_j.delta_area_corrector = 0.0
                 section_j.delta_flow_corrector = section_j.delta_flow_predictor
             else:
-                section_US = section_arr[i-1]
+                section_US = section.us_section
                 section_US_j = section_US.time_steps[j_current]
                 section_j.rhs1 = -1.0 * section_j.sigma_ds\
                         * (section_j.f1 - section_US_j.f1\
@@ -746,10 +718,10 @@ class MESHpyNetwork(Network):
             , downstream_stage_next):
         '''docstring here'''
         dt = self.time_list[j_next] - self.time_list[j_current]
-        for i, section in enumerate(reversed(self.sections)):
-        # do i=ncomp-1,1,-1
+        for k, section in enumerate(reversed(self.sections)):
+        # for i, section in enumerate((self.sections)):
+            i = self.I_DOWNSTREAM - k
         #TODO: CONFIRM That the reversed array is necessary in this case (I don't think it is...)
-        #     cour=dt(i)/dx(i)
             # Use the flow time series for the upstream boundary
             section_j = section.time_steps[j_current]
             if i == self.I_DOWNSTREAM:
@@ -761,19 +733,20 @@ class MESHpyNetwork(Network):
                 section_j.delta_area_corrector = 0.0
                 section_j.delta_flow_corrector = section_j.delta_flow_predictor
             else:
-                section_DS = section_arr[i+1]
+                #### WHY DOES THIS NOT WORK WITH THE APPROPRIATE DS SECTION????
+                section_DS = section.ds_section
+                #### WHY DOES THIS NOT WORK WITH THE APPROPRIATE DS SECTION????
+
                 section_DS_j = section_DS.time_steps[j_current]
                 section_j.sigma_ds = dt / section.dx_ds
                 section_j.rhs1 = -1.0 * section_j.sigma_ds\
                         * (section_DS_j.f1 - section_j.f1\
                             - section_DS_j.d1 + section_j.d1)
-            #     rhs1=-cour*(f1(i+1)-f1(i)-d1(i+1)+d1(i))
                 section_j.rhs2 = -1.0 * section_j.sigma_ds\
                         * (section_DS_j.f2 - section_j.f2\
                             - section_DS_j.d2 + section_j.d2)\
                         + dt * self.gravity\
                              * (section_j.ci2_ds + section_j.as0_ds)
-            #     rhs2=-cour*(f2(i+1)-f2(i)-d2(i+1)+d2(i))+dt(i)*grav*(ci2(i)+aso(i))
                 c11 = section_j.g11inv * section_DS_j.b11 + section_j.g12inv \
                                                             * section_DS_j.b21
                 c12 = section_j.g11inv * section_DS_j.b12 + section_j.g12inv \
@@ -782,22 +755,16 @@ class MESHpyNetwork(Network):
                                                             * section_DS_j.b21
                 c22 = section_j.g21inv * section_DS_j.b12 + section_j.g22inv \
                                                             * section_DS_j.b22
-            #     c11=g11inv(i)*b11(i+1)+g12inv(i)*b21(i+1)
-            #     c12=g11inv(i)*b12(i+1)+g12inv(i)*b22(i+1)
-            #     c21=g21inv(i)*b11(i+1)+g22inv(i)*b21(i+1)
-            #     c22=g21inv(i)*b12(i+1)+g22inv(i)*b22(i+1)
                 section_j.delta_area_corrector =\
                     section_j.g11inv * section_j.rhs1\
                     + section_j.g12inv * section_j.rhs2\
                     - c11 * section_DS_j.delta_area_corrector\
                     - c12 * section_DS_j.delta_flow_corrector
-            #     dac(i)=g11inv(i)*rhs1+g12inv(i)*rhs2-c11*dac(i+1)-c12*dqc(i+1)
                 section_j.delta_flow_corrector =\
                     section_j.g21inv * section_j.rhs1\
                     + section_j.g22inv * section_j.rhs2\
                     - c21 * section_DS_j.delta_area_corrector\
                     - c22 * section_DS_j.delta_flow_corrector
-            #     dqc(i)=g21inv(i)*rhs1+g22inv(i)*rhs2-c21*dac(i+1)-c22*dqc(i+1)
 
             da = (section_j.delta_area_predictor + section_j.delta_area_corrector) \
                     / 2.0
@@ -836,8 +803,16 @@ class MESHpyNetwork(Network):
         def get_ci1_depth(self, depth):
             return self.bottom_width * (depth ** 2.0) / 2.0
 
+        def get_dbdx_ds_depth(self, depth, depth_ds):
+            #FOR RectangleSection -- the depth is trivial
+            return (self.ds_section.bottom_width - self.bottom_width) \
+                      / (self.dx_ds)
+
         def get_ci2_depth_depth_ds(self, depth, depth_ds):
-            return ((depth_ds ** 2.0) + (depth ** 2.0)
+            # print((depth_ds ** 2.0) + (depth ** 2.0))
+            # print(self.ds_section.bottom_width - self.bottom_width)
+            # print(self.dx_ds)
+            return (((depth_ds ** 2.0) + (depth ** 2.0))
                       * (self.ds_section.bottom_width - self.bottom_width) \
                       / (self.dx_ds * 4.0))
 
@@ -848,9 +823,10 @@ class MESHpyNetwork(Network):
                   (area ** (5.0/3.0) * 2.0 / self.bottom_width)) /
                   (wetted_perimeter ** 2.0))
 
-        def get_st21_area(self, area, flow, gs0, conveyance, dkda, gravity, manning_m):
+        def get_st21_area(self, area, flow, gs0, conveyance,
+                                dkda, dbdx, gravity, manning_m):
             return (gravity * area / self.bottom_width \
-                / self.bottom_width * self.dbdx_ds + gs0 \
+                / self.bottom_width * dbdx + gs0 \
                 + manning_m * 2.0 * gravity \
                 * area * flow \
                 * abs (flow) / conveyance ** 3.0 \
@@ -881,7 +857,7 @@ class MESHpyNetwork(Network):
             self.gs0_ds = 0
             self.sigma_ds = 0 # Sigma is related to the courant parameter: CFL = celerity * sigma
             #self.cour = 0
-            self.dbdx = 0
+            self.dbdx_ds = 0
             self.velocity = 0
             self.celerity = 0
             self.f1 = 0

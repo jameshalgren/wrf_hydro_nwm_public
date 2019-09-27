@@ -312,7 +312,7 @@ class Network:
             super().__init__(*args, **kwargs)
             self.bottom_width = bottom_width
             self.manning_n_ds = manning_n_ds
-            self.dbdx_ds = 0 # change in width to the next downstream section
+            #self.dbdx_ds = 0 # change in width to the next downstream section
 
         def get_celerity_area(self, area, gravity, debug = False):
             if debug: print(gravity, area, self.bottom_width)
