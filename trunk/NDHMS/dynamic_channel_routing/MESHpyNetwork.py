@@ -140,8 +140,7 @@ class MESHpyNetwork(Network):
 
         # print(self.time_list)
         for j, t in enumerate(self.time_list):
-            if verbose: print(j+1 , len(self.time_list), len(self.upstream_flow_ts), len(self.downstream_stage_ts))
-            if verbose: print(f'timestep {j} {t}')
+            if verbose: print(f'timestep {j} of {len(self.time_list)}, t = {t}')
             if j+1 < len(self.time_list):
                 j_current = j
                 j_next = j + 1
@@ -154,11 +153,11 @@ class MESHpyNetwork(Network):
                 if write_output:
                     pass
                     self.write_state_timestep_mesh(self.sections, j_current
-                                        , 'mesh_', output_path, False)
+                                        , 'mesh_', output_path, self.debug)
             else:
                 if write_output:
                     self.write_state_timestep_mesh(self.sections, j_next
-                                        , 'mesh_', output_path, False)
+                                        , 'mesh_', output_path, self.debug)
 
 
     def compute_next_time_step_state(self, j_current
@@ -202,7 +201,8 @@ class MESHpyNetwork(Network):
                         , downstream_stage_next = downstream_stage_next)
         self.thetas = self.thetasinv
         output_path = r'c:\users\james.halgren\Downloads\git\mesh\trunk\NDHMS\dynamic_channel_routing\test\output\out.txt'
-        # self.write_state_timestep_mesh(self.sections, j_current, 'mesh_predictor', output_path)
+        if self.debug:
+            self.write_state_timestep_mesh(self.sections, j_current, 'mesh_predictor', output_path)
         self.compute_sections(section_arr = self.sections
                         , j_current = j_current
                         , j_next = j_next
@@ -226,8 +226,16 @@ class MESHpyNetwork(Network):
                         , upstream_flow_next = upstream_flow_next
                         , downstream_stage_current = downstream_stage_current
                         , downstream_stage_next = downstream_stage_next)
+        self.mesh_final_update(section_arr = self.sections
+                        , j_current = j_current
+                        , j_next = j_next
+                        , upstream_flow_current = upstream_flow_current
+                        , upstream_flow_next = upstream_flow_next
+                        , downstream_stage_current = downstream_stage_current
+                        , downstream_stage_next = downstream_stage_next)
 
-        # self.write_state_timestep_mesh(self.sections, j_current, 'mesh_corrector', output_path)
+        if self.debug:
+            self.write_state_timestep_mesh(self.sections, j_current, 'mesh_corrector', output_path)
 
     def dsbc():
           # c----------------------------------------------------------------------
@@ -390,10 +398,11 @@ class MESHpyNetwork(Network):
             e12 = -1.0 / (section_j.velocity - section_j.celerity)
             e21 = 1.0
             e22 = -1.0 / (section_j.velocity + section_j.celerity)
-            section_j.e11 = e11
-            section_j.e12 = e12
-            section_j.e21 = e21
-            section_j.e22 = e22
+            if self.debug:
+                section_j.e11 = e11
+                section_j.e12 = e12
+                section_j.e21 = e21
+                section_j.e22 = e22
 
             #c       L^{-1} (inverse of Left eigenvector matrix)
             f11 = -(section_j.velocity - section_j.celerity) \
@@ -404,37 +413,43 @@ class MESHpyNetwork(Network):
                     / (2.0 * section_j.celerity)
             f22 = (section_j.velocity ** 2.0 - section_j.celerity ** 2.0) \
                     / (2.0 * section_j.celerity)
-            section_j.f11 = f11
-            section_j.f12 = f12
-            section_j.f21 = f21
-            section_j.f22 = f22
+            if self.debug:
+                section_j.f11 = f11
+                section_j.f12 = f12
+                section_j.f21 = f21
+                section_j.f22 = f22
 
             #c       Diagonal wave matrix D (eq 12)
-            d11 = abs(section_j.velocity + section_j.celerity)
-            d22 = abs(section_j.velocity - section_j.celerity)
-            section_j.d11 = d11
-            section_j.d22 = d22
+            section_j.d11 = abs(section_j.velocity + section_j.celerity)
+            section_j.d22 = abs(section_j.velocity - section_j.celerity)
 
             #c       Equation 11 (L^{-1} D L)
             a11 = e11 * f11 * section_j.d11 + e21 * f12 * section_j.d22
             a12 = e12 * f11 * section_j.d11 + e22 * f12 * section_j.d22
             a21 = e11 * f21 * section_j.d11 + e21 * f22 * section_j.d22
             a22 = e12 * f21 * section_j.d11 + e22 * f22 * section_j.d22
-            section_j.a11 = a11
-            section_j.a12 = a12
-            section_j.a21 = a21
-            section_j.a22 = a22
+            if self.debug:
+                section_j.a11 = a11
+                section_j.a12 = a12
+                section_j.a21 = a21
+                section_j.a22 = a22
 
 
             dt = self.time_list[j_next] - self.time_list[j_current]
             #c     Calculating dK/dA (eq 15)
             dkda = section.get_dkda_area(area)
-            section_j.dkda = dkda
+            if self.debug:
+                section_j.dkda = dkda
             # print(dkda)
 
             #c     Matrix S (eq 14)
             st11 = 0.0
             st12 = 0.0
+            if not section_j.gs0_ds:
+                #TODO: FIND THIS
+                #It is possible that the entire MatrixP loop should be shifted right.
+                section_j.gs0_ds = 0
+                section_j.dbdx_ds = 0
             st21 = section.get_st21_area (area, flow, section_j.gs0_ds
                                    , section_j.conveyance_ds, dkda
                                    , section_j.dbdx_ds
@@ -444,7 +459,8 @@ class MESHpyNetwork(Network):
             st22 = -2.0 * self.manning_m * area \
                  * flow \
                  / section_j.conveyance_ds ** 2.0
-            if predictor_step:
+
+            if self.debug:
                 section_j.st11 = st11
                 section_j.st12 = st12
                 section_j.st21 = st21
@@ -550,7 +566,7 @@ class MESHpyNetwork(Network):
                 g22 = (0.5 + self.phi + self.theta * section_j.sigma_ds * a22
                               + thetassign * 0.5 * self.thetas * st22)
 
-            if predictor_step:
+            if self.debug:
                 section_j.g11 = g11
                 section_j.g12 = g12
                 section_j.g21 = g21
@@ -567,7 +583,7 @@ class MESHpyNetwork(Network):
                         + self.gravity * section_j.ci1
 
           #      if(i.ge.2.and.i.lt.n_sections) then
-            if i > self.I_DOWNSTREAM and i < self.I_UPSTREAM:
+            if i < self.I_DOWNSTREAM and i > self.I_UPSTREAM:
                 section_DS = section.ds_section
                 section_DS_j = section_DS.time_steps[j_current]
                 section_US = section.us_section
@@ -750,13 +766,8 @@ class MESHpyNetwork(Network):
                 #So we set the Delta Q predictor, which is set from the input
                 #time series for the upstream-most point.
                 # TODO: Confirm that DAP(1) is never used... Why not? ASK EHAB
-                # section_j.delta_area_predictor = 0.0
+                section_j.delta_area_predictor = 0.0
                 section_j.delta_flow_predictor = upstream_flow_next - upstream_flow_current
-            elif i == self.I_DOWNSTREAM:
-                # section_j.delta_area_predictor = 0.0
-                #TODO: Ask Ehab why these values are touched in the predictor step
-                section_j.delta_area_corrector = 0.0
-                section_j.delta_flow_corrector = section_j.delta_flow_predictor
             else:
                 section_US = section.us_section
                 section_US_j = section_US.time_steps[j_current]
@@ -777,8 +788,7 @@ class MESHpyNetwork(Network):
                 c22 = section_j.g21inv * section_US_j.b12 + section_j.g22inv \
                                                             * section_US_j.b22
 
-                predictor_step = True
-                if predictor_step:
+                if self.debug:
                     section_j.c11 = c11
                     section_j.c12 = c12
                     section_j.c21 = c21
@@ -794,6 +804,11 @@ class MESHpyNetwork(Network):
                     + section_j.g22inv * section_j.rhs2\
                     - c21 * section_US_j.delta_area_predictor\
                     - c22 * section_US_j.delta_flow_predictor
+                if i == self.I_DOWNSTREAM:
+                    section_j.delta_area_predictor = 0.0
+                    #TODO: Ask Ehab why these values are touched in the predictor step
+                    # section_j.delta_area_corrector = 0.0
+                    # section_j.delta_flow_corrector = section_j.delta_flow_predictor
 
             #Update via predictor
             if self.debug and (i == self.I_UPSTREAM or i == self.I_DOWNSTREAM): print (f'area {section_j.flow_area}, dap {section_j.delta_area_predictor}')
@@ -812,7 +827,7 @@ class MESHpyNetwork(Network):
             , downstream_stage_next):
         '''docstring here'''
         dt = self.time_list[j_next] - self.time_list[j_current]
-        for k, section in enumerate(reversed(self.sections)):
+        for k, section in enumerate(reversed(section_arr)):
         # for i, section in enumerate((self.sections)):
             i = self.I_DOWNSTREAM - k
         #TODO: CONFIRM That the reversed array is necessary in this case (I don't think it is...)
@@ -850,8 +865,9 @@ class MESHpyNetwork(Network):
                 c22 = section_j.g21inv * section_DS_j.b12 + section_j.g22inv \
                                                             * section_DS_j.b22
 
-                predictor_step = False
-                if not predictor_step:
+                if self.debug:
+                # predictor_step = False
+                # if not predictor_step:
                     section_j.c11 = c11
                     section_j.c12 = c12
                     section_j.c21 = c21
@@ -867,7 +883,21 @@ class MESHpyNetwork(Network):
                     + section_j.g22inv * section_j.rhs2\
                     - c21 * section_DS_j.delta_area_corrector\
                     - c22 * section_DS_j.delta_flow_corrector
+                if i == self.I_UPSTREAM:
+                    section_j.delta_flow_corrector = section_j.delta_flow_predictor
 
+    def mesh_final_update(self
+            , section_arr
+            , j_current
+            , j_next
+            , upstream_flow_current
+            , upstream_flow_next
+            , downstream_stage_current
+            , downstream_stage_next
+            , predictor_step = False):
+
+        for i, section in enumerate(section_arr):
+            section_j = section.time_steps[j_current]
             da = (section_j.delta_area_predictor + section_j.delta_area_corrector) \
                     / 2.0
             dq = (section_j.delta_flow_predictor + section_j.delta_flow_corrector) \
@@ -1102,81 +1132,81 @@ class MESHpyNetwork(Network):
             super().__init__(*args, **kwargs)
 
             # Per-time-step at-a-section properties
-            self.delta_flow_corrector = 0.0
-            self.delta_flow_predictor = 0.0
-            self.delta_area_corrector = 0.0
-            self.delta_area_predictor = 0.0
+            self.delta_flow_corrector = None
+            self.delta_flow_predictor = None
+            self.delta_area_corrector = None
+            self.delta_area_predictor = None
             self.water_z = new_water_z
-            self.areap = 0.0
-            self.qp = 0.0
-            self.depthp = 0.0
-            self.ci1 = 0.0
-            self.hy = 0.0 # Hydraulic Radius (used to compute co)
+            self.areap = None
+            self.qp = None
+            self.depthp = None
+            self.ci1 = None
+            self.hy = None # Hydraulic Radius (used to compute co)
 
             # Per-time-step downstream reach properties
-            self.conveyance_ds = 0
-            self.ci2_ds = 0
+            self.conveyance_ds = None
+            self.ci2_ds = None
             # self.friction_slope_ds = 0 # Derived from parent Class, Network.TimeStep
-            self.as0_ds = 0
-            self.gs0_ds = 0
-            self.sigma_ds = 0 # Sigma is related to the courant parameter: CFL = celerity * sigma
+            self.as0_ds = None
+            self.gs0_ds = None
+            self.sigma_ds = None # Sigma is related to the courant parameter: CFL = celerity * sigma
             #self.cour = 0
-            self.dbdx_ds = 0
-            self.velocity = 0
-            self.celerity = 0
+            self.dbdx_ds = None
+            self.velocity = None
+            self.celerity = None
 
-            self.wetted_perimeter = 0
+            self.wetted_perimeter = None
 
-            self.f1 = 0
-            self.f2 = 0
-            self.d1 = 0
-            self.d2 = 0
-            self.d11 = 0
-            self.d22 = 0
-            self.b11 = 0
-            self.b12 = 0
-            self.b21 = 0
-            self.b22 = 0
-            self.g11inv = 0
-            self.g12inv = 0
-            self.g21inv = 0
-            self.g22inv = 0
-            self.eps2 = 0
-            self.eps4 = 0
-            self.rhs1 = 0
-            self.rhs2 = 0
+            self.f1 = None
+            self.f2 = None
+            self.d1 = None
+            self.d2 = None
+            self.d11 = None
+            self.d22 = None
+            self.b11 = None
+            self.b12 = None
+            self.b21 = None
+            self.b22 = None
+            self.g11inv = None
+            self.g12inv = None
+            self.g21inv = None
+            self.g22inv = None
+            self.eps2 = None
+            self.eps4 = None
+            self.rhs1 = None
+            self.rhs2 = None
 
             #FROM HERE DOWN are unnecessary
             #TODO: These could be in a debug statement
-            self.a11 = 0
-            self.a12 = 0
-            self.a21 = 0
-            self.a22 = 0
-            self.g11 = 0
-            self.g12 = 0
-            self.g21 = 0
-            self.g22 = 0
-            self.e11 = 0
-            self.e12 = 0
-            self.e21 = 0
-            self.e22 = 0
-            self.f11 = 0
-            self.f12 = 0
-            self.f21 = 0
-            self.f22 = 0
-            self.st11 = 0
-            self.st12 = 0
-            self.st21 = 0
-            self.st22 = 0
+            self.a11 = None
+            self.a12 = None
+            self.a21 = None
+            self.a22 = None
+            self.g11 = None
+            self.g12 = None
+            self.g21 = None
+            self.g22 = None
+            self.e11 = None
+            self.e12 = None
+            self.e21 = None
+            self.e22 = None
+            self.f11 = None
+            self.f12 = None
+            self.f21 = None
+            self.f22 = None
+            self.st11 = None
+            self.st12 = None
+            self.st21 = None
+            self.st22 = None
 
-            self.eia = 0
+            self.eia = None
 
-            self.dkda = 0
+            self.dkda = None
 
-            self.c11 = 0
-            self.c12 = 0
-            self.c21 = 0
-            self.c22 = 0
+            self.c11 = None
+            self.c12 = None
+            self.c21 = None
+            self.c22 = None
 
 def main():
 
@@ -1216,7 +1246,7 @@ def main():
 
     network.compute_initial_state(write_output = False
                                                     , output_path = output_path)
-    network.debug = False
+    network.debug = True
     network.compute_time_steps_mesh(verbose = True, write_output = False
                                                     , output_path = output_path)
     network.output_dump_all(output_path = output_path, verbose = True)
