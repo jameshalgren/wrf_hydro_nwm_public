@@ -3,6 +3,7 @@ from __future__ import division
 import helpers
 import constants
 import meshconstants
+import pandas as pd
 from network import Network
 import csv
 import os
@@ -23,13 +24,16 @@ class MESHpyNetwork(Network):
     area_tolerance = meshconstants.AREA_TOLERANCE
     crmax = 0.0
     crmin = 100.0
-    predictor_step = True
     yy = 0.0
     qq = 0.0
     phi = meshconstants.PHI         # source term treatment (0:explicit, 1:implicit)
     theta = meshconstants.THETA     # ?
+    # thetas is the weighting coefficient for the source term
+    # (to determine if we want to compute the source term in an
+    # implicit or an explicit manner.)
     thetas = meshconstants.THETAS   # ?
     thesinv = meshconstants.THESINV # ?
+    #TODO: THIS THESINV is probably extranneous and should be removed
     alfa2 = meshconstants.ALFA2     # emp parameter for artificial diffusion (lit)
     alfa4 = meshconstants.ALFA4     # maximum value for artificial diffusion
 
@@ -57,7 +61,7 @@ class MESHpyNetwork(Network):
                 , bed_elevation_path, upstream_path, downstream_path, channel_width_path\
                 , output_path, option_dsbc, null = data
 
-            print(data)
+            # print(data)
 
         self.I_UPSTREAM = 0
         self.I_DOWNSTREAM = n_sections - 1
@@ -124,6 +128,39 @@ class MESHpyNetwork(Network):
         #print(self.upstream_flow_ts)
         #print(self.downstream_stage_ts)
 
+    def compute_time_steps_mesh(self, verbose=False, write_output = False
+                                                , output_path = None):
+        '''This function can operate with
+        1) Nt and dt (number of time steps and size of time step) and a pointer to boundary information
+        2) List of times and a pointer to boundary information
+        3) an initial time, a list of time deltas, and a corresponding list of boundary conditions
+         but since they really all boil down to the last situation, we'll just
+         make it work for #3 and then have other translator methods that create these.'''
+        # print (output_path)
+
+        # print(self.time_list)
+        for j, t in enumerate(self.time_list):
+            if verbose: print(j+1 , len(self.time_list), len(self.upstream_flow_ts), len(self.downstream_stage_ts))
+            if verbose: print(f'timestep {j} {t}')
+            if j+1 < len(self.time_list):
+                j_current = j
+                j_next = j + 1
+                self.compute_next_time_step_state(j_current = j_current
+                                                  , j_next = j_next
+                                                  , upstream_flow_current = self.upstream_flow_ts[j_current]
+                                                  , upstream_flow_next = self.upstream_flow_ts[j_next]
+                                                  , downstream_stage_current = self.downstream_stage_ts[j_current]
+                                                  , downstream_stage_next = self.downstream_stage_ts[j_next])
+                if write_output:
+                    pass
+                    self.write_state_timestep_mesh(self.sections, j_current
+                                        , 'mesh_', output_path, False)
+            else:
+                if write_output:
+                    self.write_state_timestep_mesh(self.sections, j_next
+                                        , 'mesh_', output_path, False)
+
+
     def compute_next_time_step_state(self, j_current
                                          , j_next
                                          , upstream_flow_current
@@ -164,6 +201,8 @@ class MESHpyNetwork(Network):
                         , downstream_stage_current = downstream_stage_current
                         , downstream_stage_next = downstream_stage_next)
         self.thetas = self.thetasinv
+        output_path = r'c:\users\james.halgren\Downloads\git\mesh\trunk\NDHMS\dynamic_channel_routing\test\output\out.txt'
+        # self.write_state_timestep_mesh(self.sections, j_current, 'mesh_predictor', output_path)
         self.compute_sections(section_arr = self.sections
                         , j_current = j_current
                         , j_next = j_next
@@ -187,6 +226,8 @@ class MESHpyNetwork(Network):
                         , upstream_flow_next = upstream_flow_next
                         , downstream_stage_current = downstream_stage_current
                         , downstream_stage_next = downstream_stage_next)
+
+        # self.write_state_timestep_mesh(self.sections, j_current, 'mesh_corrector', output_path)
 
     def dsbc():
           # c----------------------------------------------------------------------
@@ -239,10 +280,12 @@ class MESHpyNetwork(Network):
                 print(f'current stage {downstream_stage_current}')
                 print(f'next stage {downstream_stage_next}')
             section_j.ci1 = section.get_ci1_depth(depth)
+            section_j.wetted_perimeter = section.get_wetted_perimeter_depth(depth)
             section_j.hy = area / section.get_wetted_perimeter_depth(depth)
-            section_j.conveyance_ds = section.manning_n_ds * area * \
+            # print(f'manning_n_ds {section.manning_n_ds}')
+            section_j.conveyance_ds = 1 / section.manning_n_ds * area * \
                                         section_j.hy ** (2.0/3.0)
-            self.debug = True
+            self.debug = False
             if self.debug:
                 if i == self.I_UPSTREAM or i == self.I_DOWNSTREAM:
                     print (f'ci1 {section_j.ci1: 9g} Rw {section_j.hy: 9g} conveyance {section_j.conveyance_ds: 9g}')
@@ -289,24 +332,24 @@ class MESHpyNetwork(Network):
                     section_j.ci2_ds = \
                         section.get_ci2_depth_depth_ds(depth, section_DS_j.depthp)
                         #TODO: Verify that depthp is calculated in time.
-                    self.debug = True
+                    self.debug = False
                     if self.debug:
                         if  i == self.I_DOWNSTREAM or i == self.I_UPSTREAM:
-                            print ('depthp{: 9g} depthp_DS{: 9g} {: 9g}'\
-                                 .format(section_j.ci2_ds, section_j.dbdx_ds
-                                 , section_j.friction_slope_ds))
-                        self.debug = False
+                            # print ('depthp{: 9g} depthp_DS{: 9g} {: 9g}'\
+                            #      .format(section_j.ci2_ds, section_j.dbdx_ds
+                            #      , section_j.friction_slope_ds))
+                            self.debug = False
                     section_j.friction_slope_ds = 0.5 * self.manning_m * (
-                                     section_j.flow * abs(section_j.flow)
+                                     flow * abs(flow)
                                    / (section_j.conveyance_ds ** 2.0)
-                                   + section_DS_j.flow * abs(section_DS_j.flow)
+                                   + section_DS_j.qp * abs(section_DS_j.qp)
                                    / (section_DS_j.conveyance_ds ** 2.0))
                     section_j.as0_ds = (section_j.areap + section_DS_j.areap) \
                            / 2.0 * (section.bed_slope_ds \
                                     - section_j.friction_slope_ds)
                     section_j.gs0_ds = self.gravity * (section.bed_slope_ds \
                                             - section_j.friction_slope_ds)
-                self.debug = True
+                self.debug = False
                 if self.debug:
                     if  i == self.I_DOWNSTREAM or i == self.I_UPSTREAM:
                         print ('ci2 {: 9g} dbdx {: 9g} fs{: 9g}'\
@@ -325,7 +368,7 @@ class MESHpyNetwork(Network):
 
         for i, section in enumerate(section_arr):
             section_j = section.time_steps[j_current]
-            if self.predictor_step:
+            if predictor_step:
                 area = section_j.flow_area
                 flow = section_j.flow
             else:
@@ -347,6 +390,10 @@ class MESHpyNetwork(Network):
             e12 = -1.0 / (section_j.velocity - section_j.celerity)
             e21 = 1.0
             e22 = -1.0 / (section_j.velocity + section_j.celerity)
+            section_j.e11 = e11
+            section_j.e12 = e12
+            section_j.e21 = e21
+            section_j.e22 = e22
 
             #c       L^{-1} (inverse of Left eigenvector matrix)
             f11 = -(section_j.velocity - section_j.celerity) \
@@ -357,21 +404,33 @@ class MESHpyNetwork(Network):
                     / (2.0 * section_j.celerity)
             f22 = (section_j.velocity ** 2.0 - section_j.celerity ** 2.0) \
                     / (2.0 * section_j.celerity)
+            section_j.f11 = f11
+            section_j.f12 = f12
+            section_j.f21 = f21
+            section_j.f22 = f22
 
             #c       Diagonal wave matrix D (eq 12)
-            section_j.d11 = abs(section_j.velocity + section_j.celerity)
-            section_j.d22 = abs(section_j.velocity - section_j.celerity)
+            d11 = abs(section_j.velocity + section_j.celerity)
+            d22 = abs(section_j.velocity - section_j.celerity)
+            section_j.d11 = d11
+            section_j.d22 = d22
 
             #c       Equation 11 (L^{-1} D L)
             a11 = e11 * f11 * section_j.d11 + e21 * f12 * section_j.d22
             a12 = e12 * f11 * section_j.d11 + e22 * f12 * section_j.d22
             a21 = e11 * f21 * section_j.d11 + e21 * f22 * section_j.d22
             a22 = e12 * f21 * section_j.d11 + e22 * f22 * section_j.d22
+            section_j.a11 = a11
+            section_j.a12 = a12
+            section_j.a21 = a21
+            section_j.a22 = a22
+
 
             dt = self.time_list[j_next] - self.time_list[j_current]
-
             #c     Calculating dK/dA (eq 15)
             dkda = section.get_dkda_area(area)
+            section_j.dkda = dkda
+            # print(dkda)
 
             #c     Matrix S (eq 14)
             st11 = 0.0
@@ -379,12 +438,17 @@ class MESHpyNetwork(Network):
             st21 = section.get_st21_area (area, flow, section_j.gs0_ds
                                    , section_j.conveyance_ds, dkda
                                    , section_j.dbdx_ds
-                                   , self.gravity, self .manning_m)
+                                   , self.gravity, self.manning_m)
             # TODO: Determine if st22 is a section-property-dependent value
             # and if so, move it to a method within the RectangleSection class
             st22 = -2.0 * self.manning_m * area \
-                 * area \
-                 / section_j.conveyance_ds
+                 * flow \
+                 / section_j.conveyance_ds ** 2.0
+            if predictor_step:
+                section_j.st11 = st11
+                section_j.st12 = st12
+                section_j.st21 = st21
+                section_j.st22 = st22
 
             section_US = section.us_section
             if predictor_step:
@@ -404,6 +468,8 @@ class MESHpyNetwork(Network):
                             * max(section_j.d11, section_j.d22))
 
                 # c     LHS of eq 7
+                # print(self.phi, self.theta, section_j.sigma_ds, thetassign, dt)
+                # print(f'{a11: 9f}, {a12: 9f}, {a21: 9f}, {a22: 9f}, {st11: 9f}, {st12: 9f}, {st21: 9f}, {st22: 9f}')
                 section_j.b11 = (0.5 - self.phi
                                     - self.theta  * section_j.sigma_ds * a11
                                     + thetassign * 0.5 * self.thetas * st11 * dt)
@@ -449,9 +515,21 @@ class MESHpyNetwork(Network):
                     self.crmax = max(self.crmax , section_j.sigma_ds * max(section_j.d11, section_j.d22))
                     self.crmin = min(self.crmin , section_j.sigma_ds * max(section_j.d11, section_j.d22))
 
+            # TODO: activate this code and delete the g-matrix lines following
+            # to bring consistency with new version of code.
+            # if predictor_step:
+            #     thetassign = -1.0
+            # elif not predictor_step: # This reads more clearly that the equivalent simple 'else'
+            #     thetassign = 1.0
+            # g11 = (0.5 + self.phi + self.theta * section_j.sigma_ds * a11
+            #               + thetassign * 0.5 * self.thetas * st11 * dt)
+            # g12 = (self.theta * section_j.sigma_ds * a12 + thetassign * 0.5
+            #               * self.thetas * st12 * dt)
+            # g21 = (self.theta * section_j.sigma_ds * a21 + thetassign * 0.5
+            #               * self.thetas * st21 * dt)
+            # g22 = (0.5 + self.phi + self.theta * section_j.sigma_ds * a22
+            #               + thetassign * 0.5 * self.thetas * st22 * dt)
             if predictor_step:
-                #TODO: ASK Ehab if 'dt' missing from matrixc computation is intentional
-                #If it is an omission, these two equations can be combined...
                 thetassign = -1.0
                 g11 = (0.5 + self.phi + self.theta * section_j.sigma_ds * a11
                               + thetassign * 0.5 * self.thetas * st11 * dt)
@@ -472,6 +550,12 @@ class MESHpyNetwork(Network):
                 g22 = (0.5 + self.phi + self.theta * section_j.sigma_ds * a22
                               + thetassign * 0.5 * self.thetas * st22)
 
+            if predictor_step:
+                section_j.g11 = g11
+                section_j.g12 = g12
+                section_j.g21 = g21
+                section_j.g22 = g22
+
             section_j.g11inv =  g22 / (g11 * g22 - g12 * g21)
             section_j.g12inv = -g12 / (g11 * g22 - g12 * g21)
             section_j.g21inv = -g21 / (g11 * g22 - g12 * g21)
@@ -488,7 +572,7 @@ class MESHpyNetwork(Network):
                 section_DS_j = section_DS.time_steps[j_current]
                 section_US = section.us_section
                 section_US_j = section_US.time_steps[j_current]
-                if self.predictor_step: # If we are on the second step, applying the predictors, use the areap and qp
+                if predictor_step: # If we are on the second step, applying the predictors, use the areap and qp
                     area_DS = section_DS_j.flow_area
                     flow_DS = section_DS_j.flow
                     area_US = section_US_j.flow_area
@@ -586,6 +670,8 @@ class MESHpyNetwork(Network):
                     ei1 = max(abs(section_US_j.velocity + section_US_j.celerity),
                                     abs(section_US_j.velocity - section_US_j.celerity))
                 eia = (ei + ei1) / 2.0
+                if predictor_step:
+                    section_j.eia = eia
               #      if(ityp(i-1).ne.1) then
               #        d1(i)=0.0
               #        d2(i)=0.0
@@ -690,6 +776,14 @@ class MESHpyNetwork(Network):
                                                             * section_US_j.b21
                 c22 = section_j.g21inv * section_US_j.b12 + section_j.g22inv \
                                                             * section_US_j.b22
+
+                predictor_step = True
+                if predictor_step:
+                    section_j.c11 = c11
+                    section_j.c12 = c12
+                    section_j.c21 = c21
+                    section_j.c22 = c22
+
                 section_j.delta_area_predictor =\
                     section_j.g11inv * section_j.rhs1\
                     + section_j.g12inv * section_j.rhs2\
@@ -755,6 +849,14 @@ class MESHpyNetwork(Network):
                                                             * section_DS_j.b21
                 c22 = section_j.g21inv * section_DS_j.b12 + section_j.g22inv \
                                                             * section_DS_j.b22
+
+                predictor_step = False
+                if not predictor_step:
+                    section_j.c11 = c11
+                    section_j.c12 = c12
+                    section_j.c21 = c21
+                    section_j.c22 = c22
+
                 section_j.delta_area_corrector =\
                     section_j.g11inv * section_j.rhs1\
                     + section_j.g12inv * section_j.rhs2\
@@ -776,7 +878,7 @@ class MESHpyNetwork(Network):
                 next_flow_area = self.area_tolerance
             next_depth = section.get_depth_area(next_flow_area)
             next_flow = section_j.flow + dq
-            self.debug = True
+            self.debug = False
             section.time_steps.append(self.TimeStep(new_time = self.time_list[j_next]
                                 , new_flow = next_flow
                                 , new_depth = next_depth
@@ -819,18 +921,180 @@ class MESHpyNetwork(Network):
         def get_dkda_area(self, area):
             wetted_perimeter = self.get_wetted_perimeter_area(area)
             return (1 / self.manning_n_ds *
-                  (( 5.0 / 3.0 * area ** (2.0/3.0) * wetted_perimeter) -
-                  (area ** (5.0/3.0) * 2.0 / self.bottom_width)) /
-                  (wetted_perimeter ** 2.0))
+                  (( 5.0 / 3.0 * area ** (2.0/3.0) * wetted_perimeter)
+                  - (area ** (5.0/3.0) * 2.0 / self.bottom_width))
+                  / (wetted_perimeter ** 2.0))
+                  #TODO: CORRECTED
+                  #/ (wetted_perimeter ** (5.0 / 3.0)))
 
         def get_st21_area(self, area, flow, gs0, conveyance,
                                 dkda, dbdx, gravity, manning_m):
-            return (gravity * area / self.bottom_width \
-                / self.bottom_width * dbdx + gs0 \
-                + manning_m * 2.0 * gravity \
-                * area * flow \
-                * abs (flow) / conveyance ** 3.0 \
-                * dkda)
+            return (gravity * area / (self.bottom_width ** 2.0) * dbdx \
+                + gs0
+                + manning_m * 2.0 * gravity * area * flow \
+                * abs (flow) / (conveyance ** 3.0) * dkda)
+
+    def write_state_timestep_mesh(self, section_arr, j_current, prefix = 'mesh', output_path = None, verbose = False):
+        elevation = [section.bottom_z + section.time_steps[j_current].water_z \
+                                                    for section in section_arr]
+        depth = [section.time_steps[j_current].depth for section in section_arr]
+        flow = [section.time_steps[j_current].flow for section in section_arr]
+        flow_area = [section.time_steps[j_current].flow_area for section in section_arr]
+
+        if verbose:
+            depthp = [section.time_steps[j_current].depthp for section in section_arr]
+            qp = [section.time_steps[j_current].qp for section in section_arr]
+            areap = [section.time_steps[j_current].areap for section in section_arr]
+
+            # Section/SecPred
+            ci1 = [section.time_steps[j_current].ci1 for section in section_arr]
+            hy = [section.time_steps[j_current].hy for section in section_arr]
+            conveyance_ds = [section.time_steps[j_current].conveyance_ds for section in section_arr]
+            ci2_ds = [section.time_steps[j_current].ci2_ds for section in section_arr]
+            dbdx_ds = [section.time_steps[j_current].dbdx_ds for section in section_arr]
+            friction_slope_ds = [section.time_steps[j_current].friction_slope_ds for section in section_arr]
+            gs0_ds = [section.time_steps[j_current].gs0_ds for section in section_arr]
+            as0_ds = [section.time_steps[j_current].as0_ds for section in section_arr]
+
+            #MatrixC/MatrixP
+            velocity = [section.time_steps[j_current].velocity for section in section_arr]
+            celerity = [section.time_steps[j_current].celerity for section in section_arr]
+            e11 = [section.time_steps[j_current].e11 for section in section_arr]
+            e12 = [section.time_steps[j_current].e12 for section in section_arr]
+            e21 = [section.time_steps[j_current].e21 for section in section_arr]
+            e22 = [section.time_steps[j_current].e22 for section in section_arr]
+            f11 = [section.time_steps[j_current].f11 for section in section_arr]
+            f12 = [section.time_steps[j_current].f12 for section in section_arr]
+            f21 = [section.time_steps[j_current].f21 for section in section_arr]
+            f22 = [section.time_steps[j_current].f22 for section in section_arr]
+            d11 = [section.time_steps[j_current].d11 for section in section_arr]
+            d22 = [section.time_steps[j_current].d22 for section in section_arr]
+            a11 = [section.time_steps[j_current].a11 for section in section_arr]
+            a12 = [section.time_steps[j_current].a12 for section in section_arr]
+            a21 = [section.time_steps[j_current].a21 for section in section_arr]
+            a22 = [section.time_steps[j_current].a22 for section in section_arr]
+            wetted_perimeter = [section.time_steps[j_current].wetted_perimeter for section in section_arr]
+            dkda = [section.time_steps[j_current].dkda for section in section_arr]
+
+
+            st11 = [section.time_steps[j_current].st11 for section in section_arr]
+            st12 = [section.time_steps[j_current].st12 for section in section_arr]
+            st21 = [section.time_steps[j_current].st21 for section in section_arr]
+            st22 = [section.time_steps[j_current].st22 for section in section_arr]
+            b11 = [section.time_steps[j_current].b11 for section in section_arr]
+            b12 = [section.time_steps[j_current].b12 for section in section_arr]
+            b21 = [section.time_steps[j_current].b21 for section in section_arr]
+            b22 = [section.time_steps[j_current].b22 for section in section_arr]
+            g11 = [section.time_steps[j_current].g11 for section in section_arr]
+            g12 = [section.time_steps[j_current].g12 for section in section_arr]
+            g21 = [section.time_steps[j_current].g21 for section in section_arr]
+            g22 = [section.time_steps[j_current].g22 for section in section_arr]
+            g11inv = [section.time_steps[j_current].g11inv for section in section_arr]
+            g12inv = [section.time_steps[j_current].g12inv for section in section_arr]
+            g21inv = [section.time_steps[j_current].g21inv for section in section_arr]
+            g22inv = [section.time_steps[j_current].g22inv for section in section_arr]
+            f1 = [section.time_steps[j_current].f1 for section in section_arr]
+            f2 = [section.time_steps[j_current].f2 for section in section_arr]
+
+            eps2 = [section.time_steps[j_current].eps2 for section in section_arr]
+            eps4 = [section.time_steps[j_current].eps4 for section in section_arr]
+            eia = [section.time_steps[j_current].eia for section in section_arr]
+
+            d1 = [section.time_steps[j_current].d1 for section in section_arr]
+            d2 = [section.time_steps[j_current].d2 for section in section_arr]
+            c11 = [section.time_steps[j_current].c11 for section in section_arr]
+            c12 = [section.time_steps[j_current].c12 for section in section_arr]
+            c21 = [section.time_steps[j_current].c21 for section in section_arr]
+            c22 = [section.time_steps[j_current].c22 for section in section_arr]
+            rhs1 = [section.time_steps[j_current].rhs1 for section in section_arr]
+            rhs2 = [section.time_steps[j_current].rhs2 for section in section_arr]
+            dap = [section.time_steps[j_current].delta_area_predictor for section in section_arr]
+            dqp = [section.time_steps[j_current].delta_flow_predictor for section in section_arr]
+            dac = [section.time_steps[j_current].delta_area_corrector for section in section_arr]
+            dqc = [section.time_steps[j_current].delta_flow_corrector for section in section_arr]
+        if output_path:
+            # pd.DataFrame(zip(elevations, depths, flows, areas)).to_csv(output_path)
+            if verbose: print(f'output to: {output_path}')
+            folder, file = os.path.split(output_path)
+            #TODO: wrap these into some useful chunking for different verbosity levels
+            # e.g., main_output, Predictor, corrector, etc.
+            pd.DataFrame(elevation).to_csv(os.path.join(folder, f'{prefix}_elevation_{j_current:04}_{file}'))
+            pd.DataFrame(depth).to_csv(os.path.join(folder, f'{prefix}_depth_{j_current:04}_{file}'))
+            pd.DataFrame(flow).to_csv(os.path.join(folder, f'{prefix}_flow_{j_current:04}_{file}'))
+            pd.DataFrame(flow_area).to_csv(os.path.join(folder, f'{prefix}_area_{j_current:04}_{file}'))
+            if verbose:
+                pd.DataFrame(areap).to_csv(os.path.join(folder, f'{prefix}_areap_{j_current:04}_{file}'))
+                pd.DataFrame(qp).to_csv(os.path.join(folder, f'{prefix}_qp_{j_current:04}_{file}'))
+                pd.DataFrame(depthp).to_csv(os.path.join(folder, f'{prefix}_depthp_{j_current:04}_{file}'))
+
+                pd.DataFrame(ci1).to_csv(os.path.join(folder, f'{prefix}_ci1_{j_current:04}_{file}'))
+                pd.DataFrame(hy).to_csv(os.path.join(folder, f'{prefix}_hy_{j_current:04}_{file}'))
+                pd.DataFrame(conveyance_ds).to_csv(os.path.join(folder, f'{prefix}_converyance_ds_{j_current:04}_{file}'))
+                pd.DataFrame(ci2_ds).to_csv(os.path.join(folder, f'{prefix}_ci2_ds_{j_current:04}_{file}'))
+                pd.DataFrame(dbdx_ds).to_csv(os.path.join(folder, f'{prefix}_dbdx_ds_{j_current:04}_{file}'))
+                pd.DataFrame(friction_slope_ds).to_csv(os.path.join(folder, f'{prefix}_friction_slope_ds_{j_current:04}_{file}'))
+                pd.DataFrame(gs0_ds).to_csv(os.path.join(folder, f'{prefix}_gs0_ds_{j_current:04}_{file}'))
+                pd.DataFrame(as0_ds).to_csv(os.path.join(folder, f'{prefix}_as0_ds_{j_current:04}_{file}'))
+
+                pd.DataFrame(velocity).to_csv(os.path.join(folder, f'{prefix}_velocity_{j_current:04}_{file}'))
+                pd.DataFrame(celerity).to_csv(os.path.join(folder, f'{prefix}_celerity_{j_current:04}_{file}'))
+                pd.DataFrame(e11).to_csv(os.path.join(folder, f'{prefix}_e11_{j_current:04}_{file}'))
+                pd.DataFrame(e12).to_csv(os.path.join(folder, f'{prefix}_e12_{j_current:04}_{file}'))
+                pd.DataFrame(e21).to_csv(os.path.join(folder, f'{prefix}_e21_{j_current:04}_{file}'))
+                pd.DataFrame(e22).to_csv(os.path.join(folder, f'{prefix}_e22_{j_current:04}_{file}'))
+                pd.DataFrame(f11).to_csv(os.path.join(folder, f'{prefix}_f11_{j_current:04}_{file}'))
+                pd.DataFrame(f12).to_csv(os.path.join(folder, f'{prefix}_f12_{j_current:04}_{file}'))
+                pd.DataFrame(f21).to_csv(os.path.join(folder, f'{prefix}_f21_{j_current:04}_{file}'))
+                pd.DataFrame(f22).to_csv(os.path.join(folder, f'{prefix}_f22_{j_current:04}_{file}'))
+                pd.DataFrame(d11).to_csv(os.path.join(folder, f'{prefix}_d11_{j_current:04}_{file}'))
+                pd.DataFrame(d22).to_csv(os.path.join(folder, f'{prefix}_d22_{j_current:04}_{file}'))
+                pd.DataFrame(a11).to_csv(os.path.join(folder, f'{prefix}_a11_{j_current:04}_{file}'))
+                pd.DataFrame(a12).to_csv(os.path.join(folder, f'{prefix}_a12_{j_current:04}_{file}'))
+                pd.DataFrame(a21).to_csv(os.path.join(folder, f'{prefix}_a21_{j_current:04}_{file}'))
+                pd.DataFrame(a22).to_csv(os.path.join(folder, f'{prefix}_a22_{j_current:04}_{file}'))
+                pd.DataFrame(wetted_perimeter).to_csv(os.path.join(folder, f'{prefix}_wetted_perimeter_{j_current:04}_{file}'))
+                pd.DataFrame(dkda).to_csv(os.path.join(folder, f'{prefix}_dkda_{j_current:04}_{file}'))
+
+                pd.DataFrame(st11).to_csv(os.path.join(folder, f'{prefix}_st11_{j_current:04}_{file}'))
+                pd.DataFrame(st12).to_csv(os.path.join(folder, f'{prefix}_st12_{j_current:04}_{file}'))
+                pd.DataFrame(st21).to_csv(os.path.join(folder, f'{prefix}_st21_{j_current:04}_{file}'))
+                pd.DataFrame(st22).to_csv(os.path.join(folder, f'{prefix}_st22_{j_current:04}_{file}'))
+                pd.DataFrame(b11).to_csv(os.path.join(folder, f'{prefix}_b11_{j_current:04}_{file}'))
+                pd.DataFrame(b12).to_csv(os.path.join(folder, f'{prefix}_b12_{j_current:04}_{file}'))
+                pd.DataFrame(b21).to_csv(os.path.join(folder, f'{prefix}_b21_{j_current:04}_{file}'))
+                pd.DataFrame(b22).to_csv(os.path.join(folder, f'{prefix}_b22_{j_current:04}_{file}'))
+                pd.DataFrame(g11).to_csv(os.path.join(folder, f'{prefix}_g11_{j_current:04}_{file}'))
+                pd.DataFrame(g12).to_csv(os.path.join(folder, f'{prefix}_g12_{j_current:04}_{file}'))
+                pd.DataFrame(g21).to_csv(os.path.join(folder, f'{prefix}_g21_{j_current:04}_{file}'))
+                pd.DataFrame(g22).to_csv(os.path.join(folder, f'{prefix}_g22_{j_current:04}_{file}'))
+                pd.DataFrame(g11inv).to_csv(os.path.join(folder, f'{prefix}_g11inv_{j_current:04}_{file}'))
+                pd.DataFrame(g12inv).to_csv(os.path.join(folder, f'{prefix}_g12inv_{j_current:04}_{file}'))
+                pd.DataFrame(g21inv).to_csv(os.path.join(folder, f'{prefix}_g21inv_{j_current:04}_{file}'))
+                pd.DataFrame(g22inv).to_csv(os.path.join(folder, f'{prefix}_g22inv_{j_current:04}_{file}'))
+                pd.DataFrame(f1).to_csv(os.path.join(folder, f'{prefix}_f1_{j_current:04}_{file}'))
+                pd.DataFrame(f2).to_csv(os.path.join(folder, f'{prefix}_f2_{j_current:04}_{file}'))
+                # pd.DataFrame(zip(flows, areas)).to_csv(output_path)
+                pd.DataFrame(eps2).to_csv(os.path.join(folder, f'{prefix}_eps2_{j_current:04}_{file}'))
+                pd.DataFrame(eps4).to_csv(os.path.join(folder, f'{prefix}_eps4_{j_current:04}_{file}'))
+                pd.DataFrame(eia).to_csv(os.path.join(folder, f'{prefix}_eia_{j_current:04}_{file}'))
+
+                pd.DataFrame(d1).to_csv(os.path.join(folder, f'{prefix}_d1_{j_current:04}_{file}'))
+                pd.DataFrame(d2).to_csv(os.path.join(folder, f'{prefix}_d2_{j_current:04}_{file}'))
+                pd.DataFrame(c11).to_csv(os.path.join(folder, f'{prefix}_c11_{j_current:04}_{file}'))
+                pd.DataFrame(c12).to_csv(os.path.join(folder, f'{prefix}_c12_{j_current:04}_{file}'))
+                pd.DataFrame(c21).to_csv(os.path.join(folder, f'{prefix}_c21_{j_current:04}_{file}'))
+                pd.DataFrame(c22).to_csv(os.path.join(folder, f'{prefix}_c22_{j_current:04}_{file}'))
+                pd.DataFrame(rhs1).to_csv(os.path.join(folder, f'{prefix}_rhs1_{j_current:04}_{file}'))
+                pd.DataFrame(rhs2).to_csv(os.path.join(folder, f'{prefix}_rhs2_{j_current:04}_{file}'))
+                pd.DataFrame(dap).to_csv(os.path.join(folder, f'{prefix}_dap_{j_current:04}_{file}'))
+                pd.DataFrame(dqp).to_csv(os.path.join(folder, f'{prefix}_dqp_{j_current:04}_{file}'))
+                pd.DataFrame(dac).to_csv(os.path.join(folder, f'{prefix}_dac_{j_current:04}_{file}'))
+                pd.DataFrame(dqc).to_csv(os.path.join(folder, f'{prefix}_dqc_{j_current:04}_{file}'))
+        else:
+            print(f'{elevation}')
+            print(f'{depth}')
+            print(f'{flow}')
+            print(f'{area}')
 
     class TimeStep(Network.TimeStep):
         '''MESH-specific time-step values'''
@@ -860,6 +1124,9 @@ class MESHpyNetwork(Network):
             self.dbdx_ds = 0
             self.velocity = 0
             self.celerity = 0
+
+            self.wetted_perimeter = 0
+
             self.f1 = 0
             self.f2 = 0
             self.d1 = 0
@@ -878,6 +1145,38 @@ class MESHpyNetwork(Network):
             self.eps4 = 0
             self.rhs1 = 0
             self.rhs2 = 0
+
+            #FROM HERE DOWN are unnecessary
+            #TODO: These could be in a debug statement
+            self.a11 = 0
+            self.a12 = 0
+            self.a21 = 0
+            self.a22 = 0
+            self.g11 = 0
+            self.g12 = 0
+            self.g21 = 0
+            self.g22 = 0
+            self.e11 = 0
+            self.e12 = 0
+            self.e21 = 0
+            self.e22 = 0
+            self.f11 = 0
+            self.f12 = 0
+            self.f21 = 0
+            self.f22 = 0
+            self.st11 = 0
+            self.st12 = 0
+            self.st21 = 0
+            self.st22 = 0
+
+            self.eia = 0
+
+            self.dkda = 0
+
+            self.c11 = 0
+            self.c12 = 0
+            self.c21 = 0
+            self.c22 = 0
 
 def main():
 
@@ -915,12 +1214,12 @@ def main():
     # network = MuskCNetwork()
     # network = MESHDNetwork()
 
-    network.compute_initial_state(write_output = True
+    network.compute_initial_state(write_output = False
                                                     , output_path = output_path)
     network.debug = False
-    network.compute_time_steps(verbose = True, write_output = True
+    network.compute_time_steps_mesh(verbose = True, write_output = False
                                                     , output_path = output_path)
-    network.output_dump(output_path = output_path, verbose = True)
+    network.output_dump_all(output_path = output_path, verbose = True)
 
 if __name__ == "__main__":
     main()
