@@ -686,7 +686,7 @@ class MESHpyNetwork(Network):
                     ei1 = max(abs(section_US_j.velocity + section_US_j.celerity),
                                     abs(section_US_j.velocity - section_US_j.celerity))
                 eia = (ei + ei1) / 2.0
-                if predictor_step:
+                if self.debug:
                     section_j.eia = eia
               #      if(ityp(i-1).ne.1) then
               #        d1(i)=0.0
