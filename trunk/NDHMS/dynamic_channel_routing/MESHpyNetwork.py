@@ -192,7 +192,7 @@ class MESHpyNetwork(Network):
                         , downstream_stage_current = downstream_stage_current
                         , downstream_stage_next = downstream_stage_next
                         , predictor_step = True)
-        self.apply_predictor(section_arr = self.sections
+        self.compute_predictor(section_arr = self.sections
                         , j_current = j_current
                         , j_next = j_next
                         , upstream_flow_current = upstream_flow_current
@@ -219,7 +219,7 @@ class MESHpyNetwork(Network):
                         , downstream_stage_current = downstream_stage_current
                         , downstream_stage_next = downstream_stage_next
                         , predictor_step = False)
-        self.apply_corrector(section_arr = self.sections
+        self.compute_corrector(section_arr = self.sections
                         , j_current = j_current
                         , j_next = j_next
                         , upstream_flow_current = upstream_flow_current
@@ -274,8 +274,8 @@ class MESHpyNetwork(Network):
                     print(f'corrector step i {i}')
                     print(f'depth {section_j.depth} depthp {section_j.depthp}')
                 self.debug = False
-                area = section_j.areap # computed via 'apply_predictor' method
-                flow = section_j.qp # computed via 'apply_predictor' method
+                area = section_j.areap # computed via 'compute_predictor' method
+                flow = section_j.qp # computed via 'compute_predictor' method
                 depth = section_j.depthp
 
             if self.debug:
@@ -605,7 +605,8 @@ class MESHpyNetwork(Network):
                 if abs(dip1 + di + dim1) < self.depth_tolerance:
                     section_j.eps2 = self.depth_tolerance
                 else:
-                    section_j.eps2 = self.alfa2 * abs(dip1 - di + dim1) / (dip1 + di + dim1)
+                    section_j.eps2 = self.alfa2 * abs(dip1 - di + dim1) \
+                                                / (dip1 + di + dim1)
                 # Assign values for eps2 at boundaries
                 if i == self.I_DOWNSTREAM - 1:
                     section_DS_j.eps2 = section_j.eps2
@@ -670,11 +671,15 @@ class MESHpyNetwork(Network):
                 if predictor_step: # If we are on the second step, applying the predictors, use the areap and qp
                     section_DS = section.ds_section
                     section_DS_j = section_DS.time_steps[j_current]
+                    area = section_j.flow_area
+                    flow = section_j.flow
                     area_DS = section_DS_j.flow_area
                     flow_DS = section_DS_j.flow
                 else:
                     section_US = section.us_section
                     section_US_j = section_US.time_steps[j_current]
+                    area = section_j.areap
+                    flow = section_j.qp
                     area_US = section_US_j.areap
                     flow_US = section_US_j.qp
                 ei = max(abs(section_j.velocity + section_j.celerity),
@@ -718,10 +723,8 @@ class MESHpyNetwork(Network):
                         section_2DS_j = section_DS.time_steps[j_current]
                         area_2DS = section_2DS_j.flow_area
                         flow_2DS = section_2DS_j.flow
-                        d1_eps4_diff = - 1.0 * section_j.eps4 * (area_2DS
-                                    - 3.0 * area_DS + 3.0 * area - area_US)
-                        d2_eps4_diff = - 1.0 * section_j.eps4 * (flow_2DS
-                                    - 3.0 * flow_DS + 3.0 * flow - flow_US)
+                        area3diff = area_2DS - 3.0 * area_DS + 3.0 * area - area_US
+                        flow3diff = flow_2DS - 3.0 * flow_DS + 3.0 * flow - flow_US
                     elif not predictor_step:
                         section_DS = section.ds_section
                         section_DS_j = section_DS.time_steps[j_current]
@@ -731,12 +734,11 @@ class MESHpyNetwork(Network):
                         section_2US_j = section_2US.time_steps[j_current]
                         area_2US = section_2US_j.areap
                         flow_2US = section_2US_j.qp
-                        d1_eps4_diff = - 1.0 * section_j.eps4 * (area_DS
-                                - 3.0 * area + 3.0 * area_US - area_2US)
-                        d2_eps4_diff = - 1.0 * section_j.eps4 * (flow_DS
-                                - 3.0 * flow + 3.0 * flow_US - flow_2US)
-                    section_j.d1 = section_j.d1 + d1_eps4_diff
-                    section_j.d2 = section_j.d2 + d2_eps4_diff
+                        area3diff = area_DS - 3.0 * area + 3.0 * area_US - area_2US
+                        flow3diff = flow_DS - 3.0 * flow + 3.0 * flow_US - flow_2US
+                    section_j.d1 = section_j.d1 - section_j.eps4 * area3diff
+                    section_j.d2 = section_j.d2 - section_j.eps4 * flow3diff
+                    pass
               #      else
               #      d1(i)=eps2(i)*eia*(areap(i)-areap(i-1))-eps4(i)*
               #    1        (areap(i+1)-3*areap(i)+3*areap(i-1)-areap(i-2))
@@ -745,7 +747,7 @@ class MESHpyNetwork(Network):
               #      endif
               #c      write(*,*)'corr',i,d1(i),d2(i),eps2(i),flow_area(i+1),flow_area(i)
 
-    def apply_predictor(self
+    def compute_predictor(self
             , section_arr
             , j_current
             , j_next
@@ -817,7 +819,7 @@ class MESHpyNetwork(Network):
             if self.debug and (i == self.I_UPSTREAM or i == self.I_DOWNSTREAM): print (f'flow {section_j.flow_area}, dqp {section_j.delta_flow_predictor}')
             section_j.qp = section_j.flow + section_j.delta_flow_predictor
 
-    def apply_corrector(self
+    def compute_corrector(self
             , section_arr
             , j_current
             , j_next
@@ -842,10 +844,7 @@ class MESHpyNetwork(Network):
                 section_j.delta_area_corrector = 0.0
                 section_j.delta_flow_corrector = section_j.delta_flow_predictor
             else:
-                #### WHY DOES THIS NOT WORK WITH THE APPROPRIATE DS SECTION????
                 section_DS = section.ds_section
-                #### WHY DOES THIS NOT WORK WITH THE APPROPRIATE DS SECTION????
-
                 section_DS_j = section_DS.time_steps[j_current]
                 section_j.sigma_ds = dt / section.dx_ds
                 section_j.rhs1 = -1.0 * section_j.sigma_ds\
@@ -898,16 +897,16 @@ class MESHpyNetwork(Network):
 
         for i, section in enumerate(section_arr):
             section_j = section.time_steps[j_current]
-            da = (section_j.delta_area_predictor + section_j.delta_area_corrector) \
-                    / 2.0
-            dq = (section_j.delta_flow_predictor + section_j.delta_flow_corrector) \
-                    / 2.0
-            if (da + section_j.flow_area) > self.area_tolerance:
-                next_flow_area = section_j.flow_area + da
+            da_bar = (section_j.delta_area_predictor +
+                        section_j.delta_area_corrector) / 2.0
+            dq_bar = (section_j.delta_flow_predictor +
+                        section_j.delta_flow_corrector) / 2.0
+            if (da_bar + section_j.flow_area) > self.area_tolerance:
+                next_flow_area = section_j.flow_area + da_bar
             else:
                 next_flow_area = self.area_tolerance
             next_depth = section.get_depth_area(next_flow_area)
-            next_flow = section_j.flow + dq
+            next_flow = section_j.flow + dq_bar
             self.debug = False
             section.time_steps.append(self.TimeStep(new_time = self.time_list[j_next]
                                 , new_flow = next_flow
@@ -920,7 +919,7 @@ class MESHpyNetwork(Network):
                 print('current depth area flow {: 10g} {: 9g} {: 9g}'.format\
                         (section_j.depth, section_j.flow_area
                             , section_j.flow))
-                print(f'              da    dq             {da: 9g} {dq: 9g}')
+                print(f'              da    dq             {da_bar: 9g} {dq_bar: 9g}')
                 print('next    depth area flow {: 10g} {: 9g} {: 9g}'.format\
                         (next_depth, next_flow_area, next_flow))
                 print('next    depth area flow {: 10g} {: 9g} {: 9g}\n(in new array)'.format\
