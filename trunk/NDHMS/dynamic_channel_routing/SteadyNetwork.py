@@ -75,7 +75,7 @@ class SteadyNetwork(Network):
 
             section.time_steps.append(self.TimeStep(new_flow = upstream_flow_next, new_depth = y_standard))
 
-    def y_standard_step(self, j, section_ds, section_us, Q, y_guess = 1.0, k = constants.MANNING_SI, gravity=constants.GRAVITY):
+    def y_standard_step(self, j, section_ds, section_us, Q, y_guess = 1.0, k = constants.MANNING_M, gravity=constants.GRAVITY):
         ''' function to compute error in depth calculation for a guessed depth compared to a calculated depth for a given flow.
             Uses scipy.optimize fmin '''
         y_ds = section_ds.time_steps[j].depth
@@ -124,8 +124,8 @@ class SteadyNetwork(Network):
         # print(f'Sf_ds = {Sf_ds} Sf_us = {Sf_us} Sf_mean = {Sf_mean}')
         hl_us2ds = Sf_mean * dx + loss_coeff * abs(V_head_us -  V_head_ds)
         # print('hl_us2ds = {hl_us2ds}')
-        # print('y_us, y_guess, y_ds, z_us, z_ds, Q, V_us, V_ds, hl_us2ds, constants.MANNING_SI')
-        # print(y_us, y_guess, y_ds, z_us, z_ds, Q, V_us, V_ds, hl_us2ds, constants.MANNING_SI)
+        # print('y_us, y_guess, y_ds, z_us, z_ds, Q, V_us, V_ds, hl_us2ds, constants.MANNING_M')
+        # print(y_us, y_guess, y_ds, z_us, z_ds, Q, V_us, V_ds, hl_us2ds, constants.MANNING_M)
         WSE_ds = y_ds + z_ds
         WSE_us = y_us + z_us
         E_ds = helpers.Bernoulli_Energy(WSE_ds, V_ds, 0, gravity)
@@ -135,7 +135,7 @@ class SteadyNetwork(Network):
 
         return float(y_standard[0])
 
-    def stage_standard_min(self, y_us, section_us, section_ds, loss_coeff, dx, Q, y_ds, z_us, z_ds, n_us, n_ds, gravity = constants.GRAVITY, k=constants.MANNING_SI):
+    def stage_standard_min(self, y_us, section_us, section_ds, loss_coeff, dx, Q, y_ds, z_us, z_ds, n_us, n_ds, gravity = constants.GRAVITY, k=constants.MANNING_M):
         ''' computes the error term comparing the Manning's computed depth with the given Q '''
         Area_us = section_us.get_area_depth(y_us)
         Area_ds = section_ds.get_area_depth(y_ds)

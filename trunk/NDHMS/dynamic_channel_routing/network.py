@@ -1,6 +1,9 @@
+import os
 import constants
 import helpers
 import numpy as np
+import pandas as pd
+from math import sqrt
 
 class Network:
     '''Class definition for reaches related as part of a computational scheme for
@@ -14,6 +17,11 @@ class Network:
         self.time_list = [] # TODO: this initialization could be for a datetime series to contain the timestamps
         self.upstream_flow_ts = []
         self.downstream_stage_ts = []
+
+        self.I_UPSTREAM = 1
+        self.I_DOWNSTREAM = 0
+        self.gravity = constants.GRAVITY_SI
+        self.manning_m = constants.MANNING_M
 
         if input_vars:
             if input_type is 'simple':
@@ -38,19 +46,15 @@ class Network:
                                # , hydrograph_skewness = input_vars['hydrograph_skewness']
                                # , hydrograph_qpeak = input_vars['hydrograph_qpeak']
                                # )
-        #TODO: Replace following psuedocode
-            elif input_type is 'file':
+            elif input_type == 'file':
                 filetype = input_vars['filetype']
-                if filetype is 'json':
-                    file = read(filepath)
+                if filetype == 'json': #TODO: Replace json psuedocode
+                    file = read(input_path)
                     for v in file:
                         pass
-                elif filetype is 'mesh.py':
-                    file = read(filepath)
-                    for v in file:
-                        pass
-                else:
-                    print('not-yet-implemented input_type')
+                elif filetype == 'mesh.py':
+                    self.input_and_initialize_meshpyfile(**input_vars)
+                else: print('not-yet-implemented input_type')
             else: #If nothing was defined, prepare a simple network with some default parameters.
             #TODO: This should be properly error trapped/handled.
                 self.input_and_initialize_simple(n_sections = 11
@@ -71,11 +75,9 @@ class Network:
                                             , hydrograph_qpeak = 5000)
 
 
-    def input_and_initialize(self, input_opt=1, input_path=None, output_path=None, upstream_flow_ts=None, downstream_stage_ts=None):
+    def input_and_initialize_meshpyfile(self, filetype = None, input_path=None):
         pass
-    #TODO: These Input and Initialize methods could be different methods within the Network class
-    #TODO: Make GRAVITY and MANNING_SI constants consistent with anticipated units in the input step and
-    #get them to be called/passsed consistently.
+
     def input_and_initialize_simple(self, n_sections = 11
                                         , n_timesteps = 22
                                         , station_downstream = 0
@@ -93,14 +95,8 @@ class Network:
                                         , hydrograph_skewness = 4
                                         , hydrograph_qpeak = 5000):
         ''' This input option is intended to be an extremely simple channel for testing and plotting development'''
-        self.time_list = range(n_timesteps)
-        #TODO: Convert all timesteps to time_stamps
-        # import pandas as pd
-        # pandas.date_range("11:00", "21:30", freq="30min")
-        # datelist = pd.date_range(pd.datetime.today(), periods=100).tolist()
-
-        I_UPSTREAM = n_sections - 1
-        I_DOWNSTREAM = 0
+        self.I_UPSTREAM = n_sections - 1
+        self.I_DOWNSTREAM = 0
 
         stations = np.linspace(station_downstream, station_upstream, n_sections, False)
         bottom_widths = np.linspace(bottom_width_upstream, bottom_width_downstream, len(stations), False)
@@ -126,21 +122,36 @@ class Network:
                                             / self.sections[i].dx_ds
 
         #TODO: clean up this code to generate intial upstream flow and downstream stage boundary time series
-        self.upstream_flow_ts = helpers.Generate_Hydrograph(len(self.time_list) , hydrograph_steady_time
+        self.upstream_flow_ts = helpers.Generate_Hydrograph(n_timesteps , hydrograph_steady_time
                                                                                 , hydrograph_event_width
                                                                                 , hydrograph_skewness
                                                                                 , hydrograph_qpeak)
-        self.downstream_stage_ts = [5*helpers.y_direct(self.sections[I_DOWNSTREAM].bottom_width
-                                             , self.sections[I_DOWNSTREAM].manning_n_ds
-                                             , self.sections[I_DOWNSTREAM].bed_slope_ds
-                                             , q ) for q in self.upstream_flow_ts]
+#        self.time_list, self.downstream_stage_ts = [zip(j, 5*helpers.y_direct(self.sections[self.I_DOWNSTREAM].bottom_width
+#                                             , self.sections[self.I_DOWNSTREAM].manning_n_ds
+#                                             , self.sections[self.I_DOWNSTREAM].bed_slope_ds
+#                                             , q )) for j, q in enumerate(self.upstream_flow_ts)]
+
+        self.time_list = [j for j, _ in enumerate(self.upstream_flow_ts)]
+        #TODO: Convert all timesteps to time_stamps
+        # import pandas as pd
+        # pandas.date_range("11:00", "21:30", freq="30min")
+        # datelist = pd.date_range(pd.datetime.today(), periods=100).tolist()
+
+        self.downstream_stage_ts = [5*helpers.y_direct(self.sections[self.I_DOWNSTREAM].bottom_width
+                                              , self.sections[self.I_DOWNSTREAM].manning_n_ds
+                                              , self.sections[self.I_DOWNSTREAM].bed_slope_ds
+                                              , q ) for q in self.upstream_flow_ts]
+
         # print(self.upstream_flow_ts)
         # print(self.downstream_stage_ts)
 
-    def compute_initial_state(self):
+    def compute_initial_state(self, verbose = False
+                                    , write_output = False
+                                    , output_path = None):
         pass
 
-    def compute_time_steps(self, verbose=False):
+    def compute_time_steps(self, verbose=False, write_output = False
+                                                , output_path = None):
         '''This function can operate with
         1) Nt and dt (number of time steps and size of time step) and a pointer to boundary information
         2) List of times and a pointer to boundary information
@@ -148,17 +159,24 @@ class Network:
          but since they really all boil down to the last situation, we'll just
          make it work for #3 and then have other translator methods that create these.'''
 
+        # print(self.time_list)
         for j, t in enumerate(self.time_list):
             if verbose: print(j+1 , len(self.time_list), len(self.upstream_flow_ts), len(self.downstream_stage_ts))
             if verbose: print(f'timestep {j} {t}')
             if j+1 < len(self.time_list):
-                self.compute_next_time_step_state(j_current = j
-                                                  , j_next = j + 1
-                                                  , upstream_flow_current = self.upstream_flow_ts[j]
-                                                  , upstream_flow_next = self.upstream_flow_ts[j+1]
-                                                  , downstream_stage_current = self.downstream_stage_ts[j]
-                                                  , downstream_stage_next = self.downstream_stage_ts[j+1])
-                # self.compute_next_time_step_state(t, j)
+                j_current = j
+                j_next = j + 1
+                self.compute_next_time_step_state(j_current = j_current
+                                                  , j_next = j_next
+                                                  , upstream_flow_current = self.upstream_flow_ts[j_current]
+                                                  , upstream_flow_next = self.upstream_flow_ts[j_next]
+                                                  , downstream_stage_current = self.downstream_stage_ts[j_current]
+                                                  , downstream_stage_next = self.downstream_stage_ts[j_next])
+                if write_output:
+                    self.write_state_timestep(self.sections, j_current, output_path)
+            else:
+                if write_output:
+                    self.write_state_timestep(self.sections, j_next, output_path)
 
     def compute_next_time_step_state(self, j_current
                                          , j_next
@@ -171,7 +189,32 @@ class Network:
 
         pass
 
-    def write_state(self, type, file):
+    def write_state_timestep(self, section_arr, j_current, output_path = None, verbose = False):
+        elevations = [section.bottom_z + section.time_steps[j_current].water_z \
+                                                    for section in section_arr]
+        depths = [section.time_steps[j_current].depth for section in section_arr]
+        flows = [section.time_steps[j_current].flow for section in section_arr]
+        areas = [section.time_steps[j_current].flow_area for section in section_arr]
+        if output_path:
+            # pd.DataFrame(zip(elevations, depths, flows, areas)).to_csv(output_path)
+            if verbose: print(f'output to: {output_path}')
+            folder, file = os.path.split(output_path)
+            pd.DataFrame(elevations).to_csv(os.path.join(folder
+                                        , f'elevations_{j_current:04}_{file}'))
+            pd.DataFrame(depths).to_csv(os.path.join(folder
+                                        , f'depths_{j_current:04}_{file}'))
+            pd.DataFrame(flows).to_csv(os.path.join(folder
+                                        , f'flows_{j_current:04}_{file}'))
+            pd.DataFrame(areas).to_csv(os.path.join(folder
+                                        , f'areas_{j_current:04}_{file}'))
+            # pd.DataFrame(zip(flows, areas)).to_csv(output_path)
+        else:
+            print(f'{elevations}')
+            print(f'{depths}')
+            print(f'{flows}')
+            print(f'{areas}')
+
+    def write_state_general(self, type, file):
         output = self.output_state(type, file)
         with open(file, 'w') as output_file:
             output_file.write(output)
@@ -186,59 +229,101 @@ class Network:
     def pickle_output(self, network):
         return pickle.dumps(network.sections)
 
+    def output_dump_all(self, output_path = None, verbose = False):
+        elevations = [[section.bottom_z + section.time_steps[j].depth for section in self.sections] for j, _ in enumerate(self.sections[0].time_steps)]
+        depths = [[section.time_steps[j].depth for section in self.sections] for j, _ in enumerate(self.sections[0].time_steps)]
+        flows = [[section.time_steps[j].flow for section in self.sections] for j, _ in enumerate(self.sections[0].time_steps)]
+        areas = [[section.time_steps[j].flow_area for section in self.sections] for j, _ in enumerate(self.sections[0].time_steps)]
+        if output_path:
+            # pd.DataFrame(zip(elevations, depths, flows, areas)).to_csv(output_path)
+            if verbose: print(f'output to: {output_path}')
+            folder, file = os.path.split(output_path)
+            pd.DataFrame(flows).to_csv(os.path.join(folder, f'flows_{file}'))
+            pd.DataFrame(areas).to_csv(os.path.join(folder, f'areas_{file}'))
+            pd.DataFrame(elevations).to_csv(os.path.join(folder, f'elevations_{file}'))
+            pd.DataFrame(depths).to_csv(os.path.join(folder, f'depths_{file}'))
+        else:
+            print(f'{elevations}')
+            print(f'{depths}')
+            print(f'{flows}')
+            print(f'{areas}')
+
+    def output_writer(time_step, output_opt = 0, output_path = None):
+        ##WARNING THIS FUNCTION DOESN'T WORK at this point!
+        #TODO: convert this to Section-based code
+        if output_opt == 1:
+            # Open files for output
+            with open(f'{output_path}/flow_area.csv', 'w') as area_output: # unit 8
+                with open(f'{output_path}/flow.csv', 'w') as flow_output: # unit 9
+                    # Output initial condition
+                    area_output.write(f'{t} {",".join((y[0][i] - z[i]) * bo[i] for i in range(n_sections))}\n')
+                    flow_output.write(f'{t}  {",".join(q[0][i] for i in range(n_sections))}\n')
+        else:
+            print(f'{t} {" ".join((y[0][i] - z[i]) * bo[i] for i in range(n_sections))}\n')
+            print(f'{t}  {" ".join(q[0][i] for i in range(n_sections))}\n')
+
     class TimeStep:
-    #TODO: QUESTION FOR Nick
-        ''' When we are passing the time steps out to the Fortran module,
-        we only want to pass one timestep at a time and receive another one back.
-        How does that happen best? '''
-        def __init__(self, time_step = None, new_flow = None, new_depth = None):
+        # TODO: Juzer find how to pass the time steps out to the Fortran module,
+        # we only want to pass one timestep at a time and receive another one back.
+        # How does that happen best? '''
+        def __init__(self, new_time = None, new_flow = None, new_depth = None, new_area = None):
             # Per-time-step at-a-section properties
-            self.time = time_step
+            self.time = new_time
             self.flow = new_flow
             self.depth = new_depth
+            self.flow_area = new_area
 
             # Per-time-step downstream reach properties
             self.friction_slope_ds = 0
 
-    def add_time_step(self, section, new_flow, new_depth):
+    def add_time_step(self, section, new_flow, new_depth): #TODO: the Self and Section inputs are probably redundant
         section.time_steps.append(self.TimeStep(new_flow = new_flow, new_depth=new_depth))
 
-    def add_upstream_boundary_condition_time_step(self, section, upstream_flow):
+    def add_upstream_boundary_condition_time_step(self, section, upstream_flow): #TODO: The Self and Section inputs are probably redundant
         section.time_steps.append(self.TimeStep(new_flow = upstream_flow))
 
-    def add_downstream_boundary_condition_time_step(self, section, downstream_depth):
+    def add_downstream_boundary_condition_time_step(self, section, downstream_depth): #TODO: the Self and Section inputs are probably redundant
         section.time_steps.append(self.TimeStep(new_depth = downstream_depth))
 
-    def add_normal_depth_time_step(self, section, new_flow):
+    def add_normal_depth_time_step(self, section, new_flow): #TODO: the Self and Section inputs are probably redundant
         new_depth = helpers.y_direct(section.bottom_width, section.manning_n_ds, section.bed_slope_ds, new_flow)
         section.time_steps.append(self.TimeStep(new_flow=new_flow, new_depth=new_depth))
 
     class Section:
         #TODO: The Section Class needs to be sub-classed with Different types,
-        #e.g., SectionRectangle, SectionTrapezoid, SectionTrapFlood (for the type that
-        #currently used in the National Water Model), SectionDepthArea, SectionDepthWidth, ...
+        #e.g., RectangleSection, TrapezoidSection, TrapFloodSection (for the type that
+        #currently used in the National Water Model), DepthAreaSection, DepthWidthSection, ...
         #def __init__(self, bottom_width, side_slope):
         def __init__(self, bottom_z, comid=None, station=None, dx_ds = 10):
             #Time independent at-a-station properties
             self.comid = comid
             self.station = station
             self.bottom_z = bottom_z
+
             self.time_steps = [] # array of values
 
             #Time independent downstream reach properties
-            self.dx_ds = 0 # Distance to downstream section
+            self.dx_ds = dx_ds # Distance to downstream section
             self.loss_coeff_ds = 0 # Contraction and other loss coefficients to downstream section
                                 # C in the following equation
                                 # hl = Sf * dx + C * (V1**2/2g - V2**2/2g)
             self.bed_slope_ds = 0 # Bed slope (S0) to downstream section
-            #ADD NEIGHBOR Concept
+            self.ds_section = None
+            self.us_section = None
 
     class RectangleSection(Section):
         def __init__(self, bottom_width, manning_n_ds = 0.015, *args, **kwargs):
             super().__init__(*args, **kwargs)
             self.bottom_width = bottom_width
-            self.manning_n_ds = constants.MANNING_SI
-            #self.sk = constants.MANNING_SI
+            self.manning_n_ds = manning_n_ds
+            #self.dbdx_ds = 0 # change in width to the next downstream section
+
+        def get_celerity_area(self, area, gravity, debug = False):
+            if debug: print(gravity, area, self.bottom_width)
+            return sqrt(gravity * area / self.bottom_width)
+
+        def get_depth_area(self, area):
+            return area / self.bottom_width
 
         def get_area_depth(self, depth):
             return self.bottom_width * depth
@@ -246,8 +331,16 @@ class Network:
         def get_area_j(self, j):
             return self.bottom_z * self.time_steps[j].depth
 
+        def get_wetted_perimeter_area(self, area):
+            return self.bottom_width + 2.0 * area / self.bottom_width
+
         def get_wetted_perimeter_depth(self, depth):
             return self.bottom_width + 2.0 * depth
 
         def get_wetted_perimeter_j(self, j):
             return self.bottom_z + 2.0 * self.time_steps[j].depth
+
+    class IrregularSection(Section):
+
+        def get_wetted_perimeter_area(self, area):
+            return self.bottom_width + 2.0 * area / self.bottom_width
