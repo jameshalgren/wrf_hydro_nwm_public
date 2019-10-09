@@ -237,7 +237,11 @@ class Network:
         if output_path:
             # pd.DataFrame(zip(elevations, depths, flows, areas)).to_csv(output_path)
             if verbose: print(f'output to: {output_path}')
-            pd.DataFrame(zip(flows, areas)).to_csv(output_path)
+            folder, file = os.path.split(output_path)
+            pd.DataFrame(flows).to_csv(os.path.join(folder, f'flows_{file}'))
+            pd.DataFrame(areas).to_csv(os.path.join(folder, f'areas_{file}'))
+            pd.DataFrame(elevations).to_csv(os.path.join(folder, f'elevations_{file}'))
+            pd.DataFrame(depths).to_csv(os.path.join(folder, f'depths_{file}'))
         else:
             print(f'{elevations}')
             print(f'{depths}')
