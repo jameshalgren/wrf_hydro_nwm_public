@@ -1,4 +1,9 @@
 # Ignore everything in this directory
-*
-# Except this file
-!.gitignore
+text/*
+map/*
+plot/*
+# Except for these folders
+!text/.gitkeep
+!map/.gitkeep
+!plot/.gitkeep
+#

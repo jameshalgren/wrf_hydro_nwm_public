@@ -1221,8 +1221,9 @@ def main():
     # input_path = os.path.join(This_Example_Path,'Qvar_us_2YNorm','Qvar_us_0033_5.0-10000.0_0100_0000-0004-0200_2NormalDepth',"input.txt")
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     test_folder = os.path.join(root, r'test')
-    output_folder = os.path.join(test_folder, r'output')
-    input_path = os.path.join(test_folder, r'input.txt')
+    output_folder = os.path.join(test_folder, r'output', r'text')
+    input_folder = os.path.join(test_folder, r'input', r'text')
+    input_path = os.path.join(input_folder, r'input.txt')
     output_path = os.path.join(output_folder, r'out.txt')
 
     input_vars[r'input_path'] = input_path
