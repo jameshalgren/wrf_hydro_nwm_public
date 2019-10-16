@@ -106,7 +106,8 @@ class Network:
 
         for i, bw in enumerate(bottom_widths):
             # continue
-            self.sections.append(Network.RectangleSection(station=stations[i]
+            self.sections.append(Network.RectangleSection(comid = i
+                                    , station=stations[i]
                                     , bottom_width=bottom_widths[i]
                                     , bottom_z = bottom_zs[i]
                                     , manning_n_ds = manning_n_ds_all))
@@ -272,6 +273,7 @@ class Network:
             self.flow = new_flow
             self.depth = new_depth
             self.flow_area = new_area
+            self.water_z = 0
 
             # Per-time-step downstream reach properties
             self.friction_slope_ds = 0
