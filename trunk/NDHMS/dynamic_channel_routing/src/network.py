@@ -7,7 +7,7 @@ from math import sqrt
 
 class Network:
     '''Class definition for reaches related as part of a computational scheme for
-       open channel routing '''
+       open channel routing. Network will need to be expanded with concepts from HyFeatures Nexuses and Watersheds'''
     #TODO: Somewhere, there will need to be a de-tangling of how we call and initialize a rectangular channel vs.
     #      vs. trapezoidal, vs. generalized, etc. Perhaps that can be handled within the input files...
     #      For now, assume rectangular
