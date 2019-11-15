@@ -1236,20 +1236,20 @@ def main():
     #     print(input_path)
     #     #input_path = "./input.txt"
 
-    # network = DummyReach()
-    # network = SimpleFlowTrace() #DongHa's method.
-    # network = SteadyReach(input_type = input_type, input_vars = input_vars)
+    # reach = DummyReach()
+    # reach = SimpleFlowTrace() #DongHa's method.
+    # reach = SteadyReach(input_type = input_type, input_vars = input_vars)
     #input_and_initialize(sections, input_path, input_opt)
-    network = MESHpyReach(input_type = input_type, input_vars = input_vars)
-    # network = MuskCReach()
-    # network = MESHDReach()
+    reach = MESHpyReach(input_type = input_type, input_vars = input_vars)
+    # reach = MuskCReach()
+    # reach = MESHDReach()
 
-    network.compute_initial_state(write_output = False
+    reach.compute_initial_state(write_output = False
                                                     , output_path = output_path)
-    network.debug = True
-    network.compute_time_steps_mesh(verbose = True, write_output = False
+    reach.debug = True
+    reach.compute_time_steps_mesh(verbose = True, write_output = False
                                                     , output_path = output_path)
-    network.output_dump_all(output_path = output_path, verbose = True)
+    reach.output_dump_all(output_path = output_path, verbose = True)
 
 if __name__ == "__main__":
     main()
