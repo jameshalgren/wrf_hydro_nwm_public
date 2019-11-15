@@ -4,7 +4,7 @@ import helpers
 import constants
 import meshconstants
 import pandas as pd
-from network import Network
+from reach import Reach
 import csv
 import os
 
@@ -14,7 +14,7 @@ import os
    derivation of the method and may be requested by contacting
    the authors or Dr. Meselhe.
    We gratefully acknowlege his contribution to this work.'''
-class MESHpyNetwork(Network):
+class MESHpyReach(Reach):
     '''USE Global Declarations here to manage these values'''
     # TODO Determine why these values do not persist when declared in __init__
     debug = False
@@ -927,7 +927,7 @@ class MESHpyNetwork(Network):
                             , section_jnext.flow))
             self.debug = False
 
-    class RectangleSection(Network.RectangleSection):
+    class RectangleSection(Reach.RectangleSection):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
 
@@ -1125,7 +1125,7 @@ class MESHpyNetwork(Network):
             print(f'{flow}')
             print(f'{area}')
 
-    class TimeStep(Network.TimeStep):
+    class TimeStep(Reach.TimeStep):
         '''MESH-specific time-step values'''
         def __init__(self, new_water_z = 0.0, *args, **kwargs):
             super().__init__(*args, **kwargs)
@@ -1145,7 +1145,7 @@ class MESHpyNetwork(Network):
             # Per-time-step downstream reach properties
             self.conveyance_ds = None
             self.ci2_ds = None
-            # self.friction_slope_ds = 0 # Derived from parent Class, Network.TimeStep
+            # self.friction_slope_ds = 0 # Derived from parent Class, Reach.TimeStep
             self.as0_ds = None
             self.gs0_ds = None
             self.sigma_ds = None # Sigma is related to the courant parameter: CFL = celerity * sigma
@@ -1236,13 +1236,13 @@ def main():
     #     print(input_path)
     #     #input_path = "./input.txt"
 
-    # network = DummyNetwork()
+    # network = DummyReach()
     # network = SimpleFlowTrace() #DongHa's method.
-    # network = SteadyNetwork(input_type = input_type, input_vars = input_vars)
+    # network = SteadyReach(input_type = input_type, input_vars = input_vars)
     #input_and_initialize(sections, input_path, input_opt)
-    network = MESHpyNetwork(input_type = input_type, input_vars = input_vars)
-    # network = MuskCNetwork()
-    # network = MESHDNetwork()
+    network = MESHpyReach(input_type = input_type, input_vars = input_vars)
+    # network = MuskCReach()
+    # network = MESHDReach()
 
     network.compute_initial_state(write_output = False
                                                     , output_path = output_path)

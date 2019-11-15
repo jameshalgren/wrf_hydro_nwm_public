@@ -2,7 +2,7 @@
 from __future__ import division
 import helpers
 import constants
-from network import Network
+from reach import Reach
 import sys
 import numpy as np
 import pandas as pd
@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import csv
 import os
 
-class DummyNetwork(Network):
+class DummyReach(Reach):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -33,7 +33,7 @@ class DummyNetwork(Network):
                                          , upstream_flow_next
                                          , downstream_stage_current
                                          , downstream_stage_next):
-        ''' the Dummy Network simply copies the current channel state to the next time step
+        ''' the Dummy Reach simply copies the current channel state to the next time step
             flow
         '''
         for section in self.sections:
@@ -59,14 +59,14 @@ def main():
     input_vars['hydrograph_event_width'] = 7
     input_vars['hydrograph_skewness'] = 4
     input_vars['hydrograph_qpeak'] = 5000
-    network = DummyNetwork(input_type = input_type, input_vars = input_vars)
-    # network = SimpleFlowTrace() #DongHa's method.
-    # network = SteadyNetwork()
-    # network = MuskCNetwork()
-    # network = MESHDNetwork()
+    reach = DummyReach(input_type = input_type, input_vars = input_vars)
+    # reach = SimpleFlowTrace() #DongHa's method.
+    # reach = SteadyReach()
+    # reach = MuskCReach()
+    # reach = MESHDReach()
 
-    network.compute_initial_state()
-    network.compute_time_steps(verbose = True)
+    reach.compute_initial_state()
+    reach.compute_time_steps(verbose = True)
 
 if __name__ == "__main__":
     main()

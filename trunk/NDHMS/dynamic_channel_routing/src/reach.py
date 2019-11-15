@@ -5,14 +5,14 @@ import numpy as np
 import pandas as pd
 from math import sqrt
 
-class Network:
+class Reach:
     '''Class definition for reaches related as part of a computational scheme for
-       open channel routing. Network will need to be expanded with concepts from HyFeatures Nexuses and Watersheds'''
+       open channel routing. Reach will need to be expanded with concepts from HyFeatures Nexuses and Watersheds'''
     #TODO: Somewhere, there will need to be a de-tangling of how we call and initialize a rectangular channel vs.
     #      vs. trapezoidal, vs. generalized, etc. Perhaps that can be handled within the input files...
     #      For now, assume rectangular
     def __init__(self, input_type = 'simple', input_vars = None):
-        '''initialize a new Network of sections/reaches'''
+        '''initialize a new Reach of segments'''
         self.sections = []
         self.time_list = [] # TODO: this initialization could be for a datetime series to contain the timestamps
         self.upstream_flow_ts = []
@@ -55,7 +55,7 @@ class Network:
                 elif filetype == 'mesh.py':
                     self.input_and_initialize_meshpyfile(**input_vars)
                 else: print('not-yet-implemented input_type')
-            else: #If nothing was defined, prepare a simple network with some default parameters.
+            else: #If nothing was defined, prepare a simple reach with some default parameters.
             #TODO: This should be properly error trapped/handled.
                 self.input_and_initialize_simple(n_sections = 11
                                             , n_timesteps = 22
@@ -106,7 +106,7 @@ class Network:
 
         for i, bw in enumerate(bottom_widths):
             # continue
-            self.sections.append(Network.RectangleSection(comid = i
+            self.sections.append(Reach.RectangleSection(comid = i
                                     , station=stations[i]
                                     , bottom_width=bottom_widths[i]
                                     , bottom_z = bottom_zs[i]
@@ -222,13 +222,13 @@ class Network:
 
     def output_state(self, type):
         if type is 'pickle':
-            state = self.pickle_output(self.network)
+            state = self.pickle_output(self.reach)
         else:
             print("only 'pickle' output is implemented")
         return state
 
-    def pickle_output(self, network):
-        return pickle.dumps(network.sections)
+    def pickle_output(self, reach):
+        return pickle.dumps(reach.sections)
 
     def output_dump_all(self, output_path = None, verbose = False):
         elevations = [[section.bottom_z + section.time_steps[j].depth for section in self.sections] for j, _ in enumerate(self.sections[0].time_steps)]

@@ -2,7 +2,7 @@
 from __future__ import division
 import helpers
 import constants
-from network import Network
+from reach import Reach
 import sys
 import numpy as np
 import pandas as pd
@@ -16,7 +16,7 @@ import csv
 import os
 
 
-class SteadyNetwork(Network):
+class SteadyReach(Reach):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -35,7 +35,7 @@ class SteadyNetwork(Network):
                                          , upstream_flow_next
                                          , downstream_stage_current
                                          , downstream_stage_next):
-        ''' the Steady Network performs the Standard Step method to compute a steady profile
+        ''' the Steady Reach performs the Standard Step method to compute a steady profile
             for each flow and downstream stage in the series.
         '''
         self.add_steady_time_step(j_current, j_next, self.sections, downstream_stage_next, upstream_flow_next)
@@ -181,9 +181,9 @@ class SteadyNetwork(Network):
         return epsilon
 
 
-    class TimeStep(Network.TimeStep):
+    class TimeStep(Reach.TimeStep):
         def __init__(self, *args, **kwargs):
-            # super(Network.TimeStep, self).__init__(*args, **kwargs)
+            # super(Reach.TimeStep, self).__init__(*args, **kwargs)
             super().__init__(*args, **kwargs)
 
 def main():
@@ -205,15 +205,15 @@ def main():
     input_vars['hydrograph_event_width'] = 7
     input_vars['hydrograph_skewness'] = 4
     input_vars['hydrograph_qpeak'] = 5000
-    # network = DummyNetwork()
-    # network = SimpleFlowTrace() #DongHa's method.
-    network = SteadyNetwork(input_type = input_type, input_vars = input_vars)
-    # network = MuskCNetwork()
-    # network = MESHDNetwork()
+    # reach = DummyReach()
+    # reach = SimpleFlowTrace() #DongHa's method.
+    reach = SteadyReach(input_type = input_type, input_vars = input_vars)
+    # reach = MuskCReach()
+    # reach = MESHDReach()
 
-    #network.input_and_initialize()
-    network.compute_initial_state()
-    network.compute_time_steps(verbose = True)
+    #reach.input_and_initialize()
+    reach.compute_initial_state()
+    reach.compute_time_steps(verbose = True)
 
 if __name__ == "__main__":
     main()
