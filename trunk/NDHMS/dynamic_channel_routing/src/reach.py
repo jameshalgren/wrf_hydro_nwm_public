@@ -1,6 +1,7 @@
 import os
 import constants
 import helpers
+import nexus
 import numpy as np
 import pandas as pd
 from math import sqrt
@@ -11,9 +12,14 @@ class Reach:
     #TODO: Somewhere, there will need to be a de-tangling of how we call and initialize a rectangular channel vs.
     #      vs. trapezoidal, vs. generalized, etc. Perhaps that can be handled within the input files...
     #      For now, assume rectangular
-    def __init__(self, input_type = 'simple', input_vars = None):
+    def __init__(self, reachID = None, input_type = 'simple', input_vars = None, order = -1):
         '''initialize a new Reach of segments'''
+        self.reachID = reachID
+        self.order = order
+        self.upstreamNexus = None
+        self.downstreamNexus = None
         self.sections = []
+        self.segmentCollection = []
         self.time_list = [] # TODO: this initialization could be for a datetime series to contain the timestamps
         self.upstream_flow_ts = []
         self.downstream_stage_ts = []
@@ -291,14 +297,15 @@ class Reach:
         new_depth = helpers.y_direct(section.bottom_width, section.manning_n_ds, section.bed_slope_ds, new_flow)
         section.time_steps.append(self.TimeStep(new_flow=new_flow, new_depth=new_depth))
 
-    class Section:
-        #TODO: The Section Class needs to be sub-classed with Different types,
+    class Segment:
+        #TODO: The Segment Class is sub-classed with Different types,
         #e.g., RectangleSection, TrapezoidSection, TrapFloodSection (for the type that
         #currently used in the National Water Model), DepthAreaSection, DepthWidthSection, ...
         #def __init__(self, bottom_width, side_slope):
-        def __init__(self, bottom_z, comid=None, station=None, dx_ds = 10):
+        def __init__(self, bottom_z, comid=None, segmentID=None, station=None, dx_ds = 10, downstreamlength = -1):
             #Time independent at-a-station properties
             self.comid = comid
+            self.segmentID = segmentID
             self.station = station
             self.bottom_z = bottom_z
 
@@ -313,7 +320,7 @@ class Reach:
             self.ds_section = None
             self.us_section = None
 
-    class RectangleSection(Section):
+    class RectangleSection(Segment):
         def __init__(self, bottom_width, manning_n_ds = 0.015, *args, **kwargs):
             super().__init__(*args, **kwargs)
             self.bottom_width = bottom_width
@@ -342,7 +349,7 @@ class Reach:
         def get_wetted_perimeter_j(self, j):
             return self.bottom_z + 2.0 * self.time_steps[j].depth
 
-    class IrregularSection(Section):
+    class IrregularSection(Segment):
 
         def get_wetted_perimeter_area(self, area):
             return self.bottom_width + 2.0 * area / self.bottom_width
