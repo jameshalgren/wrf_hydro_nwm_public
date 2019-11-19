@@ -6,6 +6,21 @@ import numpy as np
 import pandas as pd
 from math import sqrt
 
+# class Reach():
+#     def __init__(self, reachID = None, order = -1):
+#         self.reachID = reachID
+#         self.segmentCollection = []
+#         self.order = order
+#         self.upstreamNexus = None
+#         self.downstreamNexus = None
+#
+# class Segment():
+#     def __init__(self, segmentID = None, length = -1):
+#         self.segmentID = segmentID
+#         self.length = length
+#         self.upstreamSegment = None
+#         self.downstreamSegment = None
+
 class Reach:
     '''Class definition for reaches related as part of a computational scheme for
        open channel routing. Reach will need to be expanded with concepts from HyFeatures Nexuses and Watersheds'''
