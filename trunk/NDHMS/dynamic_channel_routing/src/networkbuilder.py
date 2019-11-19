@@ -1,6 +1,6 @@
 import network
 import reach
-import nexus
+import nexus ## TODO: Incorporate this into the functional code
 import recursive_print
 
 def recurse_downstream(key, rows, key_col, downstream_col, length_col, down_connections, terminal_code):
