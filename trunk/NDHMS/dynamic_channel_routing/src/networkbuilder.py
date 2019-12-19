@@ -3,14 +3,15 @@ import recursive_print
 def get_down_connections(rows, key_col, downstream_col
             , length_col
             , verbose = False, debuglevel = 0):
+    if debuglevel <= -100: breakpoint()
     if verbose: print('down connections ...')
     connections = {row[key_col]: { 'data': row
                         , 'visited': False
                         , 'downstream': row[downstream_col]
-                        , 'length':[length_col]}
+                        , 'length': row[length_col]}
                                 for row in rows}
-    if debuglevel == -1: print(f'found {len(connections.keys())} segments')
-    if debuglevel == -2: print(connections)
+    if debuglevel <= -1: print(f'found {len(connections.keys())} segments')
+    if debuglevel <= -2: print(connections)
     if verbose: print('down_connections complete')
 
     #TODO: Change this function to operate only on Connection object
@@ -22,14 +23,14 @@ def determine_keys(connections, rows
             , verbose = False, debuglevel = 0):
     if verbose: print('ref_keys ...')
     ref_keys = {row[downstream_col] for row in rows}
-    if debuglevel == -1: print(f'found {len(ref_keys)} ref_keys')
-    if debuglevel == -2: print(ref_keys)
+    if debuglevel <= -1: print(f'found {len(ref_keys)} ref_keys')
+    if debuglevel <= -2: print(ref_keys)
     if verbose: print('ref_keys complete')
-    if debuglevel == -2: print(ref_keys)
+    if debuglevel <= -2: print(ref_keys)
     if verbose: print('headwater_keys ...')
     headwater_keys = {x for x in connections.keys() if x not in ref_keys}
-    if debuglevel == -1: print(f'found {len(headwater_keys)} headwater segments')
-    if debuglevel == -2: print(headwater_keys)
+    if debuglevel <= -1: print(f'found {len(headwater_keys)} headwater segments')
+    if debuglevel <= -2: print(headwater_keys)
     if verbose: print('headwater_keys complete')
 
     # Get the downstream terminating nodes
@@ -49,8 +50,8 @@ def determine_keys(connections, rows
                 if debuglevel <= -2:
                     print(f'Standard terminal key {row[downstream_col]} found in segment {row[key_col]}')
             terminal_keys.add(row[key_col])
-    if debuglevel == -1: print(f'found {len(terminal_keys)} terminal segments')
-    if debuglevel == -2: print(terminal_keys)
+    if debuglevel <= -1: print(f'found {len(terminal_keys)} terminal segments')
+    if debuglevel <= -2: print(terminal_keys)
     if verbose: print('terminal_keys complete')
 
     if verbose: print('circular_keys ...')
@@ -69,8 +70,8 @@ def determine_keys(connections, rows
                 circular_keys.add(key)
         except: pass
 
-    if debuglevel == -1: print(f'identified at least {len(circular_keys)} segments with circular references testing to the fourth level')
-    if debuglevel == -2: print(circular_keys)
+    if debuglevel <= -1: print(f'identified at least {len(circular_keys)} segments with circular references testing to the fourth level')
+    if debuglevel <= -2: print(circular_keys)
     if verbose: print('circular_keys complete')
 
 
@@ -131,8 +132,8 @@ def get_up_connections(connections
 
     if debuglevel <= -1: print(f'visited {len(visited_keys)} segments')
     if debuglevel <= -1: print(f'found {junction_count} junctions in {len(junction_keys)} junction nodes')
-    if debuglevel == -2: print(junction_keys)
-    if debuglevel == -2: print(connections)
+    if debuglevel <= -2: print(junction_keys)
+    if debuglevel <= -2: print(connections)
     if verbose: print('up_connections complete')
     if verbose: print('')
 
@@ -200,7 +201,7 @@ def main():
                 , downstream_col = test_downstream_col
                 , length_col = test_length_col
                 , verbose = True
-                , debuglevel = -1
+                , debuglevel = -200
                 )
 
     (test_connections, test_all_keys, test_ref_keys, test_headwater_keys
