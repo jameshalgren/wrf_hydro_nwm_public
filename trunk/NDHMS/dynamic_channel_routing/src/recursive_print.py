@@ -26,10 +26,10 @@ def print_basic_network_info(connections, headwater_keys
     #         print(f'(of those, {sum( 1 for key in terminal_keys if connections[key]['downstream'] != terminal_code)})')
     print('\n')
 
-def rec_print_down(key, down_connections, terminal_keys, debuglevel = 0):
-    if key in terminal_keys: return
+def rec_print_down(key, down_connections, terminal_ref_keys, debuglevel = 0):
+    if key in terminal_ref_keys: return
     print(f"{key} with length {down_connections[key]['length']}")
-    rec_print_down(down_connections[key]['downstream'], down_connections, terminal_keys, debuglevel)
+    rec_print_down(down_connections[key]['downstream'], down_connections, terminal_ref_keys, debuglevel)
 
 def rec_print_up(keys, tab_count, up_connections, down_connections
                 , terminal_code, debuglevel = 0):
@@ -46,14 +46,15 @@ def rec_print_up(keys, tab_count, up_connections, down_connections
 
 def print_connections(headwater_keys = None, terminal_keys = None
                     , down_connections = None, up_connections = None
-                    , terminal_code = None, debuglevel = 0):
+                    , terminal_code = None, terminal_ref_keys = None
+                    , debuglevel = 0):
     try:
         if headwater_keys:
             print("########################")
             print("Downstream Connections")
             print("########################")
             for key in headwater_keys:
-                rec_print_down(key, down_connections, terminal_keys)
+                rec_print_down(key, down_connections, terminal_ref_keys, debuglevel)
                 print("########################")
 
         if terminal_keys:

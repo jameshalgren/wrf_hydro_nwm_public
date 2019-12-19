@@ -22,11 +22,11 @@ if 1 == 1:
     Brazos_FULL_RES = False
     LowerColorado_FULL_RES = False
     LowerColorado_CONCHOS_FULL_RES = False
-    Mainstems_CONUS = True
+    Mainstems_CONUS = False
     """##NHD CONUS order 5 and greater"""
     CONUS_ge5 = False
     """##NHD Subset (Brazos/Lower Colorado)"""
-    Brazos_LowerColorado_ge5 = False
+    Brazos_LowerColorado_ge5 = True
     CONUS_FULL_RES = False
 
     debuglevel = -1
@@ -129,7 +129,9 @@ if 1 == 1:
                  , debuglevel = debuglevel)
 
     (connections_NHD, all_keys_NHD, ref_keys_NHD, headwater_keys_NHD
-     , terminal_keys_NHD) = networkbuilder.determine_keys(
+     , terminal_keys_NHD
+     , terminal_ref_keys_NHD
+     , circular_keys_NHD) = networkbuilder.determine_keys(
                  connections = connections_NHD
                  , rows = nhd_conus_rows
                  , key_col = key_col_NHD
@@ -160,8 +162,9 @@ if 1 == 1:
                     headwater_keys = headwater_keys_NHD
                     , down_connections = connections_NHD
                     , up_connections = connections_NHD
-                    , terminal_code = test_terminal_code
+                    , terminal_code = terminal_code_NHD
                     , terminal_keys = terminal_keys_NHD
+                    , terminal_ref_keys = terminal_ref_keys_NHD
                     , debuglevel = -2
                     )
 

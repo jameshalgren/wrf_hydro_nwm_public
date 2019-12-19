@@ -75,7 +75,8 @@ def determine_keys(connections, rows
     if verbose: print('circular_keys complete')
 
 
-    return connections, connections.keys(), ref_keys, headwater_keys, terminal_keys
+    return connections, connections.keys(), ref_keys, headwater_keys \
+                , terminal_keys, terminal_ref_keys, circular_keys
 
 def get_up_connections(connections
                     , terminal_code
@@ -205,7 +206,9 @@ def main():
                 )
 
     (test_connections, test_all_keys, test_ref_keys, test_headwater_keys
-     , test_terminal_keys) = determine_keys(
+     , test_terminal_keys
+     , test_terminal_ref_keys
+     , test_circular_keys) = determine_keys(
                 connections = test_connections
                 , rows = test_rows
                 , key_col = test_key_col
@@ -230,6 +233,7 @@ def main():
                 , up_connections = test_connections
                 , terminal_code = test_terminal_code
                 , terminal_keys = test_terminal_keys
+                , terminal_ref_keys = test_terminal_ref_keys
                 , debuglevel = -2
                 )
 
