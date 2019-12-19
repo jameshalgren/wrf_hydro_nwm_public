@@ -201,7 +201,7 @@ def main():
                 , downstream_col = test_downstream_col
                 , length_col = test_length_col
                 , verbose = True
-                , debuglevel = -200
+                , debuglevel = -2
                 )
 
     (test_connections, test_all_keys, test_ref_keys, test_headwater_keys
