@@ -165,6 +165,7 @@ if 1 == 1:
                     , debuglevel = -2
                     )
 
+    # # nhd_conus_networks = []
     # # conus_supernetwork = SuperNetwork()
     #
     # networkbuilder.buildNetwork(
