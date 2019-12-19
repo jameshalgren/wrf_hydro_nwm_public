@@ -3,13 +3,19 @@ class Nexus():
         self.nexusID = nexusID
         self.order = order
 
-class DendriticReachHeadNexus(Nexus): # as DRN
+class DendriticReachNexus(Nexus): # as DRN
     '''Extend this to have 0-upstreams and 1-downstream reaches'''
-    def __init__(upstreams = None, downstream = None):
+    def __init__(upstreams = None, downstream = None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.upstreams = upstreams
         self.downstream = downstream
 
-class DendriticReachJuntionNexus(Nexus): # as DRN
+class DendriticReachHeadNexus(DendriticReachNexus): # as DRN
+    '''Extend this to have 0-upstreams and 1-downstream reaches'''
+    def __init__():
+        pass
+
+class DendriticReachJunctionNexus(DendriticReachNexus): # as DRN
     '''Extend this to have N-upstreams and 1-downstream reaches'''
     def __init__():
         pass
@@ -22,10 +28,9 @@ class DendriticReachJuntionNexus(Nexus): # as DRN
         predictor vs corrector steps'''
         pass
 
-class DendriticReachTerminalNexus(Nexus): # as DRN
+class DendriticReachTerminalNexus(DendriticReachNexus): # as DRN
     '''Extend this to have N-upstreams and 0-downstream reaches'''
     def __init__():
         pass
     # dict upstreams Reaches
     # dict downstream Reach
-
