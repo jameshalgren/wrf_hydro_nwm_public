@@ -1,163 +1,163 @@
-import network
-import reach
-import nexus ## TODO: Incorporate this into the functional code
 import recursive_print
 
-def recurse_downstream(key, rows, key_col, downstream_col, length_col, down_connections, terminal_code):
-    for row in rows:
-        # print(f'{key_col}  {key}')
-        if row[key_col] == key:
-            down_connections[key] = {'downstream': row[downstream_col], 'length': row[length_col] }
-            if not key == terminal_code:
-                recurse_downstream(row[downstream_col], rows, key_col, downstream_col, length_col, down_connections, terminal_code)
+def get_down_connections(rows, key_col, downstream_col
+            , length_col
+            , verbose = False, debuglevel = 0):
+    if verbose: print('down connections ...')
+    connections = {row[key_col]: { 'data': row
+                        , 'visited': False
+                        , 'downstream': row[downstream_col]
+                        , 'length':[length_col]}
+                                for row in rows}
+    if debuglevel == -1: print(f'found {len(connections.keys())} segments')
+    if debuglevel == -2: print(connections)
+    if verbose: print('down_connections complete')
 
-def determine_keys(rows, key_col, downstream_col, terminal_code, verbose = False, debuglevel = 0):
-    # Get the upstream nodes to start with
-    if verbose: print('starting build')
-    if verbose: print('all_keys')
-    all_keys = [row[key_col] for row in rows]
-    if debuglevel == -1: print(f'length = {len(all_keys)}')
-    if verbose: print('all_keys complete')
-    if debuglevel == -2: print(all_keys)
-    if verbose: print('ref_keys')
-    ref_keys = [row[downstream_col] for row in rows]
+    #TODO: Change this function to operate only on Connection object
+    return connections
+
+def determine_keys(connections, rows
+            , key_col, downstream_col
+            , terminal_code
+            , verbose = False, debuglevel = 0):
+    if verbose: print('ref_keys ...')
+    ref_keys = {row[downstream_col] for row in rows}
+    if debuglevel == -1: print(f'found {len(ref_keys)} ref_keys')
+    if debuglevel == -2: print(ref_keys)
     if verbose: print('ref_keys complete')
     if debuglevel == -2: print(ref_keys)
-    if verbose: print('headwater_keys')
-    headwater_keys = [x for x in all_keys if x not in ref_keys]
+    if verbose: print('headwater_keys ...')
+    headwater_keys = {x for x in connections.keys() if x not in ref_keys}
+    if debuglevel == -1: print(f'found {len(headwater_keys)} headwater segments')
     if debuglevel == -2: print(headwater_keys)
     if verbose: print('headwater_keys complete')
 
     # Get the downstream terminating nodes
-    if verbose: print('terminal_keys')
-    terminal_keys = []
+    if verbose: print('terminal_keys ...')
+    # Find the pointing-to keys not found in the key dataset.
+    terminal_ref_keys = {x for x in ref_keys if x not in connections.keys()} # TODO: Determine if this is a set
+
+    # Then collect the keys associated with those 'pointing-tos'
+    terminal_keys = set()
     for row in rows:
-        if row[downstream_col] == terminal_code:
-            terminal_keys.append(row[key_col])
+        curr_term_ref_key = row[downstream_col]
+        if curr_term_ref_key in terminal_ref_keys:
+            if curr_term_ref_key != terminal_code:
+                if debuglevel <= -1:
+                    print(f'Non-standard terminal key {row[downstream_col]} found in segment {row[key_col]}')
+            elif curr_term_ref_key == terminal_code:
+                if debuglevel <= -2:
+                    print(f'Standard terminal key {row[downstream_col]} found in segment {row[key_col]}')
+            terminal_keys.add(row[key_col])
+    if debuglevel == -1: print(f'found {len(terminal_keys)} terminal segments')
     if debuglevel == -2: print(terminal_keys)
     if verbose: print('terminal_keys complete')
 
-    return all_keys, ref_keys, headwater_keys, terminal_keys
+    if verbose: print('circular_keys ...')
+    circular_keys = set()
+    for key, value in connections.items():
+        try:
+        #TODO: benchmark try/except vs. nested if statment on 'in' to handle terminal keys
+        # e.g., "if key not in terminal_keys: ... etc.
+            if connections[connections[key]['downstream']]['downstream'] == key:
+                circular_keys.add(key)
+            elif connections[connections[connections[key]['downstream']]['downstream']]['downstream'] == key:
+                circular_keys.add(key)
+            elif connections[connections[connections[connections[key]['downstream']]['downstream']]['downstream']]['downstream'] == key:
+                circular_keys.add(key)
+            elif connections[connections[connections[connections[connections[key]['downstream']]['downstream']]['downstream']]['downstream']]['downstream'] == key:
+                circular_keys.add(key)
+        except: pass
 
-def get_leaves_from_trunk():
-    '''
-    Define a function to assign leaves of a given nodeset
-    If the leaves are already present this should return self.leaves of the trunk
-    If the leaves have not yet been calculated, this should call the recursive
-    search to define the leaves.
-    '''
-    pass
+    if debuglevel == -1: print(f'identified at least {len(circular_keys)} segments with circular references testing to the fourth level')
+    if debuglevel == -2: print(circular_keys)
+    if verbose: print('circular_keys complete')
 
-def traverse_segments(rows, key_col, downstream_col, length_col, terminal_code
-                    , headwater_keys, terminal_keys
+
+    return connections, connections.keys(), ref_keys, headwater_keys, terminal_keys
+
+def get_up_connections(connections
+                    , terminal_code
+                    , headwater_keys
+                    , terminal_keys
                     , verbose = False, debuglevel = 0):
-    ''' Recursive call to go all the way down the relationship '''
-    up_connections = {}
-    down_connections = {}
-
-    if verbose: print('\nStart Recursion')
-    if verbose: print('down_connections')
-    for key in headwater_keys:
-        recurse_downstream(key = key
-             , rows = rows
-             , key_col = key_col
-             , downstream_col = downstream_col
-             , length_col = length_col
-             , down_connections = down_connections
-             , terminal_code = terminal_code)
-    if debuglevel == -2: print(down_connections)
-    if verbose: print('down_connections complete')
 
     # Create inverse of connections looking upstream
-    if verbose: print('up_connections')
-    for i in headwater_keys:
-        up_connections[i] = { 'upstreams': [terminal_code], 'length': down_connections[i]['length'] }
+    if verbose: print('identifying upstream connections and junctions ...')
 
-    for i in down_connections.keys():
-        if not down_connections[i]['downstream'] == terminal_code:
-            up_connections[down_connections[i]['downstream']] = { 'upstreams': [], 'length': down_connections[i]['length'] }
-                                    #  `down_connections[down_connections[i]['downstream']]['length']` to just `down_connections[i]['length']`
-            for j in down_connections.keys():
-                if down_connections[i]['downstream'] == down_connections[j]['downstream']:
-                    up_connections[down_connections[i]['downstream']]['upstreams'].append(j)
-    if debuglevel == -2: print(up_connections)
+    # Using Sets for Junction and Visited keys is REALLY, REALLY, REALLY, FAST!!!
+    junction_keys = set()
+    visited_keys = set()
+    junction_count = 0
+    for hkey in headwater_keys:
+        # TODO: Find the terminal segment for this headwater
+        # TODO: and label all connections with their terminal segment.
+
+        # Start with the headwater keys and label the upstream connections
+        # with the terminal_code...
+        connections[hkey].update({'upstreams' : [terminal_code]})
+        visited_keys.add(hkey)
+        # Then iterate through the list and search for the other values
+        ukey = hkey
+        # print(ukey, hkey)
+        # print(visited_keys)
+        # print(ukey not in terminal_keys)
+        # print(ukey not in junction_keys)
+        while (ukey not in terminal_keys) and (ukey not in junction_keys):
+            dkey = connections[ukey]['downstream']
+            if 'upstreams' not in connections[dkey]: # Check for key in dictionary https://able.bio/rhett/check-if-a-key-exists-in-a-python-dictionary--73iajoz
+                connections[dkey].update({'upstreams': []}) #TODO: Consider making this a set/hash for the unusual possibility of many upstream segments
+                visited_keys.add(dkey)
+                connections[dkey]['upstreams'].append(ukey)
+            else:
+                connections[dkey]['upstreams'].append(ukey)
+                # print(dkey, connections[dkey]['upstreams'], visited_keys)
+                if len(connections[dkey]['upstreams'])  == 2:
+                    # breakpoint()
+                    if dkey not in junction_keys:
+                        junction_keys.add(dkey)
+                        # visited_keys.add(dkey)
+                    if debuglevel <= -2: print (f"Junction found above/into Segment {dkey} with upstream Segments {connections[dkey]['upstreams']}")
+                    junction_count += 1
+                elif len(connections[dkey]['upstreams']) > 2:
+                    if dkey not in junction_keys:
+                        #At this point, the logic does not allow for this to be a non-junction
+                        #TODO: raise/handle error/warning
+                        print('key error -- junction analysis has an undetermined anomaly!')
+                    if debuglevel <= -2: print (f"revisited Junction above/into Segment {dkey} now with upstream Segments {connections[dkey]['upstreams']}")
+                    junction_count += 1
+            ukey = dkey
+        # if len(visited_keys) > 14266: breakpoint()
+
+    if debuglevel <= -1: print(f'visited {len(visited_keys)} segments')
+    if debuglevel <= -1: print(f'found {junction_count} junctions in {len(junction_keys)} junction nodes')
+    if debuglevel == -2: print(junction_keys)
+    if debuglevel == -2: print(connections)
     if verbose: print('up_connections complete')
+    if verbose: print('')
 
-    return down_connections, up_connections
+    return junction_keys
 
-import uuid
-def buildSuperNetwork(
-                networks = None
-                ):
-    for iter, network in enumerate(networks):
-        pass
-
-def buildNetwork(
-                rows = None
-                , networks = None
-                , down_connections = None
-                , up_connections = None
-                , key_col = None
-                , downstream_col = None
-                , length_col = None
-                , terminal_code = None
-                , headwater_keys = None
-                , terminal_keys = None
-                , verbose = False
-                , debuglevel = 0
-                ):
-    for iter, trunk_key in enumerate(terminal_keys):
-        # networks.head_segments = get_leaves_from_trunk(trunk)
-        networks.append(network.Network(uuid.uuid4()))
-        print(f'network = {networks[iter].networkID}')
-
-        reach_iter = 0
-        print(reach_iter)
-        networks[iter].reachCollection.append(reach.Reach(reachID = uuid.uuid4()))
-        print(f'reach = {networks[iter].reachCollection[reach_iter].reachID}')
-        rec_Network_up(networks[iter].reachCollection
-                            , reach_iter
-                            , [trunk_key]
-                            , -1
-                            , up_connections
-                            , down_connections
-                            , terminal_code
-                            , debuglevel)
-        print("########################")
-
-def rec_Network_up(reaches
-                    , reach_iter
-                    , keys
-                    , tab_count
-                    , up_connections
-                    , down_connections
-                    , terminal_code
-                    , debuglevel = 0):
-    tab_count += 1
-    for key_iter, key in enumerate(keys):
-        if len(keys) > 1:
-            reaches.append(reach.Reach(reachID = uuid.uuid4(), order = reach_iter - key_iter))
-            reach_iter += 1
-            if debuglevel < 0: print(reach_iter)
-            if debuglevel < -1: print(f"{'.' * int(tab_count/10)}reach = {reaches[reach_iter].reachID}")
-        if not key == terminal_code:
-            reaches[reach_iter].segmentCollection.append(reach.Reach.Segment(key, down_connections[key]['length']))
-            if debuglevel < -2: print(f"{'.' * (tab_count)}\\{key} with length {down_connections[key]['length']}\\")
-            rec_Network_up(
-                        reaches
-                        , reach_iter
-                        , up_connections[key]['upstreams']
-                        , tab_count
-                        , up_connections
-                        , down_connections
-                        , terminal_code
-                        , debuglevel)
 def main():
     """##TEST"""
     print("")
     print ('Executing Test')
     # Test data
     test_rows = [
+        [50,178,51,0],
+        [51,178,50,0],
+        [60,178,61,0],
+        [61,178,62,0],
+        [62,178,60,0],
+        [70,178,71,0],
+        [71,178,72,0],
+        [72,178,73,0],
+        [73,178,70,0],
+        [80,178,81,0],
+        [81,178,82,0],
+        [82,178,83,0],
+        [83,178,84,0],
+        [84,178,80,0],
         [0,456,-999,0],
         [1,178,4,0],
         [2,394,0,0],
@@ -194,49 +194,52 @@ def main():
     test_length_col = 1
     test_terminal_code = -999
 
-    (test_all_keys, test_ref_keys, test_headwater_keys
-     , test_terminal_keys) = determine_keys(
-                 rows = test_rows
-                 , key_col = test_key_col
-                 , downstream_col = test_downstream_col
-                 , terminal_code = test_terminal_code
-                 , verbose = True
-                 , debuglevel = -2)
-
-    (test_down_connections
-     , test_up_connections) = traverse_segments(
-                 rows = test_rows
-                 , key_col = test_key_col
-                 , downstream_col = test_downstream_col
-                 , length_col = test_length_col
-                 , terminal_code = test_terminal_code
-                 , headwater_keys = test_headwater_keys
-                 , terminal_keys = test_terminal_keys
-                 , verbose = True
-                 , debuglevel = -2)
-
-    recursive_print.print_connections(headwater_keys = test_headwater_keys
-                    , terminal_keys = test_terminal_keys
-                    , down_connections = test_down_connections
-                    , up_connections = test_up_connections
-                    , terminal_code = test_terminal_code)
-
-    test_networks = []
-    test_supernetwork = network.SuperNetwork()
-
-    buildNetwork(
+    (test_connections) = get_down_connections(
                 rows = test_rows
-                , networks = test_networks
-                , down_connections = test_down_connections
-                , up_connections = test_up_connections
                 , key_col = test_key_col
                 , downstream_col = test_downstream_col
                 , length_col = test_length_col
+                , verbose = True
+                , debuglevel = -1
+                )
+
+    (test_connections, test_all_keys, test_ref_keys, test_headwater_keys
+     , test_terminal_keys) = determine_keys(
+                connections = test_connections
+                , rows = test_rows
+                , key_col = test_key_col
+                , downstream_col = test_downstream_col
+                , terminal_code = test_terminal_code
+                , verbose = True
+                , debuglevel = -2
+                )
+
+    test_junction_keys = get_up_connections(
+                connections = test_connections
                 , terminal_code = test_terminal_code
                 , headwater_keys = test_headwater_keys
                 , terminal_keys = test_terminal_keys
                 , verbose = True
-                , debuglevel = -3
+                , debuglevel = -2
+                )
+
+    recursive_print.print_connections(
+                headwater_keys = test_headwater_keys
+                , down_connections = test_connections
+                , up_connections = test_connections
+                , terminal_code = test_terminal_code
+                , terminal_keys = test_terminal_keys
+                , debuglevel = -2
+                )
+
+    recursive_print.print_basic_network_info(
+                connections = test_connections
+                , headwater_keys = test_headwater_keys
+                , junction_keys = test_junction_keys
+                , terminal_keys = test_terminal_keys
+                , terminal_code = test_terminal_code
+                , verbose = True
+                , debuglevel = -2
                 )
 
 if __name__ == '__main__':
