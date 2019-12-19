@@ -31,14 +31,6 @@ def rec_print_down(key, down_connections, terminal_keys, debuglevel = 0):
     print(f"{key} with length {down_connections[key]['length']}")
     rec_print_down(down_connections[key]['downstream'], down_connections, terminal_keys, debuglevel)
 
-def rec_print_up(keys, tab_count, up_connections, down_connections, terminal_code, debuglevel = 0):
-    if not isinstance(keys, list): keys = [keys]
-    tab_count += 1
-    for key in keys:
-        if not key == terminal_code:
-            print(f"{'..' * (tab_count)}\\{key} with length {down_connections[key]['length']}\\")
-            rec_print_up(up_connections[key]['upstreams'], tab_count, up_connections, down_connections, terminal_code)
-
 def rec_print_up(keys, tab_count, up_connections, down_connections
                 , terminal_code, debuglevel = 0):
     if not isinstance(keys, list): keys = [keys]
