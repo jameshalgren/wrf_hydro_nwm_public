@@ -128,7 +128,7 @@ if 1 == 1:
                  , verbose = verbose
                  , debuglevel = debuglevel)
 
-    (connections_NHD, all_keys_NHD, ref_keys_NHD, headwater_keys_NHD
+    (all_keys_NHD, ref_keys_NHD, headwater_keys_NHD
      , terminal_keys_NHD
      , terminal_ref_keys_NHD
      , circular_keys_NHD) = networkbuilder.determine_keys(
