@@ -44,13 +44,14 @@ def determine_keys(connections, rows
         curr_term_ref_key = row[downstream_col]
         if curr_term_ref_key in terminal_ref_keys:
             if curr_term_ref_key != terminal_code:
-                if debuglevel <= -1:
+                if debuglevel <= -2:
                     print(f'Non-standard terminal key {row[downstream_col]} found in segment {row[key_col]}')
             elif curr_term_ref_key == terminal_code:
                 if debuglevel <= -2:
                     print(f'Standard terminal key {row[downstream_col]} found in segment {row[key_col]}')
             terminal_keys.add(row[key_col])
     if debuglevel <= -1: print(f'found {len(terminal_keys)} terminal segments')
+    if debuglevel <= -1: print(f'of those, {len([x for x in terminal_ref_keys if x != terminal_code])} had non-standard terminal keys')
     if debuglevel <= -2: print(terminal_keys)
     if verbose: print('terminal_keys complete')
 
