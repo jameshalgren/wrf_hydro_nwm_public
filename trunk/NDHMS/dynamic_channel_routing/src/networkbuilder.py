@@ -115,7 +115,7 @@ def get_up_connections(connections
             dkey = connections[ukey]['downstream']
             if 'upstreams' not in connections[dkey]: # Check for key in dictionary https://able.bio/rhett/check-if-a-key-exists-in-a-python-dictionary--73iajoz
                 # connections[dkey].update({'upstreams': []}) #TODO: Consider making this a set/hash for the unusual possibility of many upstream segments
-                connections[dkey].update({'upstreams': set()}) #TODO: altenate Upstreams-as-a-set method
+                connections[dkey].update({'upstreams': set()}) #TODO: alternate Upstreams-as-a-set method
                 visited_keys.add(dkey)
                 # connections[dkey]['upstreams'].append(ukey)
                 connections[dkey]['upstreams'].add(ukey)
