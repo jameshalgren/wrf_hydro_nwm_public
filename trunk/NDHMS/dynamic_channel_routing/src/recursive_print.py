@@ -33,7 +33,7 @@ def rec_print_down(key, down_connections, terminal_ref_keys, debuglevel = 0):
 
 def rec_print_up(keys, tab_count, up_connections, down_connections
                 , terminal_code, debuglevel = 0):
-    if not isinstance(keys, list): keys = [keys]
+    if not isinstance(keys, set): keys = {keys}
     tab_count += 1
     for key in keys:
         if not key == terminal_code:
@@ -62,7 +62,7 @@ def print_connections(headwater_keys = None, terminal_keys = None
             print("Upstream Connections")
             print("########################")
             for key in terminal_keys:
-                rec_print_up([key], -1, up_connections, down_connections
+                rec_print_up({key}, -1, up_connections, down_connections
                                 , terminal_code, debuglevel = debuglevel)
                 print("########################")
     except:
