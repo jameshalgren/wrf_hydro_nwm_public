@@ -187,7 +187,8 @@ def get_nhd_connections(
         )
 
 def main():
-    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    # find the path of the test scripts, several levels above the script path
+    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     test_folder = os.path.join(root, r'test')
     
     supernetworks = {}
