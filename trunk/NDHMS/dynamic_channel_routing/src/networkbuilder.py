@@ -17,20 +17,22 @@ def get_down_connections(rows, key_col, downstream_col
     if debuglevel <= -2: print(connections)
     if verbose: print('down_connections complete')
 
-    #TODO: Change this function to operate only on Connection object
     return connections
 
-def determine_keys(connections, rows
+def determine_keys(connections
             , key_col, downstream_col
             , terminal_code
             , verbose = False, debuglevel = 0):
+
     if verbose: print('ref_keys ...')
-    ref_keys = {row[downstream_col] for row in rows}
+    # ref_keys = {row[downstream_col] for row in rows}
+    ref_keys = {con['downstream'] for key, con in connections.items()}
     if debuglevel <= -1: print(f'found {len(ref_keys)} ref_keys')
     if debuglevel <= -2: print(ref_keys)
     if verbose: print('ref_keys complete')
     if debuglevel <= -2: print(ref_keys)
     if verbose: print('headwater_keys ...')
+    # headwater_keys = {x for x in connections.keys() if x not in ref_keys}
     headwater_keys = {x for x in connections.keys() if x not in ref_keys}
     if debuglevel <= -1: print(f'found {len(headwater_keys)} headwater segments')
     if debuglevel <= -2: print(headwater_keys)
@@ -39,20 +41,26 @@ def determine_keys(connections, rows
     # Get the downstream terminating nodes
     if verbose: print('terminal_keys ...')
     # Find the pointing-to keys not found in the key dataset.
-    terminal_ref_keys = {x for x in ref_keys if x not in connections.keys()} # TODO: Determine if this is a set
+    terminal_ref_keys = {x for x in ref_keys if x not in connections.keys()} 
+    # import pdb; pdb.set_trace()
 
     # Then collect the keys associated with those 'pointing-tos'
     terminal_keys = set()
-    for row in rows:
-        curr_term_ref_key = row[downstream_col]
+    # for row in rows:
+    for key, con in connections.items():
+        # curr_term_ref_key = row[downstream_col]
+        curr_term_ref_key = con['downstream']
         if curr_term_ref_key in terminal_ref_keys:
             if curr_term_ref_key != terminal_code:
                 if debuglevel <= -2:
-                    print(f'Non-standard terminal key {row[downstream_col]} found in segment {row[key_col]}')
+                    # print(f'Non-standard terminal key {row[downstream_col]} found in segment {row[key_col]}')
+                    print(f"Non-standard terminal key {con['downstream']} found in segment {key}")
             elif curr_term_ref_key == terminal_code:
                 if debuglevel <= -2:
-                    print(f'Standard terminal key {row[downstream_col]} found in segment {row[key_col]}')
-            terminal_keys.add(row[key_col])
+                    # print(f'Standard terminal key {row[downstream_col]} found in segment {row[key_col]}')
+                    print(f"Standard terminal key {con['downstream']} found in segment {key}")
+            # terminal_keys.add(row[key_col])
+            terminal_keys.add(key)
     if debuglevel <= -1: print(f'found {len(terminal_keys)} terminal segments')
     if debuglevel <= -1: print(f'of those, {len([x for x in terminal_ref_keys if x != terminal_code])} had non-standard terminal keys')
     if debuglevel <= -2: print(terminal_keys)
@@ -97,8 +105,7 @@ def get_up_connections(connections
     visited_terminal_keys = set()
     junction_count = 0
     for hkey in headwater_keys:
-        # TODO: Find the terminal segment for this headwater
-        # TODO: and label all connections with their terminal segment.
+        # TODO: Create a dictionary key identifying relationship to the terminal segment. 
 
         # Start with the headwater keys and label the upstream connections
         # with the terminal_code...
@@ -116,9 +123,9 @@ def get_up_connections(connections
             if 'upstreams' not in connections[dkey]: # Check for key in dictionary https://able.bio/rhett/check-if-a-key-exists-in-a-python-dictionary--73iajoz
                 # connections[dkey].update({'upstreams': []}) #TODO: Consider making this a set/hash for the unusual possibility of many upstream segments
                 connections[dkey].update({'upstreams': set()}) #TODO: alternate Upstreams-as-a-set method
-                visited_keys.add(dkey)
                 # connections[dkey]['upstreams'].append(ukey)
                 connections[dkey]['upstreams'].add(ukey)
+                visited_keys.add(dkey)
             else:
                 if terminal_code in connections[dkey]['upstreams']:
                     # If the downstream node here is labeled as a headwater (because it
@@ -126,19 +133,21 @@ def get_up_connections(connections
                     # that the network had a break and that the traversal has
                     # spanned the gap and the headwater is not actually not a terminating node.
                     # In that case, reset the node to be a blank list (or set, if using 
-                    # that method, then proceed downstream.
+                    # that method), then proceed downstream.
                     # THIS IS A DANGEROUS STEP AND DESERVES ADDITIONAL REVIEW
                     # TO MAKE SURE IT IS DOING WHAT WE INTEND AS DESCRIBED ABOVE
                     # connections[dkey].update({'upstreams': []}) 
                     connections[dkey].update({'upstreams' : set()})
+
                 # connections[dkey]['upstreams'].append(ukey)
                 connections[dkey]['upstreams'].add(ukey)
+                visited_keys.add(dkey)
                 # print(dkey, connections[dkey]['upstreams'], visited_keys)
                 if len(connections[dkey]['upstreams'])  == 2:
                     # breakpoint()
                     if dkey not in junction_keys:
                         junction_keys.add(dkey)
-                        # visited_keys.add(dkey)
+                        # print(len(junction_keys), dkey)
                     if debuglevel <= -2: print (f"Junction found above/into Segment {dkey} with upstream Segments {connections[dkey]['upstreams']}")
                     junction_count += 1
                 elif len(connections[dkey]['upstreams']) > 2:
@@ -146,9 +155,9 @@ def get_up_connections(connections
                         #At this point, the logic does not allow for this to be a non-junction
                         #TODO: raise/handle error/warning
                         print('key error -- junction analysis has an undetermined anomaly!')
-                        print(dkey in visited_keys)
-                        for temp_ukey in connections[dkey]['upstreams']:
-                            print(temp_ukey, temp_ukey in visited_keys)
+#                         print(dkey in visited_keys)
+#                         for temp_ukey in connections[dkey]['upstreams']:
+#                             print(temp_ukey, temp_ukey in visited_keys)
                     if debuglevel <= -2: print (f"revisited Junction above/into Segment {dkey} now with upstream Segments {connections[dkey]['upstreams']}")
                     junction_count += 1
             ukey = dkey
@@ -236,7 +245,6 @@ def main():
      , test_terminal_ref_keys
      , test_circular_keys) = determine_keys(
                 connections = test_connections
-                , rows = test_rows
                 , key_col = test_key_col
                 , downstream_col = test_downstream_col
                 , terminal_code = test_terminal_code
