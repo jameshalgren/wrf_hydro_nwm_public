@@ -4,10 +4,11 @@ import helpers
 import constants
 import meshconstants
 from network import Network
+from reach import Reach
 import csv
 import os
 
-class MESHpyDUMMYNetwork(Network):
+class MESHpyDUMMYReach(Reach):
     '''USE Global Declarations here to manage these values'''
     # TODO Determine why these values do not persist when declared in __init__
     debug = False
@@ -201,11 +202,11 @@ class MESHpyDUMMYNetwork(Network):
                             , section_jnext.flow))
             self.debug = False
 
-    class RectangleSection(Network.RectangleSection):
+    class RectangleSection(Reach.RectangleSection):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
 
-    class TimeStep(Network.TimeStep):
+    class TimeStep(Reach.TimeStep):
         '''MESH-specific time-step values'''
         def __init__(self, new_water_z = 0.0, *args, **kwargs):
             super().__init__(*args, **kwargs)
@@ -232,11 +233,12 @@ def main():
 
     #C:\Users\james.halgren\Downloads\MESH_test\US\BW\Q\Qvar_us_2YNorm\Qvar_us_0033_5.0-10000.0_0100_0000-0004-0200_2NormalDepth
     # input_path = os.path.join(This_Example_Path,'Qvar_us_2YNorm','Qvar_us_0033_5.0-10000.0_0100_0000-0004-0200_2NormalDepth',"input.txt")
-    root = os.path.abspath(os.path.dirname(__file__))
+    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     test_folder = os.path.join(root, r'test')
-    output_folder = os.path.join(test_folder, r'output')
-    input_path = os.path.join(test_folder, r'input.txt')
-    output_path = os.path.join(output_folder, r'out.txt')
+    output_folder = os.path.join(test_folder, r'output', r'text')
+    input_folder = os.path.join(test_folder, r'input', r'text')
+    input_path = os.path.join(input_folder, r'input.txt')
+    output_path = os.path.join(output_folder, r'Dummy_out.txt')
 
     input_vars[r'input_path'] = input_path
     # print(input_path)
@@ -248,20 +250,20 @@ def main():
     #     print(input_path)
     #     #input_path = "./input.txt"
 
-    # network = DummyNetwork()
-    # network = SimpleFlowTrace() #DongHa's method.
-    # network = SteadyNetwork(input_type = input_type, input_vars = input_vars)
+    # reach = DummyReach()
+    # reach = SimpleFlowTrace() #DongHa's method.
+    # reach = SteadyReach(input_type = input_type, input_vars = input_vars)
     #input_and_initialize(sections, input_path, input_opt)
-    network = MESHpyDUMMYNetwork(input_type = input_type, input_vars = input_vars)
-    # network = MuskCNetwork()
-    # network = MESHDNetwork()
+    reach = MESHpyDUMMYReach(input_type = input_type, input_vars = input_vars)
+    # reach = MuskCReach()
+    # reach = MESHDReach()
 
-    network.compute_initial_state(write_output = True
+    reach.compute_initial_state(write_output = True
                                                     , output_path = output_path)
-    network.debug = False
-    network.compute_time_steps(verbose = True, write_output = True
+    reach.debug = False
+    reach.compute_time_steps(verbose = True, write_output = True
                                                     , output_path = output_path)
-    network.output_dump(output_path = output_path, verbose = True)
+    reach.output_dump_all(output_path = output_path, verbose = True)
 
 if __name__ == "__main__":
     main()
