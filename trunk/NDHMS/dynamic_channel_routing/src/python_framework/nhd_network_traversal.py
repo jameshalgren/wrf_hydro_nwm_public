@@ -12,8 +12,8 @@ import os
 # NOTE: these methods can lose the "connections" and "rows" arguments when
 # implemented as class methods where those arrays are members of the class.
 
-def set_network_data(
-    supernetworks = {}
+def set_supernetwork_data(
+    supernetwork = ''
     # Note: supernetworks may contain:
     # Brazos_FULL_RES
     # LowerColorado_FULL_RES
@@ -33,9 +33,8 @@ def set_network_data(
     # from https://www.nohrsc.noaa.gov/pub/staff/keicher/NWM_live/web/data_tools/
     # the CONUS_ge5 and Brazos_LowerColorado_ge5 datasets are included
     # in the github test folder
-    if 'Brazos_FULL_RES' in supernetworks:
-        supernetworks['Brazos_FULL_RES'].update(
-          {
+    if supernetwork == 'Brazos_FULL_RES':
+        return {
             'geofile_path': os.path.join(geo_input_folder
                     , r'Export_For_Test_ONLYBrazos_ALLORDERS.shp')
             , 'key_col' : 1
@@ -46,11 +45,9 @@ def set_network_data(
             , 'driver_string' : 'ESRI Shapefile'
             , 'layer_string' : 0
           }
-        )
 
-    if 'LowerColorado_FULL_RES' in supernetworks:
-        supernetworks['LowerColorado_FULL_RES'].update(
-          {
+    elif supernetwork == 'LowerColorado_FULL_RES':
+        return {
             'geofile_path' : os.path.join(geo_input_folder
                     , r'Export_For_Test_ONLYLowerColorado_ALLORDERS.shp')
             , 'key_col' : 1
@@ -61,11 +58,9 @@ def set_network_data(
             , 'driver_string' : 'ESRI Shapefile'
             , 'layer_string' : 0
           }
-        )
 
-    if 'LowerColorado_CONCHOS_FULL_RES' in supernetworks:
-        supernetworks['LowerColorado_CONCHOS_FULL_RES'].update(
-          {
+    elif supernetwork == 'LowerColorado_CONCHOS_FULL_RES':
+        return {
             'geofile_path' : os.path.join(geo_input_folder
                     , r'Export_For_Test_ONLYLowerColorado_CONCHOS_ALLORDERS.shp')
             , 'key_col' : 1
@@ -76,11 +71,9 @@ def set_network_data(
             , 'driver_string' : 'ESRI Shapefile'
             , 'layer_string' : 0
           }
-        )
 
-    if 'Mainstems_CONUS' in supernetworks:
-        supernetworks['Mainstems_CONUS'].update(
-          {
+    elif supernetwork == 'Mainstems_CONUS':
+        return {
             'geofile_path' : os.path.join(geo_input_folder
                     , r'downstream_reaches_v1_GCS.shp')
             , 'key_col' : 0
@@ -91,11 +84,9 @@ def set_network_data(
             , 'driver_string' : 'ESRI Shapefile'
             , 'layer_string' : 0
           }
-        )
 
-    if 'CONUS_ge5' in supernetworks:
-        supernetworks['CONUS_ge5'].update(
-          {
+    elif supernetwork == 'CONUS_ge5':
+        return {
             'geofile_path' : os.path.join(geo_input_folder
                     , r'NHD_Conus_Channels.shp')
             , 'key_col' : 1
@@ -106,11 +97,9 @@ def set_network_data(
             , 'driver_string' : 'ESRI Shapefile'
             , 'layer_string' : 0
           }
-        )
 
-    if 'CONUS_Named_Streams' in supernetworks:
-        supernetworks['CONUS_Named_Streams'].update(
-          {
+    elif supernetwork == 'CONUS_Named_Streams':
+        return {
             'geofile_path' : os.path.join(geo_input_folder
                     , r'channels_nwm_v12_routeLink_NamedOnly.shp')
             , 'key_col_Named_Streams' : 0
@@ -121,11 +110,9 @@ def set_network_data(
             , 'driver_string' : 'ESRI Shapefile'
             , 'layer_string' : 0
           }
-        )
 
-    if 'CONUS_FULL_RES_v20' in supernetworks:
-        supernetworks['CONUS_FULL_RES_v20'].update(
-          {
+    elif supernetwork == 'CONUS_FULL_RES_v20':
+        return {
             'geofile_path' : os.path.join(geo_input_folder
                     , r'RouteLink_NWMv2.0_20190517_cheyenne_pull.nc')
             , 'key_col' : 0
@@ -136,11 +123,9 @@ def set_network_data(
             , 'driver_string' : 'NetCDF'
             , 'layer_string' : 0
           }
-        )
 
-    if 'CONUS_FULL_RES_v12' in supernetworks:
-        supernetworks['CONUS_FULL_RES_v12'].update(
-          {
+    elif supernetwork == 'CONUS_FULL_RES_v12':
+        return {
             'geofile_path' : os.path.join(geo_input_folder
                     , r'channels_nwm_v12_routeLink_all.shp')
             , 'key_col' : 0
@@ -151,11 +136,9 @@ def set_network_data(
             , 'driver_string' : 'ESRI Shapefile'
             , 'layer_string' : 0
           }
-        )
 
-    if 'Brazos_LowerColorado_ge5' in supernetworks:
-        supernetworks['Brazos_LowerColorado_ge5'].update(
-          {
+    elif supernetwork == 'Brazos_LowerColorado_ge5':
+        return {
             'geofile_path' : os.path.join(geo_input_folder
                     , r'NHD_BrazosLowerColorado_Channels.shp')
             , 'key_col' : 2
@@ -166,7 +149,6 @@ def set_network_data(
             , 'driver_string' : 'ESRI Shapefile'
             , 'layer_string' : 0
           }
-        )
 
 def get_nhd_connections(
     supernetwork = {}
@@ -202,12 +184,12 @@ def main():
     # NOT IN GIT REPO # supernetworks.update({'CONUS_FULL_RES_v12':{}}) 
     supernetworks.update({'CONUS_FULL_RES_v20':{}}) # = False
 
-    set_network_data(
-      supernetworks = supernetworks
-      , geo_input_folder = os.path.join(test_folder, r'input', r'geo', r'Channels')
-    )
 
     for supernetwork in supernetworks:
+        supernetworks[supernetwork] = set_supernetwork_data(
+          supernetwork = supernetwork
+          , geo_input_folder = os.path.join(test_folder, r'input', r'geo', r'Channels')
+        )
         network_out_values = \
             get_nhd_connections(
               supernetworks[supernetwork]
