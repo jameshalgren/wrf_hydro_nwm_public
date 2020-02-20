@@ -3,7 +3,6 @@ from __future__ import division
 import helpers
 import constants
 import meshconstants
-from network import Network
 from reach import Reach
 import csv
 import os
@@ -226,34 +225,20 @@ def main():
     input_type = 'file'
     input_vars = {}
     input_vars['filetype'] = 'mesh.py'
-    # root = os.path.abspath(r'c:/Users/james.halgren/Downloads/MESH_test/')
-    # Main_Example_Path = os.path.join(root , 'US')
-    # Sub_Example_Path = os.path.join(Main_Example_Path , 'BW')
-    # This_Example_Path = os.path.join(Sub_Example_Path, 'Q')
 
-    #C:\Users\james.halgren\Downloads\MESH_test\US\BW\Q\Qvar_us_2YNorm\Qvar_us_0033_5.0-10000.0_0100_0000-0004-0200_2NormalDepth
-    # input_path = os.path.join(This_Example_Path,'Qvar_us_2YNorm','Qvar_us_0033_5.0-10000.0_0100_0000-0004-0200_2NormalDepth',"input.txt")
     root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     test_folder = os.path.join(root, r'test')
     output_folder = os.path.join(test_folder, r'output', r'text')
     input_folder = os.path.join(test_folder, r'input', r'text')
-    input_path = os.path.join(input_folder, r'input.txt')
+    input_path = os.path.join(input_folder, r'input_simple.txt')
     output_path = os.path.join(output_folder, r'Dummy_out.txt')
 
     input_vars[r'input_path'] = input_path
     # print(input_path)
 
-    # if len(sys.argv) > 1:
-    #     input_path = sys.argv[1]
-    # else:
-    #     input_path = os.path.join(This_Example_Path,"input.txt")
-    #     print(input_path)
-    #     #input_path = "./input.txt"
-
     # reach = DummyReach()
     # reach = SimpleFlowTrace() #DongHa's method.
     # reach = SteadyReach(input_type = input_type, input_vars = input_vars)
-    #input_and_initialize(sections, input_path, input_opt)
     reach = MESHpyDUMMYReach(input_type = input_type, input_vars = input_vars)
     # reach = MuskCReach()
     # reach = MESHDReach()
