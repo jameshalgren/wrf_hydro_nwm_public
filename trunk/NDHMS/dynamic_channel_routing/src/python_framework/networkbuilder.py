@@ -5,6 +5,9 @@ def get_down_connections(
     , key_col
     , downstream_col
     , length_col
+    , manningn_col = 0
+    , slope_col = 0
+    , bottomwidth_col = 0
     , mask_set = None
     , verbose = False
     , debuglevel = 0
@@ -17,13 +20,23 @@ def get_down_connections(
     #                     , 'downstream': row[downstream_col]
     #                     , 'length': row[length_col]}
     #                             for row in rows}
+    
+    #TODO: do a lambda (?) function to reduce redundancy
     if mask_set: connections = {row[key_col]: { 'downstream': row[downstream_col]
-                        , 'length': row[length_col]}
-                                for row in rows 
-                                if row[key_col] in mask_set}
+                        , 'length': row[length_col]
+                        , 'manningn': row[manningn_col]
+                        , 'slope': row[slope_col]
+                        , 'bottom_width': row[bottomwidth_col]
+                        }
+                        for row in rows 
+                        if row[key_col] in mask_set}
     else: connections = {row[key_col]: { 'downstream': row[downstream_col]
-                        , 'length': row[length_col]}
-                                for row in rows}
+                        , 'length': row[length_col]
+                        , 'manningn': row[manningn_col]
+                        , 'slope': row[slope_col]
+                        , 'bottom_width': row[bottomwidth_col]
+                        }
+                        for row in rows}
     if debuglevel <= -1: print(f'found {len(connections.keys())} segments')
     if debuglevel <= -2: print(connections)
     if verbose: print('down_connections complete')

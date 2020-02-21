@@ -79,6 +79,9 @@ def set_supernetwork_data(
             , 'key_col' : 2
             , 'downstream_col' : 7
             , 'length_col' : 6
+            , 'manningn_col' : 11
+            , 'slope_col' : 10
+            , 'bottomwidth_col' : 12
             , 'terminal_code' : 0
             , 'title_string' : 'NHD Subset including Brazos + Lower Colorado\nNHD stream orders 5 and greater'
             , 'driver_string' : 'ESRI Shapefile'
@@ -105,6 +108,9 @@ def set_supernetwork_data(
             , 'key_col' : 1
             , 'downstream_col' : 6
             , 'length_col' : 5
+            , 'manningn_col' : 11
+            , 'slope_col' : 10
+            , 'bottomwidth_col' : 12
             , 'terminal_code' : 0
             , 'title_string' : 'NHD CONUS Order 5 and Greater'
             , 'driver_string' : 'ESRI Shapefile'
@@ -134,6 +140,9 @@ def set_supernetwork_data(
             , 'key_col' : 0
             , 'downstream_col' : 2
             , 'length_col' : 10
+            , 'manningn_col' : 11
+            , 'slope_col' : 12
+            , 'bottomwidth_col' : 14
             , 'terminal_code' : 0
             , 'title_string' : 'CONUS Full Resolution NWM v2.0'
             , 'driver_string' : 'NetCDF'
@@ -165,6 +174,9 @@ def get_nhd_connections(
               , key_col = supernetwork['key_col']
               , downstream_col = supernetwork['downstream_col']
               , length_col = supernetwork['length_col']
+              , manningn_col = supernetwork['manningn_col']
+              , slope_col = supernetwork['slope_col']
+              , bottomwidth_col = supernetwork['bottomwidth_col']
               , terminal_code = supernetwork['terminal_code']
               , title_string = supernetwork['title_string']
               , driver_string = supernetwork['driver_string']
@@ -182,6 +194,9 @@ def get_nhd_connections(
               , key_col = supernetwork['key_col']
               , downstream_col = supernetwork['downstream_col']
               , length_col = supernetwork['length_col']
+              , manningn_col = supernetwork['manningn_col']
+              , slope_col = supernetwork['slope_col']
+              , bottomwidth_col = supernetwork['bottomwidth_col']
               , terminal_code = supernetwork['terminal_code']
               , title_string = supernetwork['title_string']
               , driver_string = supernetwork['driver_string']

@@ -5,29 +5,32 @@ A demonstration version of this code is stored in this Colaboratory notebook:
     https://colab.research.google.com/drive/1ocgg1JiOGBUl3jfSUPCEVnW5WNaqLKCD
 
 """
+import sys
 import os
+ENV_IS_CL = False
+if ENV_IS_CL: root = '/content/wrf_hydro_nwm_public/trunk/NDHMS/dynamic_channel_routing/'
+elif not ENV_IS_CL: 
+    root = os.path.dirname(os.path.dirname(os.path.abspath('')))
+    sys.path.append(r'../python_framework')
+
 import pickle
 import networkbuilder
 import nhd_network_traversal as nnt
 
-ENV_IS_CL = False
-
 def main():
 
     
-    if ENV_IS_CL: root = '/content/wrf_hydro_nwm_public/trunk/NDHMS/dynamic_channel_routing/'
-    elif not ENV_IS_CL: root = os.path.dirname(os.path.dirname(os.path.abspath('')))
     test_folder = os.path.join(root, r'test')
     geo_input_folder = os.path.join(test_folder, r'input', r'geo', r'Channels')
 
     """##NHD Subset (Brazos/Lower Colorado)"""
-    Brazos_LowerColorado_ge5 = False
+    Brazos_LowerColorado_ge5 = True
     """##NHD CONUS order 5 and greater"""
     CONUS_ge5 = False
     """These are large -- be careful"""
-    CONUS_FULL_RES_v20 = True
-    CONUS_Named_Streams = True #create a subset of the full resolution by reading the GNIS field
-    CONUS_Named_combined = True #process the Named streams through the Full-Res paths to join the many hanging reaches
+    CONUS_FULL_RES_v20 = False
+    CONUS_Named_Streams = False #create a subset of the full resolution by reading the GNIS field
+    CONUS_Named_combined = False #process the Named streams through the Full-Res paths to join the many hanging reaches
 
     debuglevel = -1
     verbose = True
