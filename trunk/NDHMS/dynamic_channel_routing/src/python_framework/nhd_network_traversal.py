@@ -72,6 +72,19 @@ def set_supernetwork_data(
             , 'layer_string' : 0
           }
 
+    elif supernetwork == 'Brazos_LowerColorado_ge5':
+        return {
+            'geofile_path' : os.path.join(geo_input_folder
+                    , r'NHD_BrazosLowerColorado_Channels.shp')
+            , 'key_col' : 2
+            , 'downstream_col' : 7
+            , 'length_col' : 6
+            , 'terminal_code' : 0
+            , 'title_string' : 'NHD Subset including Brazos + Lower Colorado\nNHD stream orders 5 and greater\n'
+            , 'driver_string' : 'ESRI Shapefile'
+            , 'layer_string' : 0
+          }
+
     elif supernetwork == 'Mainstems_CONUS':
         return {
             'geofile_path' : os.path.join(geo_input_folder
@@ -102,10 +115,10 @@ def set_supernetwork_data(
         return {
             'geofile_path' : os.path.join(geo_input_folder
                     , r'channels_nwm_v12_routeLink_NamedOnly.shp')
-            , 'key_col_Named_Streams' : 0
-            , 'downstream_col_Named_Streams' : 5
-            , 'length_col_Named_Streams' : 4
-            , 'terminal_code_Named_Streams' : 0
+            , 'key_col' : 0
+            , 'downstream_col' : 5
+            , 'length_col' : 4
+            , 'terminal_code' : 0
             , 'title_string' : 'NHD v1.2 segments corresponding to NHD 2.0 GNIS labeled streams\n'
             , 'driver_string' : 'ESRI Shapefile'
             , 'layer_string' : 0
@@ -133,19 +146,6 @@ def set_supernetwork_data(
             , 'length_col' : 4
             , 'terminal_code' : 0
             , 'title_string' : 'CONUS Full Resolution NWM v1.2'
-            , 'driver_string' : 'ESRI Shapefile'
-            , 'layer_string' : 0
-          }
-
-    elif supernetwork == 'Brazos_LowerColorado_ge5':
-        return {
-            'geofile_path' : os.path.join(geo_input_folder
-                    , r'NHD_BrazosLowerColorado_Channels.shp')
-            , 'key_col' : 2
-            , 'downstream_col' : 7
-            , 'length_col' : 6
-            , 'terminal_code' : 0
-            , 'title_string' : 'NHD Subset including Brazos + Lower Colorado\nNHD stream orders 5 and greater\n'
             , 'driver_string' : 'ESRI Shapefile'
             , 'layer_string' : 0
           }
