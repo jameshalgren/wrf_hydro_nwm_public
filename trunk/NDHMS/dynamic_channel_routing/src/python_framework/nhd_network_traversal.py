@@ -133,7 +133,7 @@ def set_supernetwork_data(
                     , r'RouteLink_NWMv2.0_20190517_cheyenne_pull.nc')
             , 'key_col' : 0
             , 'downstream_col' : 2
-            , 'length_col' : 8
+            , 'length_col' : 10
             , 'terminal_code' : 0
             , 'title_string' : 'CONUS Full Resolution NWM v2.0'
             , 'driver_string' : 'NetCDF'
@@ -159,8 +159,7 @@ def get_nhd_connections(
     , verbose = False
     ):
     if 'mask_file_path' in supernetwork:
-        #TODO: this probably means we are reading the same file twice -- fix this.
-        #TODO: invert the precedence of the supernetwork dictionary item so the call can be the same
+        #TODO: this probably means we are reading the same file twice -- fix this [maybe] by implementing an overloaded return
         return nnu.do_network(
             geo_file_path = supernetwork['geo_file_path']
               , key_col = supernetwork['key_col']
