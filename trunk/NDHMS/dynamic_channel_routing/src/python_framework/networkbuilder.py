@@ -1,8 +1,15 @@
 import recursive_print
 
-def get_down_connections(rows, key_col, downstream_col
-            , length_col
-            , verbose = False, debuglevel = 0):
+def get_down_connections(
+    rows
+    , key_col
+    , downstream_col
+    , length_col
+    , mask_set = None
+    , verbose = False
+    , debuglevel = 0
+    ):
+    # TODO: Consider moving debug and verbose prints to the calling function
     if debuglevel <= -100: breakpoint()
     if verbose: print('down connections ...')
     # connections = {row[key_col]: { 'data': list(row)
@@ -10,7 +17,11 @@ def get_down_connections(rows, key_col, downstream_col
     #                     , 'downstream': row[downstream_col]
     #                     , 'length': row[length_col]}
     #                             for row in rows}
-    connections = {row[key_col]: { 'downstream': row[downstream_col]
+    if mask_set: connections = {row[key_col]: { 'downstream': row[downstream_col]
+                        , 'length': row[length_col]}
+                                for row in rows 
+                                if row[key_col] in mask_set}
+    else: connections = {row[key_col]: { 'downstream': row[downstream_col]
                         , 'length': row[length_col]}
                                 for row in rows}
     if debuglevel <= -1: print(f'found {len(connections.keys())} segments')
