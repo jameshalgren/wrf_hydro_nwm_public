@@ -5,218 +5,101 @@ A demonstration version of this code is stored in this Colaboratory notebook:
     https://colab.research.google.com/drive/1ocgg1JiOGBUl3jfSUPCEVnW5WNaqLKCD
 
 """
-import nhd_network_utilities as nnu
-import recursive_print
 import os
+import pickle
+import networkbuilder
+import nhd_network_traversal as nnt
 
-# NOTE: these methods can lose the "connections" and "rows" arguments when
-# implemented as class methods where those arrays are members of the class.
-
-def set_supernetwork_data(
-    supernetwork = ''
-    # Note: supernetworks may contain:
-    # Brazos_FULL_RES
-    # LowerColorado_FULL_RES
-    # LowerColorado_CONCHOS_FULL_RES
-    # Mainstems_CONUS
-    # CONUS_ge5
-    # Brazos_LowerColorado_ge5
-    # CONUS_Named_Streams
-    # CONUS_FULL_RES_v12
-    # CONUS_FULL_RES_v20
-    , geo_input_folder = None
-    , verbose = True
-    , debuglevel = 0
-    ):
-
-    # The following datasets are extracts from the feature datasets available
-    # from https://www.nohrsc.noaa.gov/pub/staff/keicher/NWM_live/web/data_tools/
-    # the CONUS_ge5 and Brazos_LowerColorado_ge5 datasets are included
-    # in the github test folder
-    if supernetwork == 'Brazos_FULL_RES':
-        return {
-            'geofile_path': os.path.join(geo_input_folder
-                    , r'Export_For_Test_ONLYBrazos_ALLORDERS.shp')
-            , 'key_col' : 1
-            , 'downstream_col' : 6
-            , 'length_col' : 5
-            , 'terminal_code' : 0
-            , 'title_string' : 'Brazos \nFull Res'
-            , 'driver_string' : 'ESRI Shapefile'
-            , 'layer_string' : 0
-          }
-
-    elif supernetwork == 'LowerColorado_FULL_RES':
-        return {
-            'geofile_path' : os.path.join(geo_input_folder
-                    , r'Export_For_Test_ONLYLowerColorado_ALLORDERS.shp')
-            , 'key_col' : 1
-            , 'downstream_col' : 6
-            , 'length_col' : 5
-            , 'terminal_code' : 0
-            , 'title_string' : 'Lower Colorado\nFull Res'
-            , 'driver_string' : 'ESRI Shapefile'
-            , 'layer_string' : 0
-          }
-
-    elif supernetwork == 'LowerColorado_CONCHOS_FULL_RES':
-        return {
-            'geofile_path' : os.path.join(geo_input_folder
-                    , r'Export_For_Test_ONLYLowerColorado_CONCHOS_ALLORDERS.shp')
-            , 'key_col' : 1
-            , 'downstream_col' : 6
-            , 'length_col' : 5
-            , 'terminal_code' : 0
-            , 'title_string' : 'Conchos sub-basin\nLower Colorado Full Res '
-            , 'driver_string' : 'ESRI Shapefile'
-            , 'layer_string' : 0
-          }
-
-    elif supernetwork == 'Brazos_LowerColorado_ge5':
-        return {
-            'geofile_path' : os.path.join(geo_input_folder
-                    , r'NHD_BrazosLowerColorado_Channels.shp')
-            , 'key_col' : 2
-            , 'downstream_col' : 7
-            , 'length_col' : 6
-            , 'terminal_code' : 0
-            , 'title_string' : 'NHD Subset including Brazos + Lower Colorado\nNHD stream orders 5 and greater\n'
-            , 'driver_string' : 'ESRI Shapefile'
-            , 'layer_string' : 0
-          }
-
-    elif supernetwork == 'Mainstems_CONUS':
-        return {
-            'geofile_path' : os.path.join(geo_input_folder
-                    , r'downstream_reaches_v1_GCS.shp')
-            , 'key_col' : 0
-            , 'downstream_col' : 2
-            , 'length_col' : 10
-            , 'terminal_code' : 0
-            , 'title_string' : 'CONUS "Mainstem"'
-            , 'driver_string' : 'ESRI Shapefile'
-            , 'layer_string' : 0
-          }
-
-    elif supernetwork == 'CONUS_ge5':
-        return {
-            'geofile_path' : os.path.join(geo_input_folder
-                    , r'NHD_Conus_Channels.shp')
-            , 'key_col' : 1
-            , 'downstream_col' : 6
-            , 'length_col' : 5
-            , 'terminal_code' : 0
-            , 'title_string' : 'NHD CONUS Order 5 and Greater'
-            , 'driver_string' : 'ESRI Shapefile'
-            , 'layer_string' : 0
-          }
-
-    elif supernetwork == 'CONUS_Named_Streams':
-        return {
-            'geofile_path' : os.path.join(geo_input_folder
-                    , r'channels_nwm_v12_routeLink_NamedOnly.shp')
-            , 'key_col' : 0
-            , 'downstream_col' : 5
-            , 'length_col' : 4
-            , 'terminal_code' : 0
-            , 'title_string' : 'NHD v1.2 segments corresponding to NHD 2.0 GNIS labeled streams\n'
-            , 'driver_string' : 'ESRI Shapefile'
-            , 'layer_string' : 0
-          }
-
-    elif supernetwork == 'CONUS_FULL_RES_v20':
-        return {
-            'geofile_path' : os.path.join(geo_input_folder
-                    , r'RouteLink_NWMv2.0_20190517_cheyenne_pull.nc')
-            , 'key_col' : 0
-            , 'downstream_col' : 2
-            , 'length_col' : 8
-            , 'terminal_code' : 0
-            , 'title_string' : 'CONUS Full Resolution NWM v2.0'
-            , 'driver_string' : 'NetCDF'
-            , 'layer_string' : 0
-          }
-
-    elif supernetwork == 'CONUS_FULL_RES_v12':
-        return {
-            'geofile_path' : os.path.join(geo_input_folder
-                    , r'channels_nwm_v12_routeLink_all.shp')
-            , 'key_col' : 0
-            , 'downstream_col' : 5
-            , 'length_col' : 4
-            , 'terminal_code' : 0
-            , 'title_string' : 'CONUS Full Resolution NWM v1.2'
-            , 'driver_string' : 'ESRI Shapefile'
-            , 'layer_string' : 0
-          }
-
-def get_nhd_connections(
-    supernetwork = {}
-    , debuglevel = 0
-    , verbose = False
-    ):
-    return nnu.do_network(
-        geofile_path = supernetwork['geofile_path']
-          , key_col = supernetwork['key_col']
-          , downstream_col = supernetwork['downstream_col']
-          , length_col = supernetwork['length_col']
-          , terminal_code = supernetwork['terminal_code']
-          , title_string = supernetwork['title_string']
-          , driver_string = supernetwork['driver_string']
-          , layer_string = supernetwork['layer_string']
-          , debuglevel = debuglevel
-          , verbose = verbose
-        )
+ENV_IS_CL = False
 
 def main():
-    # find the path of the test scripts, several levels above the script path
-    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    test_folder = os.path.join(root, r'test')
+
     
-    supernetworks = {}
-    # NOT IN GIT REPO # supernetworks.update({'Brazos_FULL_RES':{}}) 
-    # NOT IN GIT REPO # supernetworks.update({'LowerColorado_FULL_RES':{}}) 
-    # NOT IN GIT REPO # supernetworks.update({'LowerColorado_CONCHOS_FULL_RES':{}}) 
-    # NOT IN GIT REPO # supernetworks.update({'Mainstems_CONUS':{}})
-    supernetworks.update({'CONUS_ge5':{}}) ##NHD CONUS order 5 and greater"""
-    supernetworks.update({'Brazos_LowerColorado_ge5':{}}) ##NHD Subset (Brazos/Lower Colorado)"""
-    # NOT IN GIT REPO # supernetworks.update({'CONUS_Named_Streams':{}})
-    # NOT IN GIT REPO # supernetworks.update({'CONUS_FULL_RES_v12':{}}) 
-    supernetworks.update({'CONUS_FULL_RES_v20':{}}) # = False
+    if ENV_IS_CL: root = '/content/wrf_hydro_nwm_public/trunk/NDHMS/dynamic_channel_routing/'
+    elif not ENV_IS_CL: root = os.path.dirname(os.path.dirname(os.path.abspath('')))
+    test_folder = os.path.join(root, r'test')
+    geo_input_folder = os.path.join(test_folder, r'input', r'geo', r'Channels')
 
+    """##NHD Subset (Brazos/Lower Colorado)"""
+    Brazos_LowerColorado_ge5 = False
+    """##NHD CONUS order 5 and greater"""
+    CONUS_ge5 = False
+    """These are large -- be careful"""
+    CONUS_FULL_RES_v20 = True
+    CONUS_Named_Streams = True #create a subset of the full resolution by reading the GNIS field
+    CONUS_Named_combined = True #process the Named streams through the Full-Res paths to join the many hanging reaches
 
-    for supernetwork in supernetworks:
-        supernetworks[supernetwork] = set_supernetwork_data(
-          supernetwork = supernetwork
-          , geo_input_folder = os.path.join(test_folder, r'input', r'geo', r'Channels')
-        )
-        network_out_values = \
-            get_nhd_connections(
-              supernetworks[supernetwork]
-              , debuglevel = -1
-              , verbose = True
-        )
+    debuglevel = -1
+    verbose = True
 
-        recursive_print.print_basic_network_info(
-          connections = network_out_values[0]
-            , headwater_keys = network_out_values[3]
-            , junction_keys = network_out_values[7]
-            , terminal_keys = network_out_values[4]
-            , terminal_code = supernetworks[supernetwork]['terminal_code']
-            , verbose = True
-        )
+    if Brazos_LowerColorado_ge5:
+        Brazos_LowerColorado_ge5_supernetwork = \
+        nnt.set_supernetwork_data(supernetwork = 'Brazos_LowerColorado_ge5'
+        , geo_input_folder = geo_input_folder)
+        Brazos_LowerColorado_ge5_values = nnt.get_nhd_connections(
+        supernetwork = Brazos_LowerColorado_ge5_supernetwork
+        , verbose = verbose
+        , debuglevel = debuglevel)
 
-        if 1 == 0: #THE RECURSIVE PRINT IS NOT A GOOD IDEA WITH LARGE NETWORKS!!!
-            recursive_print.print_connections(
-                        headwater_keys = headwater_keys_NHD
-                        , down_connections = connections_NHD
-                        , up_connections = connections_NHD
-                        , terminal_code = terminal_code_NHD
-                        , terminal_keys = terminal_keys_NHD
-                        , terminal_ref_keys = terminal_ref_keys_NHD
-                        , debuglevel = -2
-                        )
+    if CONUS_ge5:
+        CONUS_ge5_supernetwork = \
+        nnt.set_supernetwork_data(supernetwork = 'CONUS_ge5'
+        , geo_input_folder = geo_input_folder)
+        CONUS_ge5_values = nnt.get_nhd_connections(
+        supernetwork = CONUS_ge5_supernetwork
+        , verbose = verbose
+        , debuglevel = debuglevel)
 
+    if CONUS_FULL_RES_v20:
+        CONUS_FULL_RES_v20_supernetwork = \
+        nnt.set_supernetwork_data(supernetwork = 'CONUS_FULL_RES_v20'
+        , geo_input_folder = geo_input_folder)
+        CONUS_FULL_RES_v20_values = nnt.get_nhd_connections(
+        supernetwork = CONUS_FULL_RES_v20_supernetwork
+        , verbose = verbose
+        , debuglevel = debuglevel)
+
+    if CONUS_Named_Streams:
+        CONUS_Named_Streams_supernetwork = \
+        nnt.set_supernetwork_data(supernetwork = 'CONUS_Named_Streams'
+        , geo_input_folder = geo_input_folder)
+        #print(CONUS_Named_Streams_supernetwork)
+        CONUS_Named_Streams_values = nnt.get_nhd_connections(
+        supernetwork = CONUS_Named_Streams_supernetwork
+        , verbose = verbose
+        , debuglevel = debuglevel)
+
+    if CONUS_Named_combined:
+        ''' NOW Combine the two CONUS analyses by starting with the Named Headwaters
+            but trace the network down the Full Resolution NHD. It should only work
+            if the other two datasets have been computed.
+            ANY OTHER Set of Headerwaters could be substituted'''
+        
+        if not (CONUS_Named_Streams and CONUS_FULL_RES_v20):
+            print('\n\nWARNING: If this works, you are using old data...')
+
+        
+        # Use only headwater keys that are in the full dataset.
+        headwater_keys_combined = CONUS_FULL_RES_v20_values[3] & \
+                                    CONUS_Named_Streams_values[3]
+        # Need to make sure that these objects are independent -- we will modify them a bit.
+        connections_combined = pickle.loads(pickle.dumps(CONUS_FULL_RES_v20_values[0]))
+        terminal_keys_combined = pickle.loads(pickle.dumps(CONUS_FULL_RES_v20_values[4]))
+        terminal_code_combined = CONUS_Named_Streams_supernetwork['terminal_code']
+        
+        for key in connections_combined: #Clear the upstreams and rebuild it with just named streams
+            connections_combined[key].pop('upstreams',None)
+
+        (junction_keys_combined
+        , visited_keys_combined
+        , visited_terminal_keys_combined
+        , junction_count_combined) = networkbuilder.get_up_connections(
+                    connections = connections_combined
+                    , terminal_code = terminal_code_combined
+                    , headwater_keys = headwater_keys_combined
+                    , terminal_keys = terminal_keys_combined
+                    , verbose = verbose
+                    , debuglevel = debuglevel)
         
 if __name__ == '__main__':
     main()
