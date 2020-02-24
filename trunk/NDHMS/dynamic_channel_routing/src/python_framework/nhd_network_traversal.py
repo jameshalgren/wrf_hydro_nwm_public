@@ -40,6 +40,9 @@ def set_supernetwork_data(
             , 'key_col' : 1
             , 'downstream_col' : 6
             , 'length_col' : 5
+            , 'manningn_col' : 11
+            , 'slope_col' : 10
+            , 'bottomwidth_col' : 12
             , 'terminal_code' : 0
             , 'title_string' : 'Brazos \nFull Res'
             , 'driver_string' : 'ESRI Shapefile'
@@ -53,6 +56,9 @@ def set_supernetwork_data(
             , 'key_col' : 1
             , 'downstream_col' : 6
             , 'length_col' : 5
+            , 'manningn_col' : 11
+            , 'slope_col' : 10
+            , 'bottomwidth_col' : 12
             , 'terminal_code' : 0
             , 'title_string' : 'Lower Colorado\nFull Res'
             , 'driver_string' : 'ESRI Shapefile'
@@ -66,11 +72,31 @@ def set_supernetwork_data(
             , 'key_col' : 1
             , 'downstream_col' : 6
             , 'length_col' : 5
+            , 'manningn_col' : 11
+            , 'slope_col' : 10
+            , 'bottomwidth_col' : 12
             , 'terminal_code' : 0
             , 'title_string' : 'Conchos sub-basin\nLower Colorado Full Res '
             , 'driver_string' : 'ESRI Shapefile'
             , 'layer_string' : 0
           }
+
+    elif supernetwork == 'LowerColorado_CONCHOS_Named_Streams':
+        dict = set_supernetwork_data(
+                supernetwork = 'LowerColorado_CONCHOS_FULL_RES'
+                , geo_input_folder = geo_input_folder
+                )
+        dict.update({
+            'title_string' : 'NHD 2.0 GNIS labeled streams' #overwrites other title...
+              , 'mask_file_path' : os.path.join(geo_input_folder
+                    , r'nwm_reaches_conus_20_wGNIS.zip')
+              , 'mask_driver_string' : r'zip'
+              , 'mask_layer_string' : r'nwm_reaches_conus_20_wGNIS.csv'
+              , 'mask_key_col' : 1
+              , 'mask_name_col' : 5 #TODO: Not used yet.
+            })
+        return dict
+
 
     elif supernetwork == 'Brazos_LowerColorado_ge5':
         return {
