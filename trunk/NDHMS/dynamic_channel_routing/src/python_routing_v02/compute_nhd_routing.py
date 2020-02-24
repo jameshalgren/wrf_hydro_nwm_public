@@ -122,6 +122,10 @@ def recursive_junction_read (
         ckey = key
         if 1 == 1:
         #try:
+            reach = {}
+            reach.update({'reach_tail':ckey})
+            reachset = set()
+            reachset.add(ckey)
             ukeys = con[key]['upstreams']
             while not len(ukeys) >= 2 and not (ukeys == {terminal_code}):
                 if debuglevel <= -3: print(f"segs at ckey {ckey}: {network['total_segment_count']}")
@@ -130,16 +134,27 @@ def recursive_junction_read (
                 (ckey,) = ukeys
                 ukeys = con[ckey]['upstreams']
                 network['total_segment_count'] += 1
+                reachset.add(ckey)
+                #TODO: Can this be indented?
             if ukeys == {terminal_code}:
                 if debuglevel <= -3: print(f"headwater found at {ckey}")
                 network['total_segment_count'] += 1
                 if debuglevel <= -3: print(f"segs at ckey {ckey}: {network['total_segment_count']}")
+                reachset.add(ckey)
+                reach.update({'reach_head':ckey})
+                reach.update({'segments':reachset})
+                network['reaches'].update({ckey:reach})
+                network['headwaters'].add(ckey)
             elif len(ukeys) >= 2:
-                network['total_segment_count'] += 1
                 if debuglevel <= -3: print(f"junction found at {ckey} with upstreams {ukeys}")
                 network['total_segment_count'] += 1
                 if debuglevel <= -3: print(f"segs at ckey {ckey}: {network['total_segment_count']}")
+                reachset.add(ckey)
+                reach.update({'reach_head':ckey})
+                reach.update({'segments':reachset})
+                network['reaches'].update({ckey:reach})
                 network['total_junction_count'] += 1 #the Terminal Segment
+                network['junctions'].add(ckey)
                 recursive_junction_read (
                         ukeys
                         , con
@@ -148,8 +163,6 @@ def recursive_junction_read (
                         , verbose = verbose
                         , debuglevel = debuglevel) 
                 # print(ukeys)
-                ukeys = con[ckey]['upstreams']
-                ckey = ukeys
         #except:
             #if debuglevel <= -2: 
                 #print(f'There is a problem with connection: {key}: {con[key]}')
@@ -170,8 +183,9 @@ def network_trace(
     if 1 == 1:
         network.update({'total_segment_count': 0}) 
         network.update({'total_junction_count': 0})
-        network.update({'junctions':{}})
-        network.update({'reaches': {}}) #the Terminal Segment
+        network.update({'junctions':set()})
+        network.update({'headwaters':set()})
+        network.update({'reaches':{}}) #the Terminal Segment
         recursive_junction_read(
                   [nid]
                   , con
@@ -192,7 +206,6 @@ def compose_reaches(
         , debug_level = 0
         , verbose = False
         ):
-
 
     terminal_keys = network_values[4] 
     circular_keys = network_values[6]
@@ -216,8 +229,16 @@ def compose_reaches(
         network.update(network_trace(nid, con, terminal_code = terminal_code, verbose = verbose, debuglevel = debuglevel)[nid])
     print("--- %s seconds: serial compute ---" % (time.time() - start_time))
     if debuglevel <= -1: print(len(networks.items()))
-    if debuglevel <= -2: print(networks)
+    if debuglevel <= -2:
+        for nid, network in networks.items():
+            print(f'terminal_key: {nid}')
+            for k, v in network.items():
+                if type(v) is dict:
+                    print (f'{k}:')
+                    for k1, v1 in v.items():
+                        print(f'{k1}: {v1}')
 
+                else: print(f'{k}: {v}')
 def main():
     network_values = set_network()
     reach_values = compose_reaches(network_values)
