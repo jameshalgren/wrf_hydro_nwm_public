@@ -111,6 +111,7 @@ def set_network():
 
 def recursive_junction_read (
                              keys
+                             , order_iter
                              , con
                              , network
                              , terminal_code = 0
@@ -136,27 +137,32 @@ def recursive_junction_read (
                 network['total_segment_count'] += 1
                 reachset.add(ckey)
                 #TODO: Can this be indented?
-            if ukeys == {terminal_code}:
+            if ukeys == {terminal_code}: # HEADWATERS
                 if debuglevel <= -3: print(f"headwater found at {ckey}")
                 network['total_segment_count'] += 1
                 if debuglevel <= -3: print(f"segs at ckey {ckey}: {network['total_segment_count']}")
                 reachset.add(ckey)
                 reach.update({'reach_head':ckey})
+                reach.update({'order':order_iter})
+                network.update({'maximum_order':max(network['maximum_order'],order_iter)})
                 reach.update({'segments':reachset})
                 network['reaches'].update({ckey:reach})
                 network['headwaters'].add(ckey)
-            elif len(ukeys) >= 2:
+            elif len(ukeys) >= 2: # JUNCTIONS
                 if debuglevel <= -3: print(f"junction found at {ckey} with upstreams {ukeys}")
                 network['total_segment_count'] += 1
                 if debuglevel <= -3: print(f"segs at ckey {ckey}: {network['total_segment_count']}")
                 reachset.add(ckey)
                 reach.update({'reach_head':ckey})
+                reach.update({'order':order_iter})
+                network.update({'maximum_order':max(network['maximum_order'],order_iter)})
                 reach.update({'segments':reachset})
                 network['reaches'].update({ckey:reach})
                 network['total_junction_count'] += 1 #the Terminal Segment
                 network['junctions'].add(ckey)
                 recursive_junction_read (
                         ukeys
+                        , order_iter + 1
                         , con
                         , network
                         , terminal_code = terminal_code
@@ -169,6 +175,7 @@ def recursive_junction_read (
 
 def network_trace(
                         nid
+                        , order_iter
                         , con
                         , terminal_code = 0
                         , verbose= False
@@ -183,11 +190,13 @@ def network_trace(
     if 1 == 1:
         network.update({'total_segment_count': 0}) 
         network.update({'total_junction_count': 0})
+        network.update({'maximum_order':0})
         network.update({'junctions':set()})
         network.update({'headwaters':set()})
         network.update({'reaches':{}}) #the Terminal Segment
         recursive_junction_read(
                   [nid]
+                  , order_iter
                   , con
                   , network
                   , verbose = verbose
@@ -201,16 +210,16 @@ def network_trace(
     return {nid: network, 'upstream_length': us_length_total}
 
 def compose_reaches(
-        network_values = None
+        supernetwork_values = None
         , terminal_code = 0
         , debug_level = 0
         , verbose = False
         ):
 
-    terminal_keys = network_values[4] 
-    circular_keys = network_values[6]
+    terminal_keys = supernetwork_values[4] 
+    circular_keys = supernetwork_values[6]
     terminal_keys_super = terminal_keys - circular_keys
-    con = network_values[0]
+    con = supernetwork_values[0]
         
     networks = {terminal_key:{}
                       for terminal_key in terminal_keys_super 
@@ -225,10 +234,12 @@ def compose_reaches(
 
     start_time = time.time()
     results_serial = {}
+    init_order = 0
     for nid, network in networks.items():
-        network.update(network_trace(nid, con, terminal_code = terminal_code, verbose = verbose, debuglevel = debuglevel)[nid])
+        network.update(network_trace(nid, init_order, con, terminal_code = terminal_code, verbose = verbose, debuglevel = debuglevel)[nid])
     print("--- %s seconds: serial compute ---" % (time.time() - start_time))
-    if debuglevel <= -1: print(len(networks.items()))
+    if debuglevel <= -1: print(f'Number of networks in the Supernetwork: {len(networks.items())}')
+
     if debuglevel <= -2:
         for nid, network in networks.items():
             print(f'terminal_key: {nid}')
@@ -239,10 +250,36 @@ def compose_reaches(
                         print(f'{k1}: {v1}')
 
                 else: print(f'{k}: {v}')
-def main():
-    network_values = set_network()
-    reach_values = compose_reaches(network_values)
 
+    return networks
+
+def main():
+    supernetwork_values = set_network()
+    networks = compose_reaches(supernetwork_values)
+
+    #Greatest to least ordering of the river system for computation.
+    #IDs are in order of magnitude so largest order IDs will be computed first from the list reading left to right
+    #Can easily change to great sublists for each magnitude of order if necessary
+    #temporary function to gather unique order listings
+
+    con = supernetwork_values[0]
+    for terminal_key, network in networks.items():
+
+        g2l = []
+        print([x for x in range(network['maximum_order'],-1,-1)])
+        for x in range(network['maximum_order'],-1,-1):
+            for y, z in network['reaches'].items():
+                if x == z['order']:
+                    g2l.append(y)
+
+        print(g2l)
+        reordered = []
+        for x in g2l:
+            for y,z in con.items():
+                if x == y:
+                    reordered.append({y:z})
+
+        print(reordered)
 
 if __name__ == '__main__':
     main()
