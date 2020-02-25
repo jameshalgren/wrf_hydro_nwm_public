@@ -15,28 +15,18 @@ def get_down_connections(
     # TODO: Consider moving debug and verbose prints to the calling function
     if debuglevel <= -100: breakpoint()
     if verbose: print('down connections ...')
-    # connections = {row[key_col]: { 'data': list(row)
-    #                     , 'visited': False
-    #                     , 'downstream': row[downstream_col]
-    #                     , 'length': row[length_col]}
-    #                             for row in rows}
     
-    #TODO: do a lambda (?) function to reduce redundancy
-    if mask_set: connections = {row[key_col]: { 'downstream': row[downstream_col]
+    if not mask_set: mask_set = {row[key_col] for row in rows}
+    connections = {row[key_col]: { 'downstream': row[downstream_col]
                         , 'length': row[length_col]
                         , 'manningn': row[manningn_col]
                         , 'slope': row[slope_col]
                         , 'bottom_width': row[bottomwidth_col]
+                        , 'data': list(row)
                         }
                         for row in rows 
                         if row[key_col] in mask_set}
-    else: connections = {row[key_col]: { 'downstream': row[downstream_col]
-                        , 'length': row[length_col]
-                        , 'manningn': row[manningn_col]
-                        , 'slope': row[slope_col]
-                        , 'bottom_width': row[bottomwidth_col]
-                        }
-                        for row in rows}
+
     if debuglevel <= -1: print(f'found {len(connections.keys())} segments')
     if debuglevel <= -2: print(connections)
     if verbose: print('down_connections complete')
