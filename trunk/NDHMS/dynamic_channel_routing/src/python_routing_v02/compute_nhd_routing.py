@@ -253,6 +253,12 @@ def compose_reaches(
 
     return networks
 
+def compute_reach(reach = None):
+    pass
+
+def compute_segment:
+    pass
+
 def main():
     supernetwork_values = set_network()
     networks = compose_reaches(supernetwork_values)
