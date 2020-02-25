@@ -10,6 +10,8 @@ import os
 import time
 import multiprocessing
 from functools import partial
+connections = None
+networks = None
 
 ENV_IS_CL = False
 if ENV_IS_CL: root = '/content/wrf_hydro_nwm_public/trunk/NDHMS/dynamic_channel_routing/'
@@ -27,9 +29,9 @@ def set_network():
     geo_input_folder = os.path.join(test_folder, r'input', r'geo', r'Channels')
 
     """##NHD Subset (Brazos/Lower Colorado)"""
-    Brazos_LowerColorado_ge5 = False
+    Brazos_LowerColorado_ge5 = True
     """##NHD CONUS order 5 and greater"""
-    CONUS_ge5 = True
+    CONUS_ge5 = False
     """These are large -- be careful"""
     CONUS_FULL_RES_v20 = False
     CONUS_Named_Streams = False #create a subset of the full resolution by reading the GNIS field
@@ -112,13 +114,13 @@ def set_network():
 def recursive_junction_read (
                              segments
                              , order_iter
-                             , con
+                             , connections
                              , network
                              , terminal_code = 0
                              , verbose = False
                              , debuglevel = 0
                             ):
-    #global con, network
+    #global connections, network
 
     #Greatest to least ordering of the river system for computation.
     #IDs are in order of magnitude so largest order IDs will be computed first from the list reading left to right
@@ -133,7 +135,7 @@ def recursive_junction_read (
             reach.update({'reach_tail':csegment})
             reachset = set()
             reachset.add(csegment)
-            usegments = con[segment]['upstreams']
+            usegments = connections[segment]['upstreams']
             while True: 
                 if usegments == {terminal_code}: # HEADWATERS
                     if debuglevel <= -3: print(f"headwater found at {csegment}")
@@ -162,7 +164,7 @@ def recursive_junction_read (
                     recursive_junction_read (
                             usegments
                             , order_iter + 1
-                            , con
+                            , connections
                             , network
                             , terminal_code = terminal_code
                             , verbose = verbose
@@ -172,19 +174,19 @@ def recursive_junction_read (
                 # the terminal code will indicate a headwater
                 if debuglevel <= -4: print(usegments)
                 (csegment,) = usegments
-                usegments = con[csegment]['upstreams']
+                usegments = connections[csegment]['upstreams']
                 network['total_segment_count'] += 1
                 reachset.add(csegment)
 
                 # print(usegments)
         #except:
             #if debuglevel <= -2: 
-                #print(f'There is a problem with connection: {segment}: {con[segment]}')
+                #print(f'There is a problem with connection: {segment}: {connections[segment]}')
 
 def network_trace(
                         terminal_segment
                         , order_iter
-                        , con
+                        , connections
                         , terminal_code = 0
                         , verbose= False
                         , debuglevel = 0
@@ -205,7 +207,7 @@ def network_trace(
         recursive_junction_read(
                   [terminal_segment]
                   , order_iter
-                  , con
+                  , connections
                   , network
                   , verbose = verbose
                   , terminal_code = terminal_code
@@ -220,23 +222,21 @@ def network_trace(
 def compose_reaches(
         supernetwork_values = None
         , terminal_code = 0
-        , debug_level = 0
+        , debuglevel = 0
         , verbose = False
         ):
 
     terminal_segments = supernetwork_values[4] 
     circular_segments = supernetwork_values[6]
     terminal_segments_super = terminal_segments - circular_segments
-    con = supernetwork_values[0]
+    connections = supernetwork_values[0]
         
     networks = {terminal_segment:{}
                       for terminal_segment in terminal_segments_super 
                      }  
-    debuglevel = -2
-    verbose = False
 
     if verbose: print('verbose output')
-    if verbose: print(f'number of Independent Networks to be analyzed is {len(super_networks)}')
+    if verbose: print(f'number of Independent Networks to be analyzed is {len(networks)}')
     if verbose: print(f'Multi-processing will use {multiprocessing.cpu_count()} CPUs')
     if verbose: print(f'debuglevel is {debuglevel}')
 
@@ -244,25 +244,26 @@ def compose_reaches(
     results_serial = {}
     init_order = 0
     for terminal_segment, network in networks.items():
-        network.update(network_trace(terminal_segment, init_order, con, terminal_code = terminal_code, verbose = verbose, debuglevel = debuglevel)[terminal_segment])
+        network.update(network_trace(terminal_segment, init_order, connections, terminal_code = terminal_code, verbose = verbose, debuglevel = debuglevel)[terminal_segment])
     print("--- %s seconds: serial compute ---" % (time.time() - start_time))
     if debuglevel <= -1: print(f'Number of networks in the Supernetwork: {len(networks.items())}')
 
-    if debuglevel <= -2:
+    if debuglevel <= -1:
         for terminal_segment, network in networks.items():
-            print(f'terminal_segment: {terminal_segment}')
-            for k, v in network.items():
-                if type(v) is dict:
-                    print (f'{k}:')
-                    for k1, v1 in v.items():
-                        print(f'\t{k1}: {v1}')
-                else: print(f'{k}: {v}')
+            if debuglevel <=-1: print(f'terminal_segment: {terminal_segment}')
+            if debuglevel <=-2: 
+                for k, v in network.items():
+                    if type(v) is dict:
+                        print (f'{k}:')
+                        for k1, v1 in v.items():
+                            print(f'\t{k1}: {v1}')
+                    else: print(f'{k}: {v}')
     return networks
 
 def compute_network(
         terminal_segment = None
         , network = None
-        , con = None
+        , connections = None
         , verbose = False
         , debuglevel = 0
         ):
@@ -271,41 +272,48 @@ def compute_network(
     for x in range(network['maximum_order'],-1,-1):
         for junction_segment, reach in network['reaches'].items():
             if x == reach['order']:
-                compute_reach(junction_segment, reach, con, verbose, debuglevel)
+                compute_reach(junction_segment, reach, connections, verbose, debuglevel)
 
 def compute_reach(
         junction_segment = None
         , reach = None
-        , con = None
+        , connections = None
         , verbose = False
         , debuglevel = 0
         ):
     if verbose: print(f"\nreach: {junction_segment} (order: {reach['order']} n_segs: {len(reach['segments'])})")
     current_segment = reach['reach_head']
-    next_segment = con[current_segment]['downstream'] 
+    next_segment = connections[current_segment]['downstream'] 
     while True:
         # Thanks to SO post for a reminder of this "Loop-and-a-half" construct
         # https://stackoverflow.com/questions/1662161/is-there-a-do-until-in-python
+        compute_segment(current_segment)
         if current_segment == reach['reach_tail']:
             if verbose: print(f'{current_segment} (tail)')
             break
         if verbose: print(f'{current_segment} --> {next_segment}')
         current_segment = next_segment
-        next_segment = con[current_segment]['downstream'] 
+        next_segment = connections[current_segment]['downstream'] 
 
 
 #        print(g2l)
 #        reordered = []
 #        for x in g2l:
-#            for y,z in con.items():
+#            for y,z in connections.items():
 #                if x == y:
 #                    reordered.append({y:z})
 #
 #
 #        print(reordered)
 
-def compute_segment():
-    pass
+def compute_segment(current_segment = None):
+    global connections
+    for k, v in connections[current_segment].items():
+        if type(v) is dict:
+            print (f'{k}:')
+            for k1, v1 in v.items():
+                print(f'\t{k1}: {v1}')
+        else: print(f'{k}: {v}')
 
 def get_upstream_inflow():
     pass
@@ -318,29 +326,53 @@ def compute_junction_downstream():
 
 def main():
 
-    debuglevel = -1
+    global connections
+    global networks
+
+    debuglevel = -2
     verbose = True
 
 
     if verbose: print('creating supernetwork connections set')
     start_time = time.time()
+    #STEP 1
     supernetwork_values = set_network()
     if verbose: print('supernetwork connections set complete')
     if debuglevel <= -1: print("--- in %s seconds: ---" % (time.time() - start_time))
     if verbose: print('ordering reaches ...')
+
     start_time = time.time()
-    networks = compose_reaches(supernetwork_values)
+    #STEP 2
+    networks = compose_reaches(
+        supernetwork_values
+        , verbose = verbose
+        , debuglevel = debuglevel
+        )
     if verbose: print('ordered reaches complete')
     if debuglevel <= -1: print("--- in %s seconds: ---" % (time.time() - start_time))
 
     start_time = time.time()
     if verbose: print('executing computation on ordered reaches ...')
-    con = supernetwork_values[0]
+    #STEP 3
+    connections = supernetwork_values[0]
     for terminal_segment, network in networks.items():
-        compute_network(terminal_segment, network, con, verbose, debuglevel)
+        compute_network(
+            terminal_segment
+            , network
+            , connections
+            , verbose
+            , debuglevel
+        )
     if verbose: print('ordered reach computation complete')
     if debuglevel <= -1: print("--- in %s seconds: ---" % (time.time() - start_time))
 
+    #start_time = time.time()
+    #if verbose: print('executing computation on ordered reaches ...')
+    #connections = supernetwork_values[0]
+    #for terminal_segment, network in networks.items():
+        #compute_network(terminal_segment, network, connections, verbose, debuglevel)
+    #if verbose: print('ordered reach computation complete')
+    #if debuglevel <= -1: print("--- in %s seconds: ---" % (time.time() - start_time))
 
 if __name__ == '__main__':
     main()
