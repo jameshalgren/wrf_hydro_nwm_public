@@ -13,9 +13,9 @@ def do_network(
         , key_col = None
         , downstream_col = None
         , length_col = None
-        , manningn_col = None
-        , slope_col = None
-        , bottomwidth_col = None
+        #, manningn_col = None
+        #, slope_col = None
+        #, bottomwidth_col = None
         , terminal_code = None
         , mask_file_path = None
         , mask_driver_string = None
@@ -52,9 +52,9 @@ def do_network(
             , key_col = key_col
             , downstream_col = downstream_col
             , length_col = length_col
-            , manningn_col = manningn_col
-            , slope_col = slope_col
-            , bottomwidth_col = bottomwidth_col
+            #, manningn_col = manningn_col
+            #, slope_col = slope_col
+            #, bottomwidth_col = bottomwidth_col
             , terminal_code = terminal_code
             , verbose = verbose
             , debuglevel = debuglevel
@@ -66,9 +66,9 @@ def do_network(
             , key_col = key_col
             , downstream_col = downstream_col
             , length_col = length_col
-            , manningn_col = manningn_col
-            , slope_col = slope_col
-            , bottomwidth_col = bottomwidth_col
+            #, manningn_col = manningn_col
+            #, slope_col = slope_col
+            #, bottomwidth_col = bottomwidth_col
             , terminal_code = terminal_code
             , verbose = verbose
             , debuglevel = debuglevel
@@ -107,7 +107,11 @@ def get_geo_file_table_rows(
         if debuglevel <= -1: print(f'reading -- dataset: {geo_file_path}; layer: {layer_string}; fiona driver: {driver_string}')
         geo_file = gpd.read_file(geo_file_path, driver=driver_string, layer=layer_string)
         geo_file_rows = geo_file.to_numpy()
-        if debuglevel <= -2: geo_file.plot() 
+        if debuglevel <= -2: 
+            try: 
+                geo_file.plot() 
+            except:
+                pass
     if debuglevel <= -1: print(geo_file.head()) # Preview the first 5 lines of the loaded data
 
     return geo_file_rows
@@ -118,9 +122,9 @@ def build_connections_object(
         , key_col = None
         , downstream_col = None
         , length_col = None
-        , manningn_col = None
-        , slope_col = None
-        , bottomwidth_col = None
+        #, manningn_col = None
+        #, slope_col = None
+        #, bottomwidth_col = None
         , terminal_code = None
         , verbose = False
         , debuglevel = 0
@@ -131,9 +135,9 @@ def build_connections_object(
                     , key_col = key_col
                     , downstream_col = downstream_col
                     , length_col = length_col
-                    , manningn_col = manningn_col
-                    , slope_col = slope_col
-                    , bottomwidth_col = bottomwidth_col
+                    #, manningn_col = manningn_col
+                    #, slope_col = slope_col
+                    #, bottomwidth_col = bottomwidth_col
                     , verbose = verbose
                     , debuglevel = debuglevel)
     

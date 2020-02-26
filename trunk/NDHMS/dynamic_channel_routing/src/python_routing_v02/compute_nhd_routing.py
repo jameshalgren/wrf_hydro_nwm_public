@@ -44,17 +44,16 @@ def set_network():
         Brazos_LowerColorado_ge5_supernetwork = \
         nnt.set_supernetwork_data(supernetwork = 'Brazos_LowerColorado_ge5'
         , geo_input_folder = geo_input_folder)
-        return nnt.get_nhd_connections(
+        return Brazos_LowerColorado_ge5_supernetwork, nnt.get_nhd_connections(
         supernetwork = Brazos_LowerColorado_ge5_supernetwork
         , verbose = verbose
         , debuglevel = debuglevel)
-        return Brazos_LowerColorado_ge5_values
 
     elif CONUS_ge5:
         CONUS_ge5_supernetwork = \
         nnt.set_supernetwork_data(supernetwork = 'CONUS_ge5'
         , geo_input_folder = geo_input_folder)
-        return nnt.get_nhd_connections(
+        return CONUS_ge5_supernetwork, nnt.get_nhd_connections(
         supernetwork = CONUS_ge5_supernetwork
         , verbose = verbose
         , debuglevel = debuglevel)
@@ -63,7 +62,7 @@ def set_network():
         CONUS_FULL_RES_v20_supernetwork = \
         nnt.set_supernetwork_data(supernetwork = 'CONUS_FULL_RES_v20'
         , geo_input_folder = geo_input_folder)
-        return nnt.get_nhd_connections(
+        return CONUS_FULL_RES_v20_supernetwork, nnt.get_nhd_connections(
         supernetwork = CONUS_FULL_RES_v20_supernetwork
         , verbose = verbose
         , debuglevel = debuglevel)
@@ -74,7 +73,7 @@ def set_network():
         , geo_input_folder = geo_input_folder)
 
         if not CONUS_Named_combined:
-            return nnt.get_nhd_connections(
+            return CONUS_Named_Streams_supernetwork, nnt.get_nhd_connections(
             supernetwork = CONUS_Named_Streams_supernetwork
             , verbose = verbose
             , debuglevel = debuglevel)
@@ -99,6 +98,9 @@ def set_network():
             
             for segment in connections_combined: #Clear the upstreams and rebuild it with just named streams
                 connections_combined[segment].pop('upstreams',None)
+
+
+           #TODO: THIS IS INCOMPLETE FOR THE COMBINED
 
             (junction_segments_combined
             , visited_segments_combined
@@ -184,13 +186,13 @@ def recursive_junction_read (
                 #print(f'There is a problem with connection: {segment}: {connections[segment]}')
 
 def network_trace(
-                        terminal_segment
-                        , order_iter
-                        , connections
-                        , terminal_code = 0
-                        , verbose= False
-                        , debuglevel = 0
-                        ):
+        terminal_segment
+        , order_iter
+        , connections
+        , terminal_code = 0
+        , verbose= False
+        , debuglevel = 0
+    ):
 
     network = {}
     us_length_total = 0
@@ -224,7 +226,7 @@ def compose_reaches(
         , terminal_code = 0
         , debuglevel = 0
         , verbose = False
-        ):
+    ):
 
     terminal_segments = supernetwork_values[4] 
     circular_segments = supernetwork_values[6]
@@ -263,6 +265,7 @@ def compose_reaches(
 def compute_network(
         terminal_segment = None
         , network = None
+        , supernetwork = None
         , connections = None
         , verbose = False
         , debuglevel = 0
@@ -270,49 +273,74 @@ def compute_network(
     if verbose: print(f"\n\nExecuting simulation on network {terminal_segment} beginning with streams of order {network['maximum_order']}")
 
     for x in range(network['maximum_order'],-1,-1):
-        for junction_segment, reach in network['reaches'].items():
+        for head_segment, reach in network['reaches'].items():
             if x == reach['order']:
-                compute_reach(junction_segment, reach, connections, verbose, debuglevel)
+                compute_reach_up2down(
+                    head_segment = head_segment
+                    , reach = reach
+                    , connections = connections
+                    , supernetwork = supernetwork
+                    , verbose = verbose
+                    , debuglevel = debuglevel
+                    )
 
-def compute_reach(
-        junction_segment = None
+#TODO: generalize with a direction flag
+def compute_reach_up2down(
+        head_segment = None
         , reach = None
         , connections = None
+        , supernetwork = None
         , verbose = False
         , debuglevel = 0
         ):
-    if verbose: print(f"\nreach: {junction_segment} (order: {reach['order']} n_segs: {len(reach['segments'])})")
+    if verbose: print(f"\nreach: {head_segment} (order: {reach['order']} n_segs: {len(reach['segments'])})")
     current_segment = reach['reach_head']
     next_segment = connections[current_segment]['downstream'] 
     while True:
         # Thanks to SO post for a reminder of this "Loop-and-a-half" construct
         # https://stackoverflow.com/questions/1662161/is-there-a-do-until-in-python
-        compute_segment(current_segment)
+        compute_segment(
+            current_segment = current_segment
+            , supernetwork = supernetwork
+            , verbose = verbose
+            , debuglevel = debuglevel
+            )
         if current_segment == reach['reach_tail']:
             if verbose: print(f'{current_segment} (tail)')
             break
-        if verbose: print(f'{current_segment} --> {next_segment}')
+        if verbose: print(f'{current_segment} --> {next_segment}\n')
         current_segment = next_segment
         next_segment = connections[current_segment]['downstream'] 
 
+def compute_reach_down2up(
+        tail_segment = None
+        , reach = None
+        , connections = None
+        , supernetwork = None
+        , verbose = False
+        , debuglevel = 0
+        ):
+    if verbose: print(f"\nreach: {head_segment} (order: {reach['order']} n_segs: {len(reach['segments'])})")
+    pass
 
-#        print(g2l)
-#        reordered = []
-#        for x in g2l:
-#            for y,z in connections.items():
-#                if x == y:
-#                    reordered.append({y:z})
-#
-#
-#        print(reordered)
-
-def compute_segment(current_segment = None):
+def compute_segment(
+    current_segment = None
+    , supernetwork = None
+    , verbose = False
+    , debuglevel = 0
+    ):
     global connections
+    print(f'data for segment: {current_segment}')
+    
     for k, v in connections[current_segment].items():
-        if type(v) is dict:
+        if type(v) is list: # print the 
             print (f'{k}:')
-            for k1, v1 in v.items():
-                print(f'\t{k1}: {v1}')
+            print (f"manningn: {v[supernetwork['manningn_col']]}")
+            print (f"slope: {v[supernetwork['slope_col']]}")
+            print (f"bottom width: {v[supernetwork['bottomwidth_col']]}")
+            print (f"Muskingum K: {v[supernetwork['MusK_col']]}")
+            print (f"Muskingum X: {v[supernetwork['MusX_col']]}")
+            print (f"Channel Side Slope: {v[supernetwork['ChSlp_col']]}")
         else: print(f'{k}: {v}')
 
 def get_upstream_inflow():
@@ -336,7 +364,7 @@ def main():
     if verbose: print('creating supernetwork connections set')
     start_time = time.time()
     #STEP 1
-    supernetwork_values = set_network()
+    supernetwork, supernetwork_values = set_network()
     if verbose: print('supernetwork connections set complete')
     if debuglevel <= -1: print("--- in %s seconds: ---" % (time.time() - start_time))
     if verbose: print('ordering reaches ...')
@@ -357,11 +385,12 @@ def main():
     connections = supernetwork_values[0]
     for terminal_segment, network in networks.items():
         compute_network(
-            terminal_segment
-            , network
-            , connections
-            , verbose
-            , debuglevel
+            terminal_segment = terminal_segment
+            , network = network
+            , supernetwork = supernetwork
+            , connections = connections
+            , verbose = verbose
+            , debuglevel = debuglevel
         )
     if verbose: print('ordered reach computation complete')
     if debuglevel <= -1: print("--- in %s seconds: ---" % (time.time() - start_time))

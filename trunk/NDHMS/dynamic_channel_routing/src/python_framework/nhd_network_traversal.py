@@ -40,9 +40,12 @@ def set_supernetwork_data(
             , 'key_col' : 1
             , 'downstream_col' : 6
             , 'length_col' : 5
-            , 'manningn_col' : 11
-            , 'slope_col' : 10
-            , 'bottomwidth_col' : 12
+            , 'manningn_col' : 10
+            , 'slope_col' : 9
+            , 'bottomwidth_col' : 11
+            , 'MusK_col' : 7
+            , 'MusX_col' : 8
+            , 'ChSlp_col' : 12
             , 'terminal_code' : 0
             , 'title_string' : 'Brazos \nFull Res'
             , 'driver_string' : 'ESRI Shapefile'
@@ -56,9 +59,12 @@ def set_supernetwork_data(
             , 'key_col' : 1
             , 'downstream_col' : 6
             , 'length_col' : 5
-            , 'manningn_col' : 11
-            , 'slope_col' : 10
-            , 'bottomwidth_col' : 12
+            , 'manningn_col' : 10
+            , 'slope_col' : 9
+            , 'bottomwidth_col' : 11
+            , 'MusK_col' : 7
+            , 'MusX_col' : 8
+            , 'ChSlp_col' : 12
             , 'terminal_code' : 0
             , 'title_string' : 'Lower Colorado\nFull Res'
             , 'driver_string' : 'ESRI Shapefile'
@@ -72,9 +78,12 @@ def set_supernetwork_data(
             , 'key_col' : 1
             , 'downstream_col' : 6
             , 'length_col' : 5
-            , 'manningn_col' : 11
-            , 'slope_col' : 10
-            , 'bottomwidth_col' : 12
+            , 'manningn_col' : 10
+            , 'slope_col' : 9
+            , 'bottomwidth_col' : 11
+            , 'MusK_col' : 7
+            , 'MusX_col' : 8
+            , 'ChSlp_col' : 12
             , 'terminal_code' : 0
             , 'title_string' : 'Conchos sub-basin\nLower Colorado Full Res '
             , 'driver_string' : 'ESRI Shapefile'
@@ -108,6 +117,9 @@ def set_supernetwork_data(
             , 'manningn_col' : 11
             , 'slope_col' : 10
             , 'bottomwidth_col' : 12
+            , 'MusK_col' : 7
+            , 'MusX_col' : 8
+            , 'ChSlp_col' : 13
             , 'terminal_code' : 0
             , 'title_string' : 'NHD Subset including Brazos + Lower Colorado\nNHD stream orders 5 and greater'
             , 'driver_string' : 'ESRI Shapefile'
@@ -121,6 +133,12 @@ def set_supernetwork_data(
             , 'key_col' : 0
             , 'downstream_col' : 2
             , 'length_col' : 10
+            , 'manningn_col' : 11
+            , 'slope_col' : 12
+            , 'bottomwidth_col' : 14
+            , 'MusK_col' : 8
+            , 'MusX_col' : 9
+            , 'ChSlp_col' : 13
             , 'terminal_code' : 0
             , 'title_string' : 'CONUS "Mainstem"'
             , 'driver_string' : 'ESRI Shapefile'
@@ -134,9 +152,12 @@ def set_supernetwork_data(
             , 'key_col' : 1
             , 'downstream_col' : 6
             , 'length_col' : 5
-            , 'manningn_col' : 11
-            , 'slope_col' : 10
-            , 'bottomwidth_col' : 12
+            , 'manningn_col' : 10
+            , 'slope_col' : 9
+            , 'bottomwidth_col' : 11
+            , 'MusK_col' : 7
+            , 'MusX_col' : 8
+            , 'ChSlp_col' : 12
             , 'terminal_code' : 0
             , 'title_string' : 'NHD CONUS Order 5 and Greater'
             , 'driver_string' : 'ESRI Shapefile'
@@ -169,6 +190,9 @@ def set_supernetwork_data(
             , 'manningn_col' : 11
             , 'slope_col' : 12
             , 'bottomwidth_col' : 14
+            , 'MusK_col' : 8
+            , 'MusX_col' : 9
+            , 'ChSlp_col' : 13
             , 'terminal_code' : 0
             , 'title_string' : 'CONUS Full Resolution NWM v2.0'
             , 'driver_string' : 'NetCDF'
@@ -182,6 +206,12 @@ def set_supernetwork_data(
             , 'key_col' : 0
             , 'downstream_col' : 5
             , 'length_col' : 4
+            , 'manningn_col' : 9 
+            , 'slope_col' : 8
+            , 'bottomwidth_col' : 10
+            , 'MusK_col' : 6
+            , 'MusX_col' : 7
+            , 'ChSlp_col' : 11
             , 'terminal_code' : 0
             , 'title_string' : 'CONUS Full Resolution NWM v1.2'
             , 'driver_string' : 'ESRI Shapefile'
@@ -200,9 +230,9 @@ def get_nhd_connections(
               , key_col = supernetwork['key_col']
               , downstream_col = supernetwork['downstream_col']
               , length_col = supernetwork['length_col']
-              , manningn_col = supernetwork['manningn_col']
-              , slope_col = supernetwork['slope_col']
-              , bottomwidth_col = supernetwork['bottomwidth_col']
+              #, manningn_col = supernetwork['manningn_col']
+              #, slope_col = supernetwork['slope_col']
+              #, bottomwidth_col = supernetwork['bottomwidth_col']
               , terminal_code = supernetwork['terminal_code']
               , title_string = supernetwork['title_string']
               , driver_string = supernetwork['driver_string']
@@ -220,9 +250,9 @@ def get_nhd_connections(
               , key_col = supernetwork['key_col']
               , downstream_col = supernetwork['downstream_col']
               , length_col = supernetwork['length_col']
-              , manningn_col = supernetwork['manningn_col']
-              , slope_col = supernetwork['slope_col']
-              , bottomwidth_col = supernetwork['bottomwidth_col']
+              #, manningn_col = supernetwork['manningn_col']
+              #, slope_col = supernetwork['slope_col']
+              #, bottomwidth_col = supernetwork['bottomwidth_col']
               , terminal_code = supernetwork['terminal_code']
               , title_string = supernetwork['title_string']
               , driver_string = supernetwork['driver_string']

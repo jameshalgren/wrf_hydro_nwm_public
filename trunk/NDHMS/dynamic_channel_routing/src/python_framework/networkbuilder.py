@@ -19,9 +19,9 @@ def get_down_connections(
     if not mask_set: mask_set = {row[key_col] for row in rows}
     connections = {row[key_col]: { 'downstream': row[downstream_col]
                         , 'length': row[length_col]
-                        , 'manningn': row[manningn_col]
-                        , 'slope': row[slope_col]
-                        , 'bottom_width': row[bottomwidth_col]
+                        #, 'manningn': row[manningn_col]
+                        #, 'slope': row[slope_col]
+                        #, 'bottom_width': row[bottomwidth_col]
                         , 'data': list(row)
                         }
                         for row in rows 
