@@ -138,6 +138,7 @@ def recursive_junction_read (
         #try:
             reach = {}
             reach.update({'reach_tail':csegment})
+            reach.update({'downstream_reach':connections[csegment]['downstream']})
             reachset = set()
             reachset.add(csegment)
             usegments = connections[segment]['upstreams']
@@ -161,6 +162,7 @@ def recursive_junction_read (
                     reachset.add(csegment)
                     reach.update({'reach_head':csegment})
                     reach.update({'order':order_iter})
+                    if order_iter == 0: network.update({'terminal_reach':csegment}) #TODO: FIX THIS; SEEMS FRAGILE
                     network.update({'maximum_order':max(network['maximum_order'],order_iter)})
                     reach.update({'segments':reachset})
                     network['reaches'].update({csegment:reach})
@@ -208,7 +210,7 @@ def network_trace(
         network.update({'maximum_order':0})
         network.update({'junctions':set()})
         network.update({'headwaters':set()})
-        network.update({'reaches':{}}) #the Terminal Segment
+        network.update({'reaches':{}}) 
         recursive_junction_read(
                   [terminal_segment]
                   , order_iter
@@ -250,11 +252,16 @@ def compose_reaches(
     init_order = 0
     for terminal_segment, network in networks.items():
         network.update(network_trace(terminal_segment, init_order, connections, terminal_code = terminal_code, verbose = verbose, debuglevel = debuglevel)[terminal_segment])
-    print("--- %s seconds: serial compute ---" % (time.time() - start_time))
-    if debuglevel <= -1: print(f'Number of networks in the Supernetwork: {len(networks.items())}')
+        up_reaches = networkbuilder.get_up_connections(
+            network['reaches']
+            , terminal_code
+            , network['headwaters']
+            , {network['terminal_reach']}
+            , r'upstream_reaches'
+            , r'downstream_reach'
+            )
 
-    if debuglevel <= -1:
-        for terminal_segment, network in networks.items():
+        if debuglevel <= -1:
             if debuglevel <=-1: print(f'terminal_segment: {terminal_segment}')
             if debuglevel <=-2: 
                 for k, v in network.items():
@@ -263,6 +270,9 @@ def compose_reaches(
                         for k1, v1 in v.items():
                             print(f'\t{k1}: {v1}')
                     else: print(f'{k}: {v}')
+    print("--- %s seconds: serial compute ---" % (time.time() - start_time))
+    if debuglevel <= -1: print(f'Number of networks in the Supernetwork: {len(networks.items())}')
+
     return networks
 
 def compute_network(
@@ -278,14 +288,6 @@ def compute_network(
     for x in range(network['maximum_order'],-1,-1):
         for head_segment, reach in network['reaches'].items():
             if x == reach['order']:
-                compute_reach_up2down_mc(
-                    head_segment = head_segment
-                    , reach = reach
-                    , connections = connections
-                    , supernetwork = supernetwork
-                    , verbose = verbose
-                    , debuglevel = debuglevel
-                    )
 
                 compute_reach_up2down(
                     head_segment = head_segment
@@ -305,7 +307,7 @@ def compute_reach_up2down(
         , verbose = False
         , debuglevel = 0
         ):
-    if verbose: print(f"\nreach: {head_segment} (order: {reach['order']} n_segs: {len(reach['segments'])})")
+    if debuglevel <= -1: print(f"\nreach: {head_segment} (order: {reach['order']} n_segs: {len(reach['segments'])})")
     current_segment = reach['reach_head']
     next_segment = connections[current_segment]['downstream'] 
     while True:
@@ -318,9 +320,9 @@ def compute_reach_up2down(
             , debuglevel = debuglevel
             )
         if current_segment == reach['reach_tail']:
-            if verbose: print(f'{current_segment} (tail)')
+            if debuglevel <= -1: print(f'{current_segment} (tail)')
             break
-        if verbose: print(f'{current_segment} --> {next_segment}\n')
+        if debuglevel <= -1: print(f'{current_segment} --> {next_segment}\n')
         current_segment = next_segment
         next_segment = connections[current_segment]['downstream'] 
 
@@ -410,7 +412,6 @@ def compute_reach_up2down_mc(
       for i in range(0,ncomp):
           print(wdeptha[k,i,j])
                                               
-
 def compute_segment(
     current_segment = None
     , supernetwork = None
@@ -418,18 +419,19 @@ def compute_segment(
     , debuglevel = 0
     ):
     global connections
-    print(f'data for segment: {current_segment}')
     
-    for k, v in connections[current_segment].items():
-        if type(v) is list: # print the 
-            print (f'{k}:')
-            print (f"manningn: {v[supernetwork['manningn_col']]}")
-            print (f"slope: {v[supernetwork['slope_col']]}")
-            print (f"bottom width: {v[supernetwork['bottomwidth_col']]}")
-            print (f"Muskingum K: {v[supernetwork['MusK_col']]}")
-            print (f"Muskingum X: {v[supernetwork['MusX_col']]}")
-            print (f"Channel Side Slope: {v[supernetwork['ChSlp_col']]}")
-        else: print(f'{k}: {v}')
+    if debuglevel <= -1: print(f'data for segment: {current_segment}')
+    if debuglevel <= -2:
+        for k, v in connections[current_segment].items():
+            if type(v) is list: # print the 
+                print (f'{k}:')
+                print (f"manningn: {v[supernetwork['manningn_col']]}")
+                print (f"slope: {v[supernetwork['slope_col']]}")
+                print (f"bottom width: {v[supernetwork['bottomwidth_col']]}")
+                print (f"Muskingum K: {v[supernetwork['MusK_col']]}")
+                print (f"Muskingum X: {v[supernetwork['MusX_col']]}")
+                print (f"Channel Side Slope: {v[supernetwork['ChSlp_col']]}")
+            else: print(f'{k}: {v}')
 
 def get_upstream_inflow():
     pass
