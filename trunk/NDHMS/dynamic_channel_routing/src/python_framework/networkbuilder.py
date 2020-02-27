@@ -142,9 +142,7 @@ def get_up_connections(connections
         while (ukey not in terminal_keys) and (ukey not in junction_keys):
             dkey = connections[ukey][downstream_key]
             if upstreams_key not in connections[dkey]: # Check for key in dictionary https://able.bio/rhett/check-if-a-key-exists-in-a-python-dictionary--73iajoz
-                # connections[dkey].update({upstreams_key: []}) #TODO: Consider making this a set/hash for the unusual possibility of many upstream segments
-                connections[dkey].update({upstreams_key: set()}) #TODO: alternate Upstreams-as-a-set method
-                # connections[dkey][upstreams_key].append(ukey)
+                connections[dkey].update({upstreams_key: set()})
                 connections[dkey][upstreams_key].add(ukey)
                 visited_keys.add(dkey)
             else:
@@ -155,17 +153,14 @@ def get_up_connections(connections
                     # spanned the gap and the headwater is not actually not a terminating node.
                     # In that case, reset the node to be a blank list (or set, if using 
                     # that method), then proceed downstream.
-                    # THIS IS A DANGEROUS STEP AND DESERVES ADDITIONAL REVIEW
-                    # TO MAKE SURE IT IS DOING WHAT WE INTEND AS DESCRIBED ABOVE
-                    # connections[dkey].update({upstreams_key: []}) 
+                    # TODO: THIS IS A DANGEROUS STEP AND DESERVES ADDITIONAL REVIEW
+                    # TODO: TO MAKE SURE IT IS DOING WHAT WE INTEND AS DESCRIBED ABOVE
                     connections[dkey].update({upstreams_key : set()})
 
-                # connections[dkey][upstreams_key].append(ukey)
                 connections[dkey][upstreams_key].add(ukey)
                 visited_keys.add(dkey)
                 # print(dkey, connections[dkey][upstreams_key], visited_keys)
                 if len(connections[dkey][upstreams_key])  == 2:
-                    # breakpoint()
                     if dkey not in junction_keys:
                         junction_keys.add(dkey)
                         # print(len(junction_keys), dkey)
