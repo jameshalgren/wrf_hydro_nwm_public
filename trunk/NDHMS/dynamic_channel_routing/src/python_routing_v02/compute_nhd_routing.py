@@ -18,16 +18,16 @@ if ENV_IS_CL: root = '/content/wrf_hydro_nwm_public/trunk/NDHMS/dynamic_channel_
 elif not ENV_IS_CL: 
     root = os.path.dirname(os.path.dirname(os.path.abspath('')))
     sys.path.append(r'../python_framework')
-    sys.path.append(r'../fortran_routing/mc_pylink_v00/MC_singleCH_singleTS')
     sys.setrecursionlimit(4000)
 
 import pickle
 import networkbuilder
 import nhd_network_traversal as nnt
-import mc_sc_stime as mc
-import numpy as np
 
-def set_network():
+def set_network(
+    verbose = True
+    , debuglevel = 0
+    ):
     test_folder = os.path.join(root, r'test')
     geo_input_folder = os.path.join(test_folder, r'input', r'geo', r'Channels')
 
@@ -39,9 +39,6 @@ def set_network():
     CONUS_FULL_RES_v20 = False
     CONUS_Named_Streams = False #create a subset of the full resolution by reading the GNIS field
     CONUS_Named_combined = False #process the Named streams through the Full-Res paths to join the many hanging reaches
-
-    debuglevel = -1
-    verbose = True
 
     if Brazos_LowerColorado_ge5:
         Brazos_LowerColorado_ge5_supernetwork = \
@@ -202,7 +199,7 @@ def network_trace(
     network = {}
     us_length_total = 0
     
-    if verbose: print(f'\ntraversing upstream on network {terminal_segment}:')
+    if debuglevel <= -1: print(f'\ntraversing upstream on network {terminal_segment}:')
     # try:
     if 1 == 1:
         network.update({'total_segment_count': 0}) 
@@ -247,7 +244,7 @@ def compose_reaches(
     if verbose: print(f'Multi-processing will use {multiprocessing.cpu_count()} CPUs')
     if verbose: print(f'debuglevel is {debuglevel}')
 
-    start_time = time.time()
+    if debuglevel <= -1: start_time = time.time()
     results_serial = {}
     init_order = 0
     for terminal_segment, network in networks.items():
@@ -259,6 +256,8 @@ def compose_reaches(
             , {network['terminal_reach']}
             , r'upstream_reaches'
             , r'downstream_reach'
+            , verbose = verbose
+            , debuglevel = debuglevel
             )
 
         if debuglevel <= -1:
@@ -270,7 +269,7 @@ def compose_reaches(
                         for k1, v1 in v.items():
                             print(f'\t{k1}: {v1}')
                     else: print(f'{k}: {v}')
-    print("--- %s seconds: serial compute ---" % (time.time() - start_time))
+    if debuglevel <= -1: print("--- %s seconds: serial compute ---" % (time.time() - start_time))
     if debuglevel <= -1: print(f'Number of networks in the Supernetwork: {len(networks.items())}')
 
     return networks
@@ -283,7 +282,7 @@ def compute_network(
         , verbose = False
         , debuglevel = 0
         ):
-    if verbose: print(f"\n\nExecuting simulation on network {terminal_segment} beginning with streams of order {network['maximum_order']}")
+    if verbose: print(f"\nExecuting simulation on network {terminal_segment} beginning with streams of order {network['maximum_order']}")
 
     for x in range(network['maximum_order'],-1,-1):
         for head_segment, reach in network['reaches'].items():
@@ -326,92 +325,6 @@ def compute_reach_up2down(
         current_segment = next_segment
         next_segment = connections[current_segment]['downstream'] 
 
-def compute_reach_up2down_mc(
-        head_segment = None
-        , reach = None
-        , connections = None
-        , supernetwork = None
-        , verbose = False
-        , debuglevel = 0
-        ):
-
-    ntim=2;       #the number of time steps necessary for variables passed to mc module to compute successfully
-    nlinks=2;     #the number of links needed to define varialbe qd. ** nlinks is not used in fortran source code.
-                                        
-    ncomp0=3; mc.var.ncomp0=ncomp0  #the number of segments of a reach upstream of the current reach
-    ncomp=3; mc.var.ncomp=ncomp  #the number of segments of the current reach 
-    mxseg=max(ncomp0,ncomp)
-    mc.var.uslinkid=1
-    mc.var.linkid=2
-
-    #MC model outputs
-    mc.var.qd=np.zeros((ntim,mxseg,nlinks))  #will store MC output qdc (flow downstream current timestep) 
-    mc.var.vela=np.zeros((ntim,ncomp)) 
-    mc.var.deptha=np.zeros((ntim,ncomp))
-
-
-    #lateral flow
-    mc.var.qlat=np.zeros((ncomp))
-
-    dt=60.0;     mc.var.dt= dt
-    dx=20.0;     mc.var.dx= dx
-    bw=50;       mc.var.bw= bw
-    tw= 0.01*bw; mc.var.tw= tw
-    twcc=tw;     mc.var.twcc=twcc
-    n=0.03;      mc.var.n=n
-    ncc=n;       mc.var.ncc=ncc
-    cs=1.0e6;    mc.var.cs=cs
-    so=0.002;    mc.var.so=so
-
-    #run M-C model
-    nts=10  #the number of timestep in simulation
-    wnlinks=20 #the number of all links in simulation
-    wmxseg=5   #max number of segments among all links
-
-    #variable storing all outputs in time
-    wqd= np.zeros((nts,wmxseg,wnlinks))   
-    wvela= np.zeros((nts,wmxseg,wnlinks)) 
-    wdeptha= np.zeros((nts,wmxseg,wnlinks))
-
-    for k in range (0,nts):        
-        #input lateral flow for current reach; input flow to upstream reach of current reach
-        for i in range(0,ncomp):
-            mc.var.qlat[i]= (k+1)*2.0
-            mc.var.qd[1,i,0]= (k+1)*10.0
-        
-        mc.mc.main()
-            
-        for i in range(0,ncomp):
-            #current link(=reach)
-            #qd[k,i,j]: k=0/1: previous/current timestep; i: node ID; j=0/1: upstream/current reach
-            mc.var.qd[0,i,1]= mc.var.qd[1,i,1]
-            mc.var.vela[0,i]= mc.var.vela[1,i]
-            mc.var.deptha[0,i]= mc.var.deptha[1,i]
-            #upstream link(=reach)        
-            mc.var.qd[0,i,0]=  mc.var.qd[1,i,0] 
-        
-        #output keeping
-        j=1 #temporarily assigned link ID for the current reach
-        for i in range(0,ncomp):
-            wqd[k,i,j]= mc.var.qd[1,i,1]
-            wvela[k,i,j]= mc.var.vela[1,i]
-            wdeptha[k,i,j]= mc.var.deptha[1,i]
-
-    #test output    
-    j=1
-    print('MC_TEST_OUTPUT')
-    for k in range (0,nts):
-      for i in range(0,ncomp):
-          print(wqd[k,i,j])
-
-    for k in range (0,nts):
-      for i in range(0,ncomp):
-          print(wvela[k,i,j])
-
-    for k in range (0,nts):
-      for i in range(0,ncomp):
-          print(wdeptha[k,i,j])
-                                              
 def compute_segment(
     current_segment = None
     , supernetwork = None
@@ -420,10 +333,10 @@ def compute_segment(
     ):
     global connections
     
-    if debuglevel <= -1: print(f'data for segment: {current_segment}')
     if debuglevel <= -2:
+        print(f'data for segment: {current_segment}')
         for k, v in connections[current_segment].items():
-            if type(v) is list: # print the 
+            if type(v) is list: 
                 print (f'{k}:')
                 print (f"manningn: {v[supernetwork['manningn_col']]}")
                 print (f"slope: {v[supernetwork['slope_col']]}")
@@ -432,6 +345,15 @@ def compute_segment(
                 print (f"Muskingum X: {v[supernetwork['MusX_col']]}")
                 print (f"Channel Side Slope: {v[supernetwork['ChSlp_col']]}")
             else: print(f'{k}: {v}')
+
+    MC_CALL = False
+    if MC_CALL:
+        print (connections[current_segment]['data'][supernetwork['manningn_col']])
+        print (connections[current_segment]['data'][supernetwork['slope_col']])
+        print (connections[current_segment]['data'][supernetwork['bottomwidth_col']])
+        print (connections[current_segment]['data'][supernetwork['MusK_col']])
+        print (connections[current_segment]['data'][supernetwork['MusX_col']])
+        print (connections[current_segment]['data'][supernetwork['ChSlp_col']])
 
 def get_upstream_inflow():
     pass
@@ -452,14 +374,17 @@ def main():
 
 
     if verbose: print('creating supernetwork connections set')
-    start_time = time.time()
+    if debuglevel <= -1: start_time = time.time()
     #STEP 1
-    supernetwork, supernetwork_values = set_network()
+    supernetwork, supernetwork_values = set_network(
+        verbose = verbose
+        , debuglevel = debuglevel
+        )
     if verbose: print('supernetwork connections set complete')
     if debuglevel <= -1: print("--- in %s seconds: ---" % (time.time() - start_time))
     if verbose: print('ordering reaches ...')
 
-    start_time = time.time()
+    if debuglevel <= -1: start_time = time.time()
     #STEP 2
     networks = compose_reaches(
         supernetwork_values
@@ -469,7 +394,7 @@ def main():
     if verbose: print('ordered reaches complete')
     if debuglevel <= -1: print("--- in %s seconds: ---" % (time.time() - start_time))
 
-    start_time = time.time()
+    if debuglevel <= -1: start_time = time.time()
     if verbose: print('executing computation on ordered reaches ...')
     #STEP 3
     connections = supernetwork_values[0]
@@ -484,14 +409,6 @@ def main():
         )
     if verbose: print('ordered reach computation complete')
     if debuglevel <= -1: print("--- in %s seconds: ---" % (time.time() - start_time))
-
-    #start_time = time.time()
-    #if verbose: print('executing computation on ordered reaches ...')
-    #connections = supernetwork_values[0]
-    #for terminal_segment, network in networks.items():
-        #compute_network(terminal_segment, network, connections, verbose, debuglevel)
-    #if verbose: print('ordered reach computation complete')
-    #if debuglevel <= -1: print("--- in %s seconds: ---" % (time.time() - start_time))
 
 if __name__ == '__main__':
     main()
