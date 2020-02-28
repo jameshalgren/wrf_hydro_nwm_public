@@ -130,7 +130,6 @@ def get_up_connections(connections
 
         # Start with the headwater keys and label the upstream connections
         # with the terminal_code...
-        # connections[hkey].update({upstreams_key : [terminal_code]})
         connections[hkey].update({upstreams_key : {terminal_code}})
         visited_keys.add(hkey)
         # Then iterate through the list and search for the other values
@@ -139,8 +138,14 @@ def get_up_connections(connections
         # print(visited_keys)
         # print(ukey not in terminal_keys)
         # print(ukey not in junction_keys)
-        while (ukey not in terminal_keys) and (ukey not in junction_keys):
+        while True:
             dkey = connections[ukey][downstream_key]
+            if (ukey in terminal_keys) or (ukey in junction_keys): 
+                # If we have hit the bottom (a terminal_key) or if 
+                # we have joined into an already explored branch, STOP.
+                if ukey in terminal_keys:
+                    visited_terminal_keys.add(ukey)
+                break
             if upstreams_key not in connections[dkey]: # Check for key in dictionary https://able.bio/rhett/check-if-a-key-exists-in-a-python-dictionary--73iajoz
                 connections[dkey].update({upstreams_key: set()})
                 connections[dkey][upstreams_key].add(ukey)
@@ -163,9 +168,8 @@ def get_up_connections(connections
                 if len(connections[dkey][upstreams_key])  == 2:
                     if dkey not in junction_keys:
                         junction_keys.add(dkey)
-                        # print(len(junction_keys), dkey)
+                        junction_count += 1
                     if debuglevel <= -2: print (f"Junction found above/into Segment {dkey} with upstream Segments {connections[dkey][upstreams_key]}")
-                    junction_count += 1
                 elif len(connections[dkey][upstreams_key]) > 2:
                     if dkey not in junction_keys:
                         #At this point, the logic does not allow for this to be a non-junction
@@ -177,10 +181,6 @@ def get_up_connections(connections
                     if debuglevel <= -2: print (f"revisited Junction above/into Segment {dkey} now with upstream Segments {connections[dkey][upstreams_key]}")
                     junction_count += 1
             ukey = dkey
-        if ukey in terminal_keys:
-            visited_terminal_keys.add(ukey)
-
-        #len(visited_keys) > 14266: breakpoint()
 
     if debuglevel <= -1: print(f'visited {len(visited_keys)} segments')
     if debuglevel <= -1: print(f'found {junction_count} junctions in {len(junction_keys)} junction nodes')

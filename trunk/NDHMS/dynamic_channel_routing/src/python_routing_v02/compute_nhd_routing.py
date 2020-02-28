@@ -31,6 +31,7 @@ def set_network(
     test_folder = os.path.join(root, r'test')
     geo_input_folder = os.path.join(test_folder, r'input', r'geo', r'Channels')
 
+    #TODO: Make these commandline args
     """##NHD Subset (Brazos/Lower Colorado)"""
     Brazos_LowerColorado_ge5 = True
     """##NHD CONUS order 5 and greater"""
@@ -147,6 +148,7 @@ def recursive_junction_read (
                     reachset.add(csegment)
                     reach.update({'reach_head':csegment})
                     reach.update({'order':order_iter})
+                    if order_iter == 0: network.update({'terminal_reach':csegment})#; import pdb; pdb.set_trace() #TODO: FIX THIS; SEEMS FRAGILE
                     network.update({'maximum_order':max(network['maximum_order'],order_iter)})
                     reach.update({'segments':reachset})
                     network['reaches'].update({csegment:reach})
@@ -159,7 +161,7 @@ def recursive_junction_read (
                     reachset.add(csegment)
                     reach.update({'reach_head':csegment})
                     reach.update({'order':order_iter})
-                    if order_iter == 0: network.update({'terminal_reach':csegment}) #TODO: FIX THIS; SEEMS FRAGILE
+                    if order_iter == 0: network.update({'terminal_reach':csegment})#; import pdb; pdb.set_trace() #TODO: FIX THIS; SEEMS FRAGILE
                     network.update({'maximum_order':max(network['maximum_order'],order_iter)})
                     reach.update({'segments':reachset})
                     network['reaches'].update({csegment:reach})
