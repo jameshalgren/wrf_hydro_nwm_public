@@ -175,7 +175,6 @@ def compose_reaches(
     if verbose: print(f'Multi-processing will use {multiprocessing.cpu_count()} CPUs')
     if verbose: print(f'debuglevel is {debuglevel}')
 
-    if showtiming: start_time = time.time()
     results_serial = {}
     init_order = 0
     for terminal_segment, network in networks.items():
@@ -200,7 +199,6 @@ def compose_reaches(
                         for k1, v1 in v.items():
                             print(f'\t{k1}: {v1}')
                     else: print(f'{k}: {v}')
-    if showtiming: print("--- %s seconds: serial compute ---" % (time.time() - start_time))
     if debuglevel <= -1: print(f'Number of networks in the Supernetwork: {len(networks.items())}')
 
     return networks
@@ -214,16 +212,6 @@ def compute_network(
         , debuglevel = 0
         ):
 
-    '''
-    min_network_order = 3
-    max_network_order = 500
-    if \
-        (network['maximum_order'] < min_network_order)\
-        or\
-        (network['maximum_order'] > max_network_order)\
-        :\
-        return
-    '''
 
     if verbose: print(f"\nExecuting simulation on network {terminal_segment} beginning with streams of order {network['maximum_order']}")
     for x in range(network['maximum_order'],-1,-1):
