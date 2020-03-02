@@ -322,9 +322,9 @@ def main():
     """##NHD Subset (Brazos/Lower Colorado)"""
     # supernetwork = 'Brazos_LowerColorado_ge5'
     """##NHD CONUS order 5 and greater"""
-    # supernetwork = 'CONUS_ge5'
+    supernetwork = 'CONUS_ge5'
     """These are large -- be careful"""
-    supernetwork = 'Mainstems_CONUS'
+    # supernetwork = 'Mainstems_CONUS'
     # supernetwork = 'CONUS_FULL_RES_v20'
     # supernetwork = 'CONUS_Named_Streams' #create a subset of the full resolution by reading the GNIS field
     # supernetwork = 'CONUS_Named_combined' #process the Named streams through the Full-Res paths to join the many hanging reaches
@@ -336,27 +336,29 @@ def main():
     supernetwork_data, supernetwork_values = set_networks(
         supernetwork = supernetwork
         , geo_input_folder = geo_input_folder
-        , verbose = verbose
+        , verbose = False
+        # , verbose = verbose
         , debuglevel = debuglevel
         )
     if verbose: print('supernetwork connections set complete')
-    if showtiming: print("--- in %s seconds: ---" % (time.time() - start_time))
-    if verbose: print('ordering reaches ...')
+    if showtiming: print("... in %s seconds." % (time.time() - start_time))
 
-    if showtiming: start_time = time.time()
     #STEP 2
+    if showtiming: start_time = time.time()
+    if verbose: print('ordering reaches ...')
     networks = compose_reaches(
         supernetwork_values
-        , verbose = verbose
+        , verbose = False
+        # , verbose = verbose
         , debuglevel = debuglevel
         , showtiming = showtiming
         )
     if verbose: print('ordered reaches complete')
-    if showtiming: print("--- in %s seconds: ---" % (time.time() - start_time))
+    if showtiming: print("... in %s seconds." % (time.time() - start_time))
 
+    #STEP 3
     if showtiming: start_time = time.time()
     if verbose: print('executing computation on ordered reaches ...')
-    #STEP 3
     connections = supernetwork_values[0]
     for terminal_segment, network in networks.items():
         compute_network(
@@ -364,11 +366,12 @@ def main():
             , network = network
             , supernetwork_data = supernetwork_data
             , connections = connections
-            , verbose = verbose
+            , verbose = False
+            # , verbose = verbose
             , debuglevel = debuglevel
         )
     if verbose: print('ordered reach computation complete')
-    if showtiming: print("--- in %s seconds: ---" % (time.time() - start_time))
+    if showtiming: print("... in %s seconds." % (time.time() - start_time))
 
 if __name__ == '__main__':
     main()
