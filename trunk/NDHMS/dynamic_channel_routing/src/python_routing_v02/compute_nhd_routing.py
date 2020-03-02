@@ -24,95 +24,23 @@ import pickle
 import networkbuilder
 import nhd_network_traversal as nnt
 
-def set_network(
-    verbose = True
+def set_networks(
+    supernetwork = ''
+    , geo_input_folder = None
+    , verbose = True
     , debuglevel = 0
     ):
-    test_folder = os.path.join(root, r'test')
-    geo_input_folder = os.path.join(test_folder, r'input', r'geo', r'Channels')
 
-    #TODO: Make these commandline args
-    """##NHD Subset (Brazos/Lower Colorado)"""
-    Brazos_LowerColorado_ge5 = True
-    """##NHD CONUS order 5 and greater"""
-    CONUS_ge5 = False
-    """These are large -- be careful"""
-    CONUS_FULL_RES_v20 = False
-    CONUS_Named_Streams = False #create a subset of the full resolution by reading the GNIS field
-    CONUS_Named_combined = False #process the Named streams through the Full-Res paths to join the many hanging reaches
-
-    if Brazos_LowerColorado_ge5:
-        Brazos_LowerColorado_ge5_supernetwork = \
-        nnt.set_supernetwork_data(supernetwork = 'Brazos_LowerColorado_ge5'
-        , geo_input_folder = geo_input_folder)
-        return Brazos_LowerColorado_ge5_supernetwork, nnt.get_nhd_connections(
-        supernetwork = Brazos_LowerColorado_ge5_supernetwork
-        , verbose = verbose
-        , debuglevel = debuglevel)
-
-    elif CONUS_ge5:
-        CONUS_ge5_supernetwork = \
-        nnt.set_supernetwork_data(supernetwork = 'CONUS_ge5'
-        , geo_input_folder = geo_input_folder)
-        return CONUS_ge5_supernetwork, nnt.get_nhd_connections(
-        supernetwork = CONUS_ge5_supernetwork
-        , verbose = verbose
-        , debuglevel = debuglevel)
-
-    elif CONUS_FULL_RES_v20:
-        CONUS_FULL_RES_v20_supernetwork = \
-        nnt.set_supernetwork_data(supernetwork = 'CONUS_FULL_RES_v20'
-        , geo_input_folder = geo_input_folder)
-        return CONUS_FULL_RES_v20_supernetwork, nnt.get_nhd_connections(
-        supernetwork = CONUS_FULL_RES_v20_supernetwork
-        , verbose = verbose
-        , debuglevel = debuglevel)
-
-    elif CONUS_Named_Streams:
-        CONUS_Named_Streams_supernetwork = \
-        nnt.set_supernetwork_data(supernetwork = 'CONUS_Named_Streams'
-        , geo_input_folder = geo_input_folder)
-
-        if not CONUS_Named_combined:
-            return CONUS_Named_Streams_supernetwork, nnt.get_nhd_connections(
-            supernetwork = CONUS_Named_Streams_supernetwork
-            , verbose = verbose
-            , debuglevel = debuglevel)
-
-        else:
-            ''' NOW Combine the two CONUS analyses by starting with the Named Headwaters
-                but trace the network down the Full Resolution NHD. It should only work
-                if the other two datasets have been computed.
-                ANY OTHER Set of Headerwaters could be substituted'''
-            
-            if not (CONUS_Named_Streams and CONUS_FULL_RES_v20):
-                print('\n\nWARNING: If this works, you may be using old data...')
-
-            
-            # Use only headwater segments that are in the full dataset.
-            headwater_segments_combined = CONUS_FULL_RES_v20_values[3] & \
-                                        CONUS_Named_Streams_values[3]
-            # Need to make sure that these objects are independent -- we will modify them a bit.
-            connections_combined = pickle.loads(pickle.dumps(CONUS_FULL_RES_v20_values[0]))
-            terminal_segments_combined = pickle.loads(pickle.dumps(CONUS_FULL_RES_v20_values[4]))
-            terminal_code_combined = CONUS_Named_Streams_supernetwork['terminal_code']
-            
-            for segment in connections_combined: #Clear the upstreams and rebuild it with just named streams
-                connections_combined[segment].pop('upstreams',None)
-
-
-           #TODO: THIS IS INCOMPLETE FOR THE COMBINED
-
-            (junction_segments_combined
-            , visited_segments_combined
-            , visited_terminal_segments_combined
-            , junction_count_combined) = networkbuilder.get_up_connections(
-                        connections = connections_combined
-                        , terminal_code = terminal_code_combined
-                        , headwater_segments = headwater_segments_combined
-                        , terminal_segments = terminal_segments_combined
-                        , verbose = verbose
-                        , debuglevel = debuglevel)
+    supernetwork_data = nnt.set_supernetwork_data(
+      supernetwork = supernetwork
+      , geo_input_folder = geo_input_folder
+      ) 
+    supernetwork_values = nnt.get_nhd_connections(
+      supernetwork_data = supernetwork_data
+      , verbose = verbose
+      , debuglevel = debuglevel
+      )
+    return supernetwork_data, supernetwork_values
 
 def recursive_junction_read (
                              segments
@@ -230,6 +158,7 @@ def compose_reaches(
         , terminal_code = 0
         , debuglevel = 0
         , verbose = False
+        , showtiming = False
     ):
 
     terminal_segments = supernetwork_values[4] 
@@ -246,7 +175,7 @@ def compose_reaches(
     if verbose: print(f'Multi-processing will use {multiprocessing.cpu_count()} CPUs')
     if verbose: print(f'debuglevel is {debuglevel}')
 
-    if debuglevel <= -1: start_time = time.time()
+    if showtiming: start_time = time.time()
     results_serial = {}
     init_order = 0
     for terminal_segment, network in networks.items():
@@ -271,7 +200,7 @@ def compose_reaches(
                         for k1, v1 in v.items():
                             print(f'\t{k1}: {v1}')
                     else: print(f'{k}: {v}')
-    if debuglevel <= -1: print("--- %s seconds: serial compute ---" % (time.time() - start_time))
+    if showtiming: print("--- %s seconds: serial compute ---" % (time.time() - start_time))
     if debuglevel <= -1: print(f'Number of networks in the Supernetwork: {len(networks.items())}')
 
     return networks
@@ -279,13 +208,24 @@ def compose_reaches(
 def compute_network(
         terminal_segment = None
         , network = None
-        , supernetwork = None
+        , supernetwork_data = None
         , connections = None
         , verbose = False
         , debuglevel = 0
         ):
-    if verbose: print(f"\nExecuting simulation on network {terminal_segment} beginning with streams of order {network['maximum_order']}")
 
+    '''
+    min_network_order = 3
+    max_network_order = 500
+    if \
+        (network['maximum_order'] < min_network_order)\
+        or\
+        (network['maximum_order'] > max_network_order)\
+        :\
+        return
+    '''
+
+    if verbose: print(f"\nExecuting simulation on network {terminal_segment} beginning with streams of order {network['maximum_order']}")
     for x in range(network['maximum_order'],-1,-1):
         for head_segment, reach in network['reaches'].items():
             if x == reach['order']:
@@ -294,7 +234,7 @@ def compute_network(
                     head_segment = head_segment
                     , reach = reach
                     , connections = connections
-                    , supernetwork = supernetwork
+                    , supernetwork_data = supernetwork_data
                     , verbose = verbose
                     , debuglevel = debuglevel
                     )
@@ -304,7 +244,7 @@ def compute_reach_up2down(
         head_segment = None
         , reach = None
         , connections = None
-        , supernetwork = None
+        , supernetwork_data = None
         , verbose = False
         , debuglevel = 0
         ):
@@ -316,7 +256,7 @@ def compute_reach_up2down(
         # https://stackoverflow.com/questions/1662161/is-there-a-do-until-in-python
         compute_segment(
             current_segment = current_segment
-            , supernetwork = supernetwork
+            , supernetwork_data = supernetwork_data
             , verbose = verbose
             , debuglevel = debuglevel
             )
@@ -329,7 +269,7 @@ def compute_reach_up2down(
 
 def compute_segment(
     current_segment = None
-    , supernetwork = None
+    , supernetwork_data = None
     , verbose = False
     , debuglevel = 0
     ):
@@ -340,22 +280,22 @@ def compute_segment(
         for k, v in connections[current_segment].items():
             if type(v) is list: 
                 print (f'{k}:')
-                print (f"manningn: {v[supernetwork['manningn_col']]}")
-                print (f"slope: {v[supernetwork['slope_col']]}")
-                print (f"bottom width: {v[supernetwork['bottomwidth_col']]}")
-                print (f"Muskingum K: {v[supernetwork['MusK_col']]}")
-                print (f"Muskingum X: {v[supernetwork['MusX_col']]}")
-                print (f"Channel Side Slope: {v[supernetwork['ChSlp_col']]}")
+                print (f"manningn: {v[supernetwork_data['manningn_col']]}")
+                print (f"slope: {v[supernetwork_data['slope_col']]}")
+                print (f"bottom width: {v[supernetwork_data['bottomwidth_col']]}")
+                print (f"Muskingum K: {v[supernetwork_data['MusK_col']]}")
+                print (f"Muskingum X: {v[supernetwork_data['MusX_col']]}")
+                print (f"Channel Side Slope: {v[supernetwork_data['ChSlp_col']]}")
             else: print(f'{k}: {v}')
 
     MC_CALL = False
     if MC_CALL:
-        print (connections[current_segment]['data'][supernetwork['manningn_col']])
-        print (connections[current_segment]['data'][supernetwork['slope_col']])
-        print (connections[current_segment]['data'][supernetwork['bottomwidth_col']])
-        print (connections[current_segment]['data'][supernetwork['MusK_col']])
-        print (connections[current_segment]['data'][supernetwork['MusX_col']])
-        print (connections[current_segment]['data'][supernetwork['ChSlp_col']])
+        print (connections[current_segment]['data'][supernetwork_data['manningn_col']])
+        print (connections[current_segment]['data'][supernetwork_data['slope_col']])
+        print (connections[current_segment]['data'][supernetwork_data['bottomwidth_col']])
+        print (connections[current_segment]['data'][supernetwork_data['MusK_col']])
+        print (connections[current_segment]['data'][supernetwork_data['MusX_col']])
+        print (connections[current_segment]['data'][supernetwork_data['ChSlp_col']])
 
 def get_upstream_inflow():
     pass
@@ -371,32 +311,50 @@ def main():
     global connections
     global networks
 
-    debuglevel = -2
     verbose = True
+    debuglevel = 0
+    showtiming = True
+
+    test_folder = os.path.join(root, r'test')
+    geo_input_folder = os.path.join(test_folder, r'input', r'geo', r'Channels')
+
+    #TODO: Make these commandline args
+    """##NHD Subset (Brazos/Lower Colorado)"""
+    # supernetwork = 'Brazos_LowerColorado_ge5'
+    """##NHD CONUS order 5 and greater"""
+    # supernetwork = 'CONUS_ge5'
+    """These are large -- be careful"""
+    supernetwork = 'Mainstems_CONUS'
+    # supernetwork = 'CONUS_FULL_RES_v20'
+    # supernetwork = 'CONUS_Named_Streams' #create a subset of the full resolution by reading the GNIS field
+    # supernetwork = 'CONUS_Named_combined' #process the Named streams through the Full-Res paths to join the many hanging reaches
 
 
     if verbose: print('creating supernetwork connections set')
-    if debuglevel <= -1: start_time = time.time()
+    if showtiming: start_time = time.time()
     #STEP 1
-    supernetwork, supernetwork_values = set_network(
-        verbose = verbose
+    supernetwork_data, supernetwork_values = set_networks(
+        supernetwork = supernetwork
+        , geo_input_folder = geo_input_folder
+        , verbose = verbose
         , debuglevel = debuglevel
         )
     if verbose: print('supernetwork connections set complete')
-    if debuglevel <= -1: print("--- in %s seconds: ---" % (time.time() - start_time))
+    if showtiming: print("--- in %s seconds: ---" % (time.time() - start_time))
     if verbose: print('ordering reaches ...')
 
-    if debuglevel <= -1: start_time = time.time()
+    if showtiming: start_time = time.time()
     #STEP 2
     networks = compose_reaches(
         supernetwork_values
         , verbose = verbose
         , debuglevel = debuglevel
+        , showtiming = showtiming
         )
     if verbose: print('ordered reaches complete')
-    if debuglevel <= -1: print("--- in %s seconds: ---" % (time.time() - start_time))
+    if showtiming: print("--- in %s seconds: ---" % (time.time() - start_time))
 
-    if debuglevel <= -1: start_time = time.time()
+    if showtiming: start_time = time.time()
     if verbose: print('executing computation on ordered reaches ...')
     #STEP 3
     connections = supernetwork_values[0]
@@ -404,13 +362,13 @@ def main():
         compute_network(
             terminal_segment = terminal_segment
             , network = network
-            , supernetwork = supernetwork
+            , supernetwork_data = supernetwork_data
             , connections = connections
             , verbose = verbose
             , debuglevel = debuglevel
         )
     if verbose: print('ordered reach computation complete')
-    if debuglevel <= -1: print("--- in %s seconds: ---" % (time.time() - start_time))
+    if showtiming: print("--- in %s seconds: ---" % (time.time() - start_time))
 
 if __name__ == '__main__':
     main()

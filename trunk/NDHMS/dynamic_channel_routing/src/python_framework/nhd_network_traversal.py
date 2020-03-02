@@ -219,44 +219,44 @@ def set_supernetwork_data(
           }
 
 def get_nhd_connections(
-    supernetwork = {}
+    supernetwork_data = {}
     , debuglevel = 0
     , verbose = False
     ):
-    if 'mask_file_path' in supernetwork:
+    if 'mask_file_path' in supernetwork_data:
         #TODO: this probably means we are reading the same file twice -- fix this [maybe] by implementing an overloaded return
         return nnu.do_network(
-            geo_file_path = supernetwork['geo_file_path']
-              , key_col = supernetwork['key_col']
-              , downstream_col = supernetwork['downstream_col']
-              , length_col = supernetwork['length_col']
-              #, manningn_col = supernetwork['manningn_col']
-              #, slope_col = supernetwork['slope_col']
-              #, bottomwidth_col = supernetwork['bottomwidth_col']
-              , terminal_code = supernetwork['terminal_code']
-              , title_string = supernetwork['title_string']
-              , driver_string = supernetwork['driver_string']
-              , layer_string = supernetwork['layer_string']
-              , mask_file_path = supernetwork['mask_file_path']
-              , mask_layer_string = supernetwork['mask_layer_string']
-              , mask_driver_string = supernetwork['mask_driver_string']
-              , mask_key_col = supernetwork['mask_key_col']
+            geo_file_path = supernetwork_data['geo_file_path']
+              , key_col = supernetwork_data['key_col']
+              , downstream_col = supernetwork_data['downstream_col']
+              , length_col = supernetwork_data['length_col']
+              #, manningn_col = supernetwork_data['manningn_col']
+              #, slope_col = supernetwork_data['slope_col']
+              #, bottomwidth_col = supernetwork_data['bottomwidth_col']
+              , terminal_code = supernetwork_data['terminal_code']
+              , title_string = supernetwork_data['title_string']
+              , driver_string = supernetwork_data['driver_string']
+              , layer_string = supernetwork_data['layer_string']
+              , mask_file_path = supernetwork_data['mask_file_path']
+              , mask_layer_string = supernetwork_data['mask_layer_string']
+              , mask_driver_string = supernetwork_data['mask_driver_string']
+              , mask_key_col = supernetwork_data['mask_key_col']
               , debuglevel = debuglevel
               , verbose = verbose
             )
     else:
         return nnu.do_network(
-            geo_file_path = supernetwork['geo_file_path']
-              , key_col = supernetwork['key_col']
-              , downstream_col = supernetwork['downstream_col']
-              , length_col = supernetwork['length_col']
-              #, manningn_col = supernetwork['manningn_col']
-              #, slope_col = supernetwork['slope_col']
-              #, bottomwidth_col = supernetwork['bottomwidth_col']
-              , terminal_code = supernetwork['terminal_code']
-              , title_string = supernetwork['title_string']
-              , driver_string = supernetwork['driver_string']
-              , layer_string = supernetwork['layer_string']
+            geo_file_path = supernetwork_data['geo_file_path']
+              , key_col = supernetwork_data['key_col']
+              , downstream_col = supernetwork_data['downstream_col']
+              , length_col = supernetwork_data['length_col']
+              #, manningn_col = supernetwork_data['manningn_col']
+              #, slope_col = supernetwork_data['slope_col']
+              #, bottomwidth_col = supernetwork_data['bottomwidth_col']
+              , terminal_code = supernetwork_data['terminal_code']
+              , title_string = supernetwork_data['title_string']
+              , driver_string = supernetwork_data['driver_string']
+              , layer_string = supernetwork_data['layer_string']
               , debuglevel = debuglevel
               , verbose = verbose
             )
