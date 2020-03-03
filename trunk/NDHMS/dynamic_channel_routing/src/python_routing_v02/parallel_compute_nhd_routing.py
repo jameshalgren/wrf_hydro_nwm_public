@@ -215,18 +215,24 @@ def compute_network(
     global connections
 
     if verbose: print(f"\nExecuting simulation on network {terminal_segment} beginning with streams of order {network['maximum_order']}")
-    for x in range(network['maximum_order'],-1,-1):
-        for head_segment, reach in network['reaches'].items():
-            if x == reach['order']:
 
-                compute_reach_up2down(
-                    head_segment = head_segment
-                    , reach = reach
-                    # , connections = connections
-                    , supernetwork_data = supernetwork_data
-                    , verbose = verbose
-                    , debuglevel = debuglevel
-                    )
+    ordered_reaches = {}
+    for head_segment, reach in network['reaches'].items():
+        if reach['order'] not in ordered_reaches:
+            ordered_reaches.update({reach['order']:[]}) #TODO: Should this be a set/dictionary?
+        ordered_reaches[reach['order']].append([head_segment
+                  , reach
+                  ])
+    for x in range(network['maximum_order'],-1,-1):
+        for head_segment, reach in ordered_reaches[x]:
+            compute_reach_up2down(
+                head_segment = head_segment
+                , reach = reach
+                # , connections = connections
+                , supernetwork_data = supernetwork_data
+                , verbose = verbose
+                , debuglevel = debuglevel
+                )
 
 def compute_network_parallel(
         large_networks = None
@@ -250,7 +256,7 @@ def compute_network_parallel(
         for terminal_segment, network in large_networks.items():
             for head_segment, reach in network['reaches'].items():
                 if reach['order'] not in ordered_reaches:
-                    ordered_reaches.update({reach['order']:[]})
+                    ordered_reaches.update({reach['order']:[]}) #TODO: Should this be a set/dictionary?
                 ordered_reaches[reach['order']].append([head_segment
                           , reach
                           , supernetwork_data
@@ -370,7 +376,7 @@ def main():
 
     #STEP 2
     if showtiming: start_time = time.time()
-    if verbose: print('ordering reaches ...')
+    if verbose: print('organizing connections into reaches ...')
     networks = compose_reaches(
         supernetwork_values
         , verbose = False
@@ -378,11 +384,11 @@ def main():
         , debuglevel = debuglevel
         , showtiming = showtiming
         )
-    if verbose: print('ordered reaches complete')
+    if verbose: print('reach organization complete')
     if showtiming: print("... in %s seconds." % (time.time() - start_time))
 
-    parallel_split = 10
-    #STEP 3a
+    parallel_split = 10 # -1 turns off the splitting and runs everything through the lumped execution
+    #STEP 3a -- Large Networks
     if showtiming: start_time = time.time()
     if verbose: print(f'executing computation on ordered reaches for networks of order greater than {parallel_split} ...')
     connections = supernetwork_values[0]
@@ -401,7 +407,7 @@ def main():
     if verbose: print(f'ordered reach computation complete for networks of order greater than {parallel_split}')
     if showtiming: print("... in %s seconds." % (time.time() - start_time))
 
-    #STEP 3b
+    #STEP 3b -- Small Networks
     if showtiming: start_time = time.time()
     if verbose: print(f'executing parallel computation on ordered reaches of order less than {parallel_split} ...')
     nslist = ([terminal_segment
