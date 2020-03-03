@@ -207,35 +207,43 @@ def compute_network(
         terminal_segment = None
         , network = None
         , supernetwork_data = None
-        , connections = None
+        # , connections = None
         , verbose = False
         , debuglevel = 0
         ):
 
+    global connections
 
     if verbose: print(f"\nExecuting simulation on network {terminal_segment} beginning with streams of order {network['maximum_order']}")
-    for x in range(network['maximum_order'],-1,-1):
-        for head_segment, reach in network['reaches'].items():
-            if x == reach['order']:
 
-                compute_reach_up2down(
-                    head_segment = head_segment
-                    , reach = reach
-                    , connections = connections
-                    , supernetwork_data = supernetwork_data
-                    , verbose = verbose
-                    , debuglevel = debuglevel
-                    )
+    ordered_reaches = {}
+    for head_segment, reach in network['reaches'].items():
+        if reach['order'] not in ordered_reaches:
+            ordered_reaches.update({reach['order']:[]}) #TODO: Should this be a set/dictionary?
+        ordered_reaches[reach['order']].append([head_segment
+                  , reach
+                  ])
+    for x in range(network['maximum_order'],-1,-1):
+        for head_segment, reach in ordered_reaches[x]:
+            compute_reach_up2down(
+                head_segment = head_segment
+                , reach = reach
+                # , connections = connections
+                , supernetwork_data = supernetwork_data
+                , verbose = verbose
+                , debuglevel = debuglevel
+                )
 
 #TODO: generalize with a direction flag
 def compute_reach_up2down(
         head_segment = None
         , reach = None
-        , connections = None
+        # , connections = None
         , supernetwork_data = None
         , verbose = False
         , debuglevel = 0
         ):
+    global connections
     if debuglevel <= -1: print(f"\nreach: {head_segment} (order: {reach['order']} n_segs: {len(reach['segments'])})")
     current_segment = reach['reach_head']
     next_segment = connections[current_segment]['downstream'] 
@@ -258,6 +266,7 @@ def compute_reach_up2down(
 def compute_segment(
     current_segment = None
     , supernetwork_data = None
+    # , connections = None
     , verbose = False
     , debuglevel = 0
     ):
@@ -333,7 +342,7 @@ def main():
 
     #STEP 2
     if showtiming: start_time = time.time()
-    if verbose: print('ordering reaches ...')
+    if verbose: print('organizing connections into reaches ...')
     networks = compose_reaches(
         supernetwork_values
         , verbose = False
@@ -341,7 +350,7 @@ def main():
         , debuglevel = debuglevel
         , showtiming = showtiming
         )
-    if verbose: print('ordered reaches complete')
+    if verbose: print('reach organization complete')
     if showtiming: print("... in %s seconds." % (time.time() - start_time))
 
     #STEP 3
@@ -353,7 +362,7 @@ def main():
             terminal_segment = terminal_segment
             , network = network
             , supernetwork_data = supernetwork_data
-            , connections = connections
+            # , connections = connections
             , verbose = False
             # , verbose = verbose
             , debuglevel = debuglevel
