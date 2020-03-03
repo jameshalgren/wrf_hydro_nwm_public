@@ -18,11 +18,14 @@ if ENV_IS_CL: root = '/content/wrf_hydro_nwm_public/trunk/NDHMS/dynamic_channel_
 elif not ENV_IS_CL: 
     root = os.path.dirname(os.path.dirname(os.path.abspath('')))
     sys.path.append(r'../python_framework')
+    sys.path.append(r'../fortran_routing/mc_pylink_v00/MC_singleCH_singleTS')
     sys.setrecursionlimit(4000)
 
 import pickle
 import networkbuilder
 import nhd_network_traversal as nnt
+import mc_sc_stime as mc
+import numpy as np
 
 def set_networks(
     supernetwork = ''
@@ -285,14 +288,43 @@ def compute_segment(
                 print (f"Channel Side Slope: {v[supernetwork_data['ChSlp_col']]}")
             else: print(f'{k}: {v}')
 
-    MC_CALL = False
-    if MC_CALL:
-        print (connections[current_segment]['data'][supernetwork_data['manningn_col']])
-        print (connections[current_segment]['data'][supernetwork_data['slope_col']])
-        print (connections[current_segment]['data'][supernetwork_data['bottomwidth_col']])
-        print (connections[current_segment]['data'][supernetwork_data['MusK_col']])
-        print (connections[current_segment]['data'][supernetwork_data['MusX_col']])
-        print (connections[current_segment]['data'][supernetwork_data['ChSlp_col']])
+    #"compute MC"
+    computeMC = True
+    #"compute Dummy"
+    computeDummy = False
+    #"compute MSH"
+    computeMSH= False
+
+     
+    if computeMC:
+       compute_mc(connections[current_segment]
+            , supernetwork_data = supernetwork_data
+            , verbose = verbose
+            , debuglevel = debuglevel)
+        
+    elif computeDummy:
+        print ('computeDummy')
+                   
+    elif computeMSH:
+        print ('computeMSH')                   
+                 
+
+
+# ### Psuedocode
+# 
+# ```
+# Call Compute Network
+#     for each reach in the network
+#         Call compute reach
+#             For each segment in the reach
+#                 Import the mc object/module
+#                 Call prepare segment
+#                     Populate the Mc segment array with the individual segment properties
+#                     Obtain and set any lateral inflows
+#                     obtain and set the upstream and downstream (requrires logic to deal with junctions or boundaries at headwaters)
+#             With the populated arrays, execute MC for the reach
+# ```     
+#         
 
 def get_upstream_inflow():
     pass
@@ -302,6 +334,114 @@ def get_lateral_inflow():
 
 def compute_junction_downstream():
     pass
+
+def compute_mc(
+        current_segment = None
+        , supernetwork_data = None
+        , verbose = False
+        , debuglevel = 0
+        ):
+    #global connections
+
+    
+ 
+    #print (current_segment['data'][supernetwork_data['manningn_col']])
+    #print (current_segment['data'][supernetwork_data['slope_col']])
+    # print (current_segment['data'][supernetwork_data['bottomwidth_col']])
+    #print (current_segment['data'][supernetwork_data['MusK_col']])
+    #print (current_segment['data'][supernetwork_data['MusX_col']])
+    #print (current_segment['data'][supernetwork_data['ChSlp_col']])
+
+    #if verbose: 
+              
+
+    #print (f"manningn: {connections[current_segment]}")
+    #print ('computeMC')
+
+    # Thanks to SO post for a reminder of this "Loop-and-a-half" construct
+    # https://stackoverflow.com/questions/1662161/is-there-a-do-until-in-python
+
+    ntim=2;       #the number of time steps necessary for variables passed to mc module to compute successfully
+    nlinks=2;     #the number of links needed to define varialbe qd. ** nlinks is not used in fortran source code.
+
+    ncomp0=3; mc.var.ncomp0=ncomp0  #the number of segments of a reach upstream of the current reach
+    ncomp=3; mc.var.ncomp=ncomp  #the number of segments of the current reach 
+    mxseg=max(ncomp0,ncomp)
+    mc.var.uslinkid=1
+    mc.var.linkid=2
+
+    #MC model outputs
+    mc.var.qd=np.zeros((ntim,mxseg,nlinks))  #will store MC output qdc (flow downstream current timestep) 
+    mc.var.vela=np.zeros((ntim,ncomp)) 
+    mc.var.deptha=np.zeros((ntim,ncomp))
+
+    #print
+    #import pdb; pdb.set_trace()
+    
+    #lateral flow
+    mc.var.qlat=np.zeros((ncomp))
+
+    dt=30.0 ;      mc.var.dt= dt  #60.0;
+    dx=current_segment['data'][supernetwork_data['length_col']] ;     mc.var.dx= dx  #20.0
+    bw=current_segment['data'][supernetwork_data['bottomwidth_col']];       mc.var.bw= bw #50
+    tw= 0.01*bw; mc.var.tw= tw
+    twcc=tw;     mc.var.twcc=twcc
+    n=current_segment['data'][supernetwork_data['manningn_col']] ;      mc.var.n=n #0.03
+    ncc=n;       mc.var.ncc=ncc
+    cs=current_segment['data'][supernetwork_data['ChSlp_col']] ;    mc.var.cs=cs #1.0e6
+    so=current_segment['data'][supernetwork_data['slope_col']];    mc.var.so=so #0.002
+    ck= current_segment['data'][supernetwork_data['MusK_col']];   mc.var.ck = ck 
+    cx= current_segment['data'][supernetwork_data['MusX_col']];   mc.var.cx = cx
+
+    #import pdb; pdb.set_trace()
+    #run M-C model
+    nts=1  #the number of timestep in simulation
+    wnlinks=20 #the number of all links in simulation
+    wmxseg=5  #max number of segments among all links
+
+    #variable storing all outputs in time
+    wqd= np.zeros((nts,wmxseg,wnlinks))   
+    wvela= np.zeros((nts,wmxseg,wnlinks)) 
+    wdeptha= np.zeros((nts,wmxseg,wnlinks))
+
+    for k in range (0,nts):        
+        #input lateral flow for current reach; input flow to upstream reach of current reach
+        for i in range(0,ncomp):
+            mc.var.qlat[i]= (k+1)*2.0
+            mc.var.qd[1,i,0]= (k+1)*10.0
+
+        mc.mc.main()
+
+        for i in range(0,ncomp):
+            #current link(=reach)
+            #qd[k,i,j]: k=0/1: previous/current timestep; i: node ID; j=0/1: upstream/current reach
+            mc.var.qd[0,i,1]= mc.var.qd[1,i,1]
+            mc.var.vela[0,i]= mc.var.vela[1,i]
+            mc.var.deptha[0,i]= mc.var.deptha[1,i]
+            #upstream link(=reach)        
+            mc.var.qd[0,i,0]=  mc.var.qd[1,i,0] 
+
+        #output keeping
+        j=1 #temporarily assigned link ID for the current reach
+        for i in range(0,ncomp):
+            wqd[k,i,j]= mc.var.qd[1,i,1]
+            wvela[k,i,j]= mc.var.vela[1,i]
+            wdeptha[k,i,j]= mc.var.deptha[1,i]
+
+    #test output    
+    j=1
+    #print('MC_TEST_OUTPUT')
+#     for k in range (0,nts):
+#         for i in range(0,ncomp):
+#             print(wqd[k,i,j])
+
+#     for k in range (0,nts):
+#         for i in range(0,ncomp):
+#             print(wvela[k,i,j])
+
+#     for k in range (0,nts):
+#         for i in range(0,ncomp):
+#             print(wdeptha[k,i,j])
 
 def main():
 
