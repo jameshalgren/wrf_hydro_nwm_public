@@ -10,8 +10,26 @@ import os
 import time
 import multiprocessing
 from functools import partial
+
+# WARNING: These global declarations cause the parallel implementation to 
+# crash when executed on Windows
 connections = None
 networks = None
+from sys import platform
+if platform == "linux" or platform == "linux2":
+    pass
+elif platform == "darwin":
+    pass
+elif platform == "win32":
+    print('The parallel version of compute_nhd_routing.py will not execute as currently')
+    print('written due to the lack of a fork() capability in the windows OS.')
+    print('For parallel execution, please us a *nix OS.')
+    print('\nexiting...')
+    sys.exit()
+    # Some useful references:
+    # https://stackoverflow.com/questions/985281/what-is-the-closest-thing-windows-has-to-fork/985525#985525
+    # https://stackoverflow.com/questions/8220108/how-do-i-check-the-operating-system-in-python
+    # https://stackoverflow.com/questions/6596617/python-multiprocess-diff-between-windows-and-linux
 
 ENV_IS_CL = False
 if ENV_IS_CL: root = '/content/wrf_hydro_nwm_public/trunk/NDHMS/dynamic_channel_routing/'
