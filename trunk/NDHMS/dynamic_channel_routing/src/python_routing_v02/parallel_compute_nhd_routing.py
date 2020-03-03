@@ -412,7 +412,7 @@ def main():
     if verbose: print(f'executing parallel computation on ordered reaches of order less than {parallel_split} ...')
     nslist = ([terminal_segment
                   , network 
-                  , supernetwork_data # This should probably be global...
+                  , supernetwork_data #TODO: This should probably be global...
                   , False
                   , debuglevel] 
                   for terminal_segment, network in networks.items() 
