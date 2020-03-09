@@ -50,9 +50,6 @@ def build_connections_object(
         , key_col = None
         , downstream_col = None
         , length_col = None
-        #, manningn_col = None
-        #, slope_col = None
-        #, bottomwidth_col = None
         , terminal_code = None
         , verbose = False
         , debuglevel = 0
@@ -63,9 +60,6 @@ def build_connections_object(
                     , key_col = key_col
                     , downstream_col = downstream_col
                     , length_col = length_col
-                    #, manningn_col = manningn_col
-                    #, slope_col = slope_col
-                    #, bottomwidth_col = bottomwidth_col
                     , verbose = verbose
                     , debuglevel = debuglevel)
     
@@ -95,7 +89,7 @@ def build_connections_object(
         , visited_keys, visited_terminal_keys \
         , junction_count
 
-def do_network(
+def do_connections(
         geo_file_path = None
         , title_string = None
         , layer_string = None
@@ -103,9 +97,6 @@ def do_network(
         , key_col = None
         , downstream_col = None
         , length_col = None
-        #, manningn_col = None
-        #, slope_col = None
-        #, bottomwidth_col = None
         , terminal_code = None
         , mask_file_path = None
         , mask_driver_string = None
@@ -135,38 +126,24 @@ def do_network(
             )
         #TODO: make mask dict with additional attributes, e.g., names
         mask_set = {row[mask_key_col] for row in mask_file_rows}
+    else: mask_set = {row[key_col] for row in geo_file_rows}
 
-        return build_connections_object(
-            geo_file_rows = geo_file_rows
-            , mask_set = mask_set
-            , key_col = key_col
-            , downstream_col = downstream_col
-            , length_col = length_col
-            #, manningn_col = manningn_col
-            #, slope_col = slope_col
-            #, bottomwidth_col = bottomwidth_col
-            , terminal_code = terminal_code
-            , verbose = verbose
-            , debuglevel = debuglevel
-            )
-
-    else:
-        return build_connections_object(
-            geo_file_rows = geo_file_rows
-            , key_col = key_col
-            , downstream_col = downstream_col
-            , length_col = length_col
-            #, manningn_col = manningn_col
-            #, slope_col = slope_col
-            #, bottomwidth_col = bottomwidth_col
-            , terminal_code = terminal_code
-            , verbose = verbose
-            , debuglevel = debuglevel
-            )
+    return build_connections_object(
+        geo_file_rows = geo_file_rows
+        , mask_set = mask_set
+        , key_col = key_col
+        , downstream_col = downstream_col
+        , length_col = length_col
+        , terminal_code = terminal_code
+        , verbose = verbose
+        , debuglevel = debuglevel
+        )
 
     # return connections, all_keys, ref_keys, headwater_keys \
     #     , terminal_keys, terminal_ref_keys \
-    #     , circular_keys, junction_keys
+    #     , circular_keys, junction_keys \
+    #     , visited_keys, visited_terminal_keys \
+    #     , junction_count
 
 def get_nhd_connections(
     supernetwork_data = {}
@@ -175,7 +152,7 @@ def get_nhd_connections(
     ):
     if 'mask_file_path' in supernetwork_data:
         #TODO: this probably means we are reading the same file twice -- fix this [maybe] by implementing an overloaded return
-        return do_network(
+        return do_connections(
             geo_file_path = supernetwork_data['geo_file_path']
               , key_col = supernetwork_data['key_col']
               , downstream_col = supernetwork_data['downstream_col']
@@ -195,7 +172,7 @@ def get_nhd_connections(
               , verbose = verbose
             )
     else:
-        return do_network(
+        return do_connections(
             geo_file_path = supernetwork_data['geo_file_path']
               , key_col = supernetwork_data['key_col']
               , downstream_col = supernetwork_data['downstream_col']

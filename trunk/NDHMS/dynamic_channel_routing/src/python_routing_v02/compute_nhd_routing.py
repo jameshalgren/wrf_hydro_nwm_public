@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""NHD Network traversal
-
-A demonstration version of this code is stored in this Colaboratory notebook:
-    https://colab.research.google.com/drive/1ocgg1JiOGBUl3jfSUPCEVnW5WNaqLKCD
-
-"""
 ## Basic imports
 import sys
 import os
@@ -14,6 +7,7 @@ import time
 # crash when executed on Windows
 connections = None
 networks = None
+
 from sys import platform
 if platform == "linux" or platform == "linux2":
     pass
@@ -57,16 +51,16 @@ def compute_network(
 
     global connections
 
-    if verbose: print(f"\nExecuting simulation on network {terminal_segment} beginning with streams of order {network['maximum_order']}")
+    if verbose: print(f"\nExecuting simulation on network {terminal_segment} beginning with streams of order {network['maximum_reach_seqorder']}")
 
     ordered_reaches = {}
     for head_segment, reach in network['reaches'].items():
-        if reach['order'] not in ordered_reaches:
-            ordered_reaches.update({reach['order']:[]}) #TODO: Should this be a set/dictionary?
-        ordered_reaches[reach['order']].append([head_segment
+        if reach['seqorder'] not in ordered_reaches:
+            ordered_reaches.update({reach['seqorder']:[]}) #TODO: Should this be a set/dictionary?
+        ordered_reaches[reach['seqorder']].append([head_segment
                   , reach
                   ])
-    for x in range(network['maximum_order'],-1,-1):
+    for x in range(network['maximum_reach_seqorder'],-1,-1):
         for head_segment, reach in ordered_reaches[x]:
             compute_reach_up2down(
                 head_segment = head_segment
@@ -87,7 +81,8 @@ def compute_reach_up2down(
         , debuglevel = 0
         ):
     global connections
-    if debuglevel <= -1: print(f"\nreach: {head_segment} (order: {reach['order']} n_segs: {len(reach['segments'])})")
+
+    if debuglevel <= -1: print(f"\nreach: {head_segment} (seqorder: {reach['seqorder']} n_segs: {len(reach['segments'])})")
     current_segment = reach['reach_head']
     next_segment = connections[current_segment]['downstream'] 
     while True:
@@ -337,6 +332,11 @@ def main():
     if showtiming: start_time = time.time()
     if verbose: print('executing computation on ordered reaches ...')
     connections = supernetwork_values[0]
+    from itertools import islice
+    def take(iterable, n):
+        return list(islice(iterable, n))
+    import pdb; pdb.set_trace()
+
     for terminal_segment, network in networks.items():
         compute_network(
             terminal_segment = terminal_segment

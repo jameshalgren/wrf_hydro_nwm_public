@@ -18,12 +18,8 @@ def get_down_connections(
     if debuglevel <= -100: breakpoint()
     if verbose: print('down connections ...')
     
-    if not mask_set: mask_set = {row[key_col] for row in rows}
     connections = {row[key_col]: { downstream_key: row[downstream_col]
                         , 'length': row[length_col]
-                        #, 'manningn': row[manningn_col]
-                        #, 'slope': row[slope_col]
-                        #, 'bottom_width': row[bottomwidth_col]
                         , 'data': list(row)
                         }
                         for row in rows 
@@ -45,13 +41,11 @@ def determine_keys(
     ):
 
     if verbose: print('ref_keys ...')
-    # ref_keys = {row[downstream_col] for row in rows}
     ref_keys = {con[downstream_key] for key, con in connections.items()}
     if debuglevel <= -1: print(f'found {len(ref_keys)} ref_keys')
     if debuglevel <= -3: print(ref_keys)
     if verbose: print('ref_keys complete')
     if verbose: print('headwater_keys ...')
-    # headwater_keys = {x for x in connections.keys() if x not in ref_keys}
     headwater_keys = {x for x in connections.keys() if x not in ref_keys}
     if debuglevel <= -1: print(f'found {len(headwater_keys)} headwater segments')
     if debuglevel <= -3: print(headwater_keys)
@@ -65,20 +59,15 @@ def determine_keys(
 
     # Then collect the keys associated with those 'pointing-tos'
     terminal_keys = set()
-    # for row in rows:
     for key, con in connections.items():
-        # curr_term_ref_key = row[downstream_col]
         curr_term_ref_key = con[downstream_key]
         if curr_term_ref_key in terminal_ref_keys:
             if curr_term_ref_key != terminal_code:
                 if debuglevel <= -2:
-                    # print(f'Non-standard terminal key {row[downstream_col]} found in segment {row[key_col]}')
                     print(f"Non-standard terminal key {con[downstream_key]} found in segment {key}")
             elif curr_term_ref_key == terminal_code:
                 if debuglevel <= -3:
-                    # print(f'Standard terminal key {row[downstream_col]} found in segment {row[key_col]}')
                     print(f"Standard terminal key {con[downstream_key]} found in segment {key}")
-            # terminal_keys.add(row[key_col])
             terminal_keys.add(key)
     if debuglevel <= -1: print(f'found {len(terminal_keys)} terminal segments')
     if debuglevel <= -1: print(f'of those, {len([x for x in terminal_ref_keys if x != terminal_code])} had non-standard terminal keys')

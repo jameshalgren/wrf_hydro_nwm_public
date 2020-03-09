@@ -27,12 +27,12 @@ def recursive_junction_read (
                     if debuglevel <= -3: print(f"segs at csegment {csegment}: {network['total_segment_count']}")
                     reachset.add(csegment)
                     reach.update({'reach_head':csegment})
-                    reach.update({'order':order_iter})
+                    reach.update({'seqorder':order_iter})
                     if order_iter == 0: network.update({'terminal_reach':csegment})#; import pdb; pdb.set_trace() #TODO: FIX THIS; SEEMS FRAGILE
-                    network.update({'maximum_order':max(network['maximum_order'],order_iter)})
+                    network.update({'maximum_reach_seqorder':max(network['maximum_reach_seqorder'],order_iter)})
                     reach.update({'segments':reachset})
                     network['reaches'].update({csegment:reach})
-                    network['headwaters'].add(csegment)
+                    network['headwater_reaches'].add(csegment)
                     break
                 elif len(usegments) >= 2: # JUNCTIONS
                     if debuglevel <= -3: print(f"junction found at {csegment} with upstreams {usegments}")
@@ -40,9 +40,9 @@ def recursive_junction_read (
                     if debuglevel <= -3: print(f"segs at csegment {csegment}: {network['total_segment_count']}")
                     reachset.add(csegment)
                     reach.update({'reach_head':csegment})
-                    reach.update({'order':order_iter})
+                    reach.update({'seqorder':order_iter})
                     if order_iter == 0: network.update({'terminal_reach':csegment})#; import pdb; pdb.set_trace() #TODO: FIX THIS; SEEMS FRAGILE
-                    network.update({'maximum_order':max(network['maximum_order'],order_iter)})
+                    network.update({'maximum_reach_seqorder':max(network['maximum_reach_seqorder'],order_iter)})
                     reach.update({'segments':reachset})
                     network['reaches'].update({csegment:reach})
                     network['total_junction_count'] += 1 #the Terminal Segment
@@ -86,9 +86,9 @@ def network_trace(
     if 1 == 1:
         network.update({'total_segment_count': 0}) 
         network.update({'total_junction_count': 0})
-        network.update({'maximum_order':0})
+        network.update({'maximum_reach_seqorder':0})
         network.update({'junctions':set()})
-        network.update({'headwaters':set()})
+        network.update({'headwater_reaches':set()})
         network.update({'reaches':{}}) 
         recursive_junction_read(
                   [terminal_segment]
@@ -134,7 +134,7 @@ def compose_reaches(
         up_reaches = networkbuilder.get_up_connections(
             network['reaches']
             , terminal_code
-            , network['headwaters']
+            , network['headwater_reaches']
             , {network['terminal_reach']}
             , r'upstream_reaches'
             , r'downstream_reach'
