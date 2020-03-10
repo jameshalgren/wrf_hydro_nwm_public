@@ -7,6 +7,7 @@ import time
 # crash when executed on Windows
 connections = None
 networks = None
+flowdepthvel = None
 
 from sys import platform
 if platform == "linux" or platform == "linux2":
@@ -50,6 +51,7 @@ def compute_network(
         ):
 
     global connections
+    global flowdepthvel 
 
     if verbose: print(f"\nExecuting simulation on network {terminal_segment} beginning with streams of order {network['maximum_reach_seqorder']}")
 
@@ -60,90 +62,26 @@ def compute_network(
         ordered_reaches[reach['seqorder']].append([head_segment
                   , reach
                   ])
-    for x in range(network['maximum_reach_seqorder'],-1,-1):
-        for head_segment, reach in ordered_reaches[x]:
-            compute_reach_up2down(
-                head_segment = head_segment
-                , reach = reach
-                # , connections = connections
-                , supernetwork_data = supernetwork_data
-                , verbose = verbose
-                , debuglevel = debuglevel
-                )
 
-#TODO: generalize with a direction flag
-def compute_reach_up2down(
-        head_segment = None
-        , reach = None
-        # , connections = None
-        , supernetwork_data = None
-        , verbose = False
-        , debuglevel = 0
-        ):
-    global connections
-
-    if debuglevel <= -1: print(f"\nreach: {head_segment} (seqorder: {reach['seqorder']} n_segs: {len(reach['segments'])})")
-    current_segment = reach['reach_head']
-    next_segment = connections[current_segment]['downstream'] 
-    while True:
-        # Thanks to SO post for a reminder of this "Loop-and-a-half" construct
-        # https://stackoverflow.com/questions/1662161/is-there-a-do-until-in-python
-        compute_segment(
-            current_segment = current_segment
-            , supernetwork_data = supernetwork_data
-            , verbose = verbose
-            , debuglevel = debuglevel
-            )
-        if current_segment == reach['reach_tail']:
-            if debuglevel <= -1: print(f'{current_segment} (tail)')
-            break
-        if debuglevel <= -1: print(f'{current_segment} --> {next_segment}\n')
-        current_segment = next_segment
-        next_segment = connections[current_segment]['downstream'] 
-
-def compute_segment(
-    current_segment = None
-    , supernetwork_data = None
-    # , connections = None
-    , verbose = False
-    , debuglevel = 0
-    ):
-    global connections
+    nts = 10 # number fof timestep
     
-    if debuglevel <= -2:
-        print(f'data for segment: {current_segment}')
-        for k, v in connections[current_segment].items():
-            if type(v) is list: 
-                print (f'{k}:')
-                print (f"manningn: {v[supernetwork_data['manningn_col']]}")
-                print (f"slope: {v[supernetwork_data['slope_col']]}")
-                print (f"bottom width: {v[supernetwork_data['bottomwidth_col']]}")
-                print (f"Muskingum K: {v[supernetwork_data['MusK_col']]}")
-                print (f"Muskingum X: {v[supernetwork_data['MusX_col']]}")
-                print (f"Channel Side Slope: {v[supernetwork_data['ChSlp_col']]}")
-            else: print(f'{k}: {v}')
+    for ts in range (0,nts):
+        #print(f'timestep: {ts}\n')
 
-    #"compute MC"
-    computeMC = True
-    #"compute Dummy"
-    computeDummy = False
-    #"compute MSH"
-    computeMSH= False
-
-     
-    if computeMC:
-       compute_mc(connections[current_segment]
-            , supernetwork_data = supernetwork_data
-            , verbose = verbose
-            , debuglevel = debuglevel)
-        
-    elif computeDummy:
-        print ('computeDummy')
-                   
-    elif computeMSH:
-        print ('computeMSH')                   
-                 
-
+        for x in range(network['maximum_reach_seqorder'],-1,-1):
+            for head_segment, reach in ordered_reaches[x]:
+                #print(f'{{{head_segment}}}:{reach}')          
+                
+                compute_mc_reach_up2down(
+                    head_segment = head_segment
+                    , reach = reach
+                    , network = network
+                    #, connections = connections
+                    , supernetwork_data = supernetwork_data
+                    , ts = ts
+                    , verbose = verbose
+                    , debuglevel = debuglevel
+                )
 
 # ### Psuedocode
 # 
@@ -157,9 +95,18 @@ def compute_segment(
 #                     Populate the Mc segment array with the individual segment properties
 #                     Obtain and set any lateral inflows
 #                     obtain and set the upstream and downstream (requrires logic to deal with junctions or boundaries at headwaters)
-#             With the populated arrays, execute MC for the reach
+#                 With the populated arrays, execute MC for the reach
 # ```     
 #         
+
+def read_segments():
+    pass
+
+def prepare_segments():
+    pass
+
+def handle_junctions():
+    pass
 
 def get_upstream_inflow():
     pass
@@ -170,118 +117,140 @@ def get_lateral_inflow():
 def compute_junction_downstream():
     pass
 
-def compute_mc(
-        current_segment = None
+#TODO: generalize with a direction flag
+def compute_mc_reach_up2down(
+        head_segment = None
+        , reach = None
+        #, connections = None
         , supernetwork_data = None
+        , ts = 0
         , verbose = False
         , debuglevel = 0
         ):
-    #global connections
-
     
- 
-    #print (current_segment['data'][supernetwork_data['manningn_col']])
-    #print (current_segment['data'][supernetwork_data['slope_col']])
-    # print (current_segment['data'][supernetwork_data['bottomwidth_col']])
-    #print (current_segment['data'][supernetwork_data['MusK_col']])
-    #print (current_segment['data'][supernetwork_data['MusX_col']])
-    #print (current_segment['data'][supernetwork_data['ChSlp_col']])
-
-    #if verbose: 
-              
-
-    #print (f"manningn: {connections[current_segment]}")
-    #print ('computeMC')
-
-    # Thanks to SO post for a reminder of this "Loop-and-a-half" construct
-    # https://stackoverflow.com/questions/1662161/is-there-a-do-until-in-python
-
+    global connections
+    global flowdepthvel
+    # global network
+    
+    if verbose: print(f"\nreach: {head_segment} (order: {reach['seqorder']} n_segs: {len(reach['segments'])})")
+    
     ntim=2;       #the number of time steps necessary for variables passed to mc module to compute successfully
     nlinks=2;     #the number of links needed to define varialbe qd. ** nlinks is not used in fortran source code.
 
-    ncomp0=3; mc.var.ncomp0=ncomp0  #the number of segments of a reach upstream of the current reach
-    ncomp=3; mc.var.ncomp=ncomp  #the number of segments of the current reach 
-    mxseg=max(ncomp0,ncomp)
     mc.var.uslinkid=1
     mc.var.linkid=2
-
+    ncomp0=1; mc.var.ncomp0=ncomp0  #the number of segments of a reach upstream of the current reach
+    ncomp = len(reach['segments']) ;  mc.var.ncomp= ncomp  #the number of segments of the current reach 
+    #mxseg=max(ncomp0,ncomp)    
     #MC model outputs
-    mc.var.qd=np.zeros((ntim,mxseg,nlinks))  #will store MC output qdc (flow downstream current timestep) 
+    mc.var.qd=np.zeros((ntim,ncomp,nlinks))  #will store MC output qdc (flow downstream current timestep) 
     mc.var.vela=np.zeros((ntim,ncomp)) 
     mc.var.deptha=np.zeros((ntim,ncomp))
-
-    #print
-    #import pdb; pdb.set_trace()
-    
     #lateral flow
     mc.var.qlat=np.zeros((ncomp))
-
-    dt=30.0 ;      mc.var.dt= dt  #60.0;
-    dx=current_segment['data'][supernetwork_data['length_col']] ;     mc.var.dx= dx  #20.0
-    bw=current_segment['data'][supernetwork_data['bottomwidth_col']];       mc.var.bw= bw #50
-    tw= 0.01*bw; mc.var.tw= tw
-    twcc=tw;     mc.var.twcc=twcc
-    n=current_segment['data'][supernetwork_data['manningn_col']] ;      mc.var.n=n #0.03
-    ncc=n;       mc.var.ncc=ncc
-    cs=current_segment['data'][supernetwork_data['ChSlp_col']] ;    mc.var.cs=cs #1.0e6
-    so=current_segment['data'][supernetwork_data['slope_col']];    mc.var.so=so #0.002
-    ck= current_segment['data'][supernetwork_data['MusK_col']];   mc.var.ck = ck 
-    cx= current_segment['data'][supernetwork_data['MusX_col']];   mc.var.cx = cx
-
+     
+    
+    
+    # upstream flow per reach
+    qup_tmp = 0
     #import pdb; pdb.set_trace()
-    #run M-C model
-    nts=10  #the number of timestep in simulation
-    wnlinks=20 #the number of all links in simulation
-    wmxseg=5  #max number of segments among all links
+    if reach['upstream_reaches'] == {supernetwork_data['terminal_code']}: # Headwaters
+        qup_tmp = (ts+1)*10.0 
+    else: # Loop over upstream reaches
+        #for us in reach['upstream_reaches']:
+        for us in connections[reach['reach_head']]['upstreams']:
+            #if us == 5507050 :
+            #    import pdb; pdb.set_trace()
+            #qup_tmp += flowdepthvel[network['reaches'][us]['reach_tail']]['flow']['curr']
+            qup_tmp += flowdepthvel[us]['flow']['curr']
+    
+    flowdepthvel[reach['reach_head']]['flow']['curr'] = qup_tmp
+    #print(qup_tmp)
+            
+    current_segment = reach['reach_head']
+    next_segment = connections[current_segment]['downstream'] 
+    #print(f'{current_segment}==>{next_segment} conections:{ncomp} timestep:{ts}')
+    i = 0
+    #input flow to upstream reach of current reach   
+    mc.var.qd[1,i,0] = qup_tmp 
+    
+    while True:
 
-    #variable storing all outputs in time
-    wqd= np.zeros((nts,wmxseg,wnlinks))   
-    wvela= np.zeros((nts,wmxseg,wnlinks)) 
-    wdeptha= np.zeros((nts,wmxseg,wnlinks))
+        # for now treating as constant per reach 
+        dt=300.0 ;      mc.var.dt= dt  #60.0;
 
-    for k in range (0,nts):        
-        #input lateral flow for current reach; input flow to upstream reach of current reach
-        for i in range(0,ncomp):
-            mc.var.qlat[i]= (k+1)*2.0
-            mc.var.qd[1,i,0]= (k+1)*10.0
+        dx=connections[current_segment]['data'][supernetwork_data['length_col']] ;     mc.var.dx= dx  #20.0
+        bw=connections[current_segment]['data'][supernetwork_data['bottomwidth_col']];       mc.var.bw= bw #50
+        tw= 0.01*bw; mc.var.tw= tw
+        twcc=tw;     mc.var.twcc=twcc
+        n=connections[current_segment]['data'][supernetwork_data['manningn_col']] ;      mc.var.n=n #0.03
+        ncc=n;       mc.var.ncc=ncc
+        cs=connections[current_segment]['data'][supernetwork_data['ChSlp_col']] ;    mc.var.cs=cs #1.0e6
+        so=connections[current_segment]['data'][supernetwork_data['slope_col']];    mc.var.so=so #0.002
+        #ck= current_segment['data'][supernetwork['MusK_col']];   mc.var.ck = ck 
+        #cx= current_segment['data'][supernetwork['MusX_col']];   mc.var.cx = cx
+        #print (f'{current_segment}')
+               
+        flowdepthvel[current_segment]['qlat']['curr'] = (ts+1)*2.0      # lateral flow per segment
+       
+                      
+        flowdepthvel[current_segment]['flow']['prev'] = flowdepthvel[current_segment]['flow']['curr']
+        flowdepthvel[current_segment]['depth']['prev'] = flowdepthvel[current_segment]['depth']['curr']
+        flowdepthvel[current_segment]['vel']['prev'] = flowdepthvel[current_segment]['vel']['curr']
+        flowdepthvel[current_segment]['qlat']['prev'] = flowdepthvel[current_segment]['qlat']['curr']
 
-        mc.mc.main()
+        #print (f'counter = {i}')
+        #if current_segment == 5559368 or i == 100:
+        #    import pdb; pdb.set_trace()
 
-        for i in range(0,ncomp):
-            #current link(=reach)
-            #qd[k,i,j]: k=0/1: previous/current timestep; i: node ID; j=0/1: upstream/current reach
-            mc.var.qd[0,i,1]= mc.var.qd[1,i,1]
-            mc.var.vela[0,i]= mc.var.vela[1,i]
-            mc.var.deptha[0,i]= mc.var.deptha[1,i]
-            #upstream link(=reach)        
-            mc.var.qd[0,i,0]=  mc.var.qd[1,i,0] 
+        mc.var.qlat[i]= flowdepthvel[current_segment]['qlat']['curr']  # temporary assigned qlat 
+        mc.var.qd[0,i,1]= flowdepthvel[current_segment]['flow']['prev']  # temporary assigned qd
+        mc.var.vela[0,i] = flowdepthvel[current_segment]['vel']['prev']
+        mc.var.deptha[0,i] = flowdepthvel[current_segment]['depth']['prev']
+        
+        i += 1
+        
+        if current_segment == reach['reach_tail']:
+            if verbose: print(f'{current_segment} (tail)')
+            break
+        if verbose: print(f'{current_segment} --> {next_segment}\n')
+        current_segment = next_segment
+        next_segment = connections[current_segment]['downstream'] 
+        
+    mc.mc.main()
 
-        #output keeping
-        j=1 #temporarily assigned link ID for the current reach
-        for i in range(0,ncomp):
-            wqd[k,i,j]= mc.var.qd[1,i,1]
-            wvela[k,i,j]= mc.var.vela[1,i]
-            wdeptha[k,i,j]= mc.var.deptha[1,i]
-
-    #test output    
-    j=1
-    #print('MC_TEST_OUTPUT')
-#     for k in range (0,nts):
-#         for i in range(0,ncomp):
-#             print(wqd[k,i,j])
-
-#     for k in range (0,nts):
-#         for i in range(0,ncomp):
-#             print(wvela[k,i,j])
-
-#     for k in range (0,nts):
-#         for i in range(0,ncomp):
-#             print(wdeptha[k,i,j])
+    #print (f'{ts} end mc')
+    
+    current_segment = reach['reach_head']
+    next_segment = connections[current_segment]['downstream'] 
+    i = 0
+    while True:
+        flowdepthvel[current_segment]['flow']['curr'] = mc.var.qd[1,i,1] 
+        flowdepthvel[current_segment]['depth']['curr'] = mc.var.deptha[1,i]
+        flowdepthvel[current_segment]['vel']['curr'] = mc.var.vela[1,i]
+        d = flowdepthvel[current_segment]['depth']['curr'] 
+        q = flowdepthvel[current_segment]['flow']['curr']
+        v = flowdepthvel[current_segment]['vel']['curr']
+        ql = flowdepthvel[current_segment]['qlat']['curr']
+        #print ( f'timestep: {ts} cur : {current_segment}  {q} {d} {v} {ql}')
+        i += 1
+        
+        #print(f'timestep: {ts} {flowdepthvel[current_segment]}')
+        #import pdb; pdb.set_trace()
+        
+            
+        if current_segment == reach['reach_tail']:
+            if verbose: print(f'{current_segment} (tail)')
+            break
+        if verbose: print(f'{current_segment} --> {next_segment}\n')
+        current_segment = next_segment
+        next_segment = connections[current_segment]['downstream'] 
 
 def main():
 
     global connections
     global networks
+    global flowdepthvel
 
     verbose = True
     debuglevel = 0
@@ -328,14 +297,22 @@ def main():
     if verbose: print('reach organization complete')
     if showtiming: print("... in %s seconds." % (time.time() - start_time))
 
+
     #STEP 3
     if showtiming: start_time = time.time()
     if verbose: print('executing computation on ordered reaches ...')
     connections = supernetwork_values[0]
-    from itertools import islice
-    def take(iterable, n):
-        return list(islice(iterable, n))
-    import pdb; pdb.set_trace()
+
+    #initialize flowdepthvel dict
+    flowdepthvel = {connection:{'flow':{'prev':0, 'curr':0}
+                                , 'depth':{'prev':-999, 'curr':0}
+                                , 'vel':{'prev':0, 'curr':0}
+                                , 'qlat':{'prev':0, 'curr':0}} for connection in connections} 
+    
+    # from itertools import islice
+    # def take(iterable, n):
+    #     return list(islice(iterable, n))
+    # import pdb; pdb.set_trace()
 
     for terminal_segment, network in networks.items():
         compute_network(
@@ -347,6 +324,9 @@ def main():
             # , verbose = verbose
             , debuglevel = debuglevel
         )
+        print(f'{terminal_segment}')
+        if showtiming: print("... in %s seconds." % (time.time() - start_time))
+        
     if verbose: print('ordered reach computation complete')
     if showtiming: print("... in %s seconds." % (time.time() - start_time))
 
