@@ -288,23 +288,38 @@ def set_supernetwork_data(
           }
 
     elif supernetwork == 'Mainstems_CONUS':
-        return {
-            'geo_file_path' : os.path.join(geo_input_folder
-                    , r'downstream_reaches_v1_GCS.shp')
-            , 'key_col' : 0
-            , 'downstream_col' : 2
-            , 'length_col' : 10
-            , 'manningn_col' : 11
-            , 'slope_col' : 12
-            , 'bottomwidth_col' : 14
-            , 'MusK_col' : 8
-            , 'MusX_col' : 9
-            , 'ChSlp_col' : 13
-            , 'terminal_code' : 0
-            , 'title_string' : 'CONUS "Mainstem"'
-            , 'driver_string' : 'ESRI Shapefile'
-            , 'layer_string' : 0
-          }
+        dict = set_supernetwork_data(
+                supernetwork = 'CONUS_FULL_RES_v20'
+                , geo_input_folder = geo_input_folder
+                )
+        dict.update({
+            'title_string' : 'CONUS "Mainstem"' #overwrites other title...
+              , 'mask_file_path' : os.path.join(geo_input_folder
+                     , r'downstream_reaches_v1_GCS.shp')
+              , 'mask_driver_string' : r'ESRI Shapefile'
+              , 'mask_layer_string' : 0
+              , 'mask_key_col' : 0
+              , 'mask_name_col' : 2 #TODO: Not used yet.
+            })
+        return dict
+
+        #return {
+            #'geo_file_path' : os.path.join(geo_input_folder
+                    #, r'downstream_reaches_v1_GCS.shp')
+            #, 'key_col' : 0
+            #, 'downstream_col' : 2
+            #, 'length_col' : 10
+            #, 'manningn_col' : 11
+            #, 'slope_col' : 12
+            #, 'bottomwidth_col' : 14
+            #, 'MusK_col' : 8
+            #, 'MusX_col' : 9
+            #, 'ChSlp_col' : 13
+            #, 'terminal_code' : 0
+            #, 'title_string' : 'CONUS "Mainstem"'
+            #, 'driver_string' : 'ESRI Shapefile'
+            #, 'layer_string' : 0
+          #}
 
     elif supernetwork == 'CONUS_ge5':
         return {
