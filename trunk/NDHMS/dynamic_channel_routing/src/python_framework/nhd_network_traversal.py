@@ -21,7 +21,7 @@ def main():
     # NOT IN GIT REPO # supernetworks.update({'Brazos_FULL_RES':{}}) 
     # NOT IN GIT REPO # supernetworks.update({'LowerColorado_FULL_RES':{}}) 
     # NOT IN GIT REPO # supernetworks.update({'LowerColorado_CONCHOS_FULL_RES':{}}) 
-    # NOT IN GIT REPO # supernetworks.update({'Mainstems_CONUS':{}})
+    supernetworks.update({'Mainstems_CONUS':{}})
     supernetworks.update({'CONUS_ge5':{}}) ##NHD CONUS order 5 and greater"""
     supernetworks.update({'Brazos_LowerColorado_ge5':{}}) ##NHD Subset (Brazos/Lower Colorado)"""
     supernetworks.update({'CONUS_Named_Streams':{}})
