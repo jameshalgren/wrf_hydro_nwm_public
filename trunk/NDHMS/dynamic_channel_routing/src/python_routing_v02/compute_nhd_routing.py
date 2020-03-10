@@ -28,17 +28,33 @@ elif platform == "win32":
 ENV_IS_CL = False
 if ENV_IS_CL: root = '/content/wrf_hydro_nwm_public/trunk/NDHMS/dynamic_channel_routing/'
 elif not ENV_IS_CL: 
+    sys.setrecursionlimit(4000)
     root = os.path.dirname(os.path.dirname(os.path.abspath('')))
     sys.path.append(r'../python_framework')
-    sys.path.append(r'../fortran_routing/mc_pylink_v00/MC_singleCH_singleTS')
-    sys.setrecursionlimit(4000)
+    fortran_source_dir = r'../fortran_routing/mc_pylink_v00/MC_singleCH_singleTS'
+    sys.path.append(fortran_source_dir)
+    try:
+        import mc_sc_stime as mc
+    except:
+        import subprocess
+        fortran_compile_call = []
+        fortran_compile_call.append(r'f2py3')
+        fortran_compile_call.append(r'-c')
+        fortran_compile_call.append(r'varSingleChStime_f2py.f90')
+        fortran_compile_call.append(r'MCsingleChStime_f2py_clean.f90')
+        fortran_compile_call.append(r'-m')
+        fortran_compile_call.append(r'mc_sc_stime')
+        subprocess.run(fortran_compile_call, cwd=fortran_source_dir, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        try:
+            import mc_sc_stime as mc
+        except Exception as e:
+            print (e)
 
 ## network and reach utilities
 import nhd_network_utilities as nnu
 import nhd_reach_utilities as nru
 
 ## Muskingum Cunge
-import mc_sc_stime as mc
 import numpy as np
 
 def compute_network(
