@@ -150,43 +150,28 @@ def get_nhd_connections(
     , debuglevel = 0
     , verbose = False
     ):
-    if 'mask_file_path' in supernetwork_data:
-        #TODO: this probably means we are reading the same file twice -- fix this [maybe] by implementing an overloaded return
-        return do_connections(
-            geo_file_path = supernetwork_data['geo_file_path']
-              , key_col = supernetwork_data['key_col']
-              , downstream_col = supernetwork_data['downstream_col']
-              , length_col = supernetwork_data['length_col']
-              #, manningn_col = supernetwork_data['manningn_col']
-              #, slope_col = supernetwork_data['slope_col']
-              #, bottomwidth_col = supernetwork_data['bottomwidth_col']
-              , terminal_code = supernetwork_data['terminal_code']
-              , title_string = supernetwork_data['title_string']
-              , driver_string = supernetwork_data['driver_string']
-              , layer_string = supernetwork_data['layer_string']
-              , mask_file_path = supernetwork_data['mask_file_path']
-              , mask_layer_string = supernetwork_data['mask_layer_string']
-              , mask_driver_string = supernetwork_data['mask_driver_string']
-              , mask_key_col = supernetwork_data['mask_key_col']
-              , debuglevel = debuglevel
-              , verbose = verbose
-            )
-    else:
-        return do_connections(
-            geo_file_path = supernetwork_data['geo_file_path']
-              , key_col = supernetwork_data['key_col']
-              , downstream_col = supernetwork_data['downstream_col']
-              , length_col = supernetwork_data['length_col']
-              #, manningn_col = supernetwork_data['manningn_col']
-              #, slope_col = supernetwork_data['slope_col']
-              #, bottomwidth_col = supernetwork_data['bottomwidth_col']
-              , terminal_code = supernetwork_data['terminal_code']
-              , title_string = supernetwork_data['title_string']
-              , driver_string = supernetwork_data['driver_string']
-              , layer_string = supernetwork_data['layer_string']
-              , debuglevel = debuglevel
-              , verbose = verbose
-            )
+    if 'mask_file_path' not in supernetwork_data:
+        #TODO: doing things this way may mean we are reading the same file twice -- fix this [maybe] by implementing an overloaded return
+        supernetwork_data.update({'mask_file_path':None})
+        supernetwork_data.update({'mask_layer_string':None})
+        supernetwork_data.update({'mask_driver_string':None})
+        supernetwork_data.update({'mask_key_col':None})
+    return do_connections(
+        geo_file_path = supernetwork_data['geo_file_path']
+          , key_col = supernetwork_data['key_col']
+          , downstream_col = supernetwork_data['downstream_col']
+          , length_col = supernetwork_data['length_col']
+          , terminal_code = supernetwork_data['terminal_code']
+          , title_string = supernetwork_data['title_string']
+          , driver_string = supernetwork_data['driver_string']
+          , layer_string = supernetwork_data['layer_string']
+          , mask_file_path = supernetwork_data['mask_file_path']
+          , mask_layer_string = supernetwork_data['mask_layer_string']
+          , mask_driver_string = supernetwork_data['mask_driver_string']
+          , mask_key_col = supernetwork_data['mask_key_col']
+          , debuglevel = debuglevel
+          , verbose = verbose
+        )
 
 def set_supernetwork_data(
     supernetwork = ''
