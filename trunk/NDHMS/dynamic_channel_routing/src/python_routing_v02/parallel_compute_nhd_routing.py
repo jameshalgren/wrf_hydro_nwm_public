@@ -109,7 +109,7 @@ def compute_network_parallel(
 
     if verbose: print(f"Executing simulation for all large network beginning with maximum order {overall_max}")
 
-    nts = 1440 # number fof timestep
+    nts = 216 # number fof timestep
     
     for ts in range (0,nts):
         #print(f'timestep: {ts}\n')
