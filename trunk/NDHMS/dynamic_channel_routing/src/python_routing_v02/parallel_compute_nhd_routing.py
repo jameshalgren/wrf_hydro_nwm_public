@@ -11,6 +11,7 @@ import multiprocessing
 connections = None
 networks = None
 flowdepthvel = None
+num_processes = None
 
 from sys import platform
 if platform == "linux" or platform == "linux2":
@@ -102,6 +103,7 @@ def compute_network_parallel(
 
     global connections
     global flowdepthvel 
+    global num_processes
 
     overall_max = -1
     for terminal_segment, network in large_networks.items():
@@ -111,21 +113,25 @@ def compute_network_parallel(
 
     nts = 216 # number fof timestep
     
-    for ts in range (0,nts):
-        #print(f'timestep: {ts}\n')
-
     #if 1 == 1:
-        ordered_reaches = {}
-        for terminal_segment, network in large_networks.items():
-            for head_segment, reach in network['reaches'].items():
-                if reach['seqorder'] not in ordered_reaches:
-                    ordered_reaches.update({reach['seqorder']:[]}) #TODO: Should this be a set/dictionary?
-                ordered_reaches[reach['seqorder']].append([head_segment
-                          , reach
-                          , supernetwork_data
-                          , verbose
-                          , debuglevel])
-        with multiprocessing.Pool() as netpool:
+    ordered_reaches = {}
+    for terminal_segment, network in large_networks.items():
+        for head_segment, reach in network['reaches'].items():
+            if reach['seqorder'] not in ordered_reaches:
+                ordered_reaches.update({reach['seqorder']:[]}) #TODO: Should this be a set/dictionary?
+            ordered_reaches[reach['seqorder']].append([head_segment
+                      , reach
+                      , supernetwork_data
+                      , verbose
+                      , debuglevel])
+    
+    with multiprocessing.Pool() as netpool:
+
+        num_processes = netpool._processes
+
+        for ts in range (0,nts):
+            #print(f'timestep: {ts}\n')
+
             for x in range(overall_max,-1,-1):
                 nslist3 = ordered_reaches[x]
                 if verbose: print(f"Executing simulation for {len(nslist3)} large network reaches of order {x}")
@@ -376,6 +382,7 @@ def main():
     )
     if verbose: print(f'ordered reach computation complete for networks of order greater than {parallel_split}')
     if showtiming: print("... in %s seconds." % (time.time() - start_time))
+    if showtiming: print(f'... with {num_processes} cores')
 
     ##STEP 3b -- Small Networks
     if parallel_split >= 0: print(r'DO NOT RUN WITH `parallel_split` >= 0')
