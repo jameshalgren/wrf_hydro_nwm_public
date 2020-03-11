@@ -115,30 +115,39 @@ def compute_network_parallel(
     
     #if 1 == 1:
     ordered_reaches = {}
+    ordered_reaches.update({overall_max:[]})
+    #import pdb; pdb.set_trace()
     for terminal_segment, network in large_networks.items():
         for head_segment, reach in network['reaches'].items():
             if reach['seqorder'] not in ordered_reaches:
                 ordered_reaches.update({reach['seqorder']:[]}) #TODO: Should this be a set/dictionary?
-            ordered_reaches[reach['seqorder']].append([head_segment
-                      , reach
-                      , supernetwork_data
-                      , verbose
-                      , debuglevel])
+            if reach['upstream_reaches'] == {supernetwork_data['terminal_code']}:
+                print('headwater')
+                ordered_reaches[overall_max].append([head_segment
+                          , reach
+                          , supernetwork_data
+                          , verbose
+                          , debuglevel])
+            else:
+                ordered_reaches[reach['seqorder']].append([head_segment
+                          , reach
+                          , supernetwork_data
+                          , verbose
+                          , debuglevel])
+            #import pdb; pdb.set_trace()
+            #print(ordered_reaches)
     
     with multiprocessing.Pool() as netpool:
 
         num_processes = netpool._processes
-
         for ts in range (0,nts):
             #print(f'timestep: {ts}\n')
 
             for x in range(overall_max,-1,-1):
                 nslist3 = ordered_reaches[x]
-                if verbose: print(f"Executing simulation for {len(nslist3)} large network reaches of order {x}")
+                #print(f'Time: {ts} Execution Args for order {x}: {nslist3}')
+                if verbose: print(f"Time: {ts} Executing simulation for {len(nslist3)} large network reaches of order {x}")
                 results = netpool.starmap(compute_mc_reach_up2down, nslist3)
-
-    if verbose: print(f"\nExecuting simulation on network {terminal_segment} beginning with streams of order {network['maximum_reach_seqorder']}")
-
 
 
 # ### Psuedocode
@@ -319,11 +328,11 @@ def main():
 
     #TODO: Make these commandline args
     """##NHD Subset (Brazos/Lower Colorado)"""
-    # supernetwork = 'Brazos_LowerColorado_ge5'
+    supernetwork = 'Brazos_LowerColorado_ge5'
     """##NHD CONUS order 5 and greater"""
     # supernetwork = 'CONUS_ge5'
     """These are large -- be careful"""
-    supernetwork = 'Mainstems_CONUS'
+    # supernetwork = 'Mainstems_CONUS'
     # supernetwork = 'CONUS_FULL_RES_v20'
     # supernetwork = 'CONUS_Named_Streams' #create a subset of the full resolution by reading the GNIS field
     # supernetwork = 'CONUS_Named_combined' #process the Named streams through the Full-Res paths to join the many hanging reaches
@@ -368,6 +377,7 @@ def main():
     #STEP 3a -- Large Networks
     if showtiming: start_time = time.time()
     if verbose: print(f'executing computation on ordered reaches for networks of order greater than {parallel_split} ...')
+
     large_networks = {terminal_segment: network \
                       for terminal_segment, network in networks.items() \
                       if network['maximum_reach_seqorder'] > parallel_split}
@@ -376,8 +386,8 @@ def main():
         large_networks
         , supernetwork_data = supernetwork_data
         # , connections = connections
-        , verbose = False
-        # , verbose = verbose
+        # , verbose = False
+        , verbose = verbose
         , debuglevel = debuglevel
     )
     if verbose: print(f'ordered reach computation complete for networks of order greater than {parallel_split}')
