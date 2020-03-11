@@ -32,9 +32,9 @@ ENV_IS_CL = False
 if ENV_IS_CL: root = '/content/wrf_hydro_nwm_public/trunk/NDHMS/dynamic_channel_routing/'
 elif not ENV_IS_CL: 
     sys.setrecursionlimit(4000)
-    root = os.path.dirname(os.path.dirname(os.path.abspath('')))
-    sys.path.append(r'../python_framework')
-    fortran_source_dir = r'../fortran_routing/mc_pylink_v00/MC_singleCH_singleTS'
+    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    sys.path.append(os.path.join(root, r'src', r'python_framework'))
+    fortran_source_dir = os.path.join(root, r'src', r'fortran_routing', r'mc_pylink_v00', r'MC_singleCH_singleTS')
     sys.path.append(fortran_source_dir)
     try:
         import mc_sc_stime as mc
@@ -58,7 +58,6 @@ import nhd_network_utilities as nnu
 import nhd_reach_utilities as nru
 
 ## Muskingum Cunge
-import mc_sc_stime as mc
 import numpy as np
 
 def compute_network(

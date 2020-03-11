@@ -29,9 +29,9 @@ ENV_IS_CL = False
 if ENV_IS_CL: root = '/content/wrf_hydro_nwm_public/trunk/NDHMS/dynamic_channel_routing/'
 elif not ENV_IS_CL: 
     sys.setrecursionlimit(4000)
-    root = os.path.dirname(os.path.dirname(os.path.abspath('')))
-    sys.path.append(r'../python_framework')
-    fortran_source_dir = r'../fortran_routing/mc_pylink_v00/MC_singleCH_singleTS'
+    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    sys.path.append(os.path.join(root, r'src', r'python_framework'))
+    fortran_source_dir = os.path.join(root, r'src', r'fortran_routing', r'mc_pylink_v00', r'MC_singleCH_singleTS')
     sys.path.append(fortran_source_dir)
     try:
         import mc_sc_stime as mc
@@ -91,7 +91,7 @@ def compute_network(
                 compute_mc_reach_up2down(
                     head_segment = head_segment
                     , reach = reach
-                    , network = network
+                    #, network = network
                     #, connections = connections
                     , supernetwork_data = supernetwork_data
                     , ts = ts
@@ -279,9 +279,9 @@ def main():
     """##NHD Subset (Brazos/Lower Colorado)"""
     # supernetwork = 'Brazos_LowerColorado_ge5'
     """##NHD CONUS order 5 and greater"""
-    supernetwork = 'CONUS_ge5'
+    # supernetwork = 'CONUS_ge5'
     """These are large -- be careful"""
-    # supernetwork = 'Mainstems_CONUS'
+    supernetwork = 'Mainstems_CONUS'
     # supernetwork = 'CONUS_FULL_RES_v20'
     # supernetwork = 'CONUS_Named_Streams' #create a subset of the full resolution by reading the GNIS field
     # supernetwork = 'CONUS_Named_combined' #process the Named streams through the Full-Res paths to join the many hanging reaches
