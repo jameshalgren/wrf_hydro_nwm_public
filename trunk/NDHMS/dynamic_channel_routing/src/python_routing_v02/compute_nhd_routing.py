@@ -100,18 +100,21 @@ def compute_network(
             for head_segment, reach in ordered_reaches[x]:
                 #print(f'{{{head_segment}}}:{reach}')          
                 
-                compute_mc_reach_up2down(
-                    head_segment = head_segment
-                    , reach = reach
-                    #, network = network
-                    #, connections = connections
-                    , supernetwork_data = supernetwork_data
-                    , ts = ts
-                    , verbose = verbose
-                    , debuglevel = debuglevel
-                )
-                #print(f'timestep: {ts} {flowdepthvel}')          
-                #print(f'{head_segment} {flowdepthvel[head_segment]}')          
+                #TODO: Add a flag here to switch between methods
+                compute_method = 'byreach' # Other options: 'bysegment'
+                if compute_method == 'byreach':
+                    compute_mc_reach_up2down(
+                        head_segment = head_segment
+                        , reach = reach
+                        #, network = network
+                        #, connections = connections
+                        , supernetwork_data = supernetwork_data
+                        , ts = ts
+                        , verbose = verbose
+                        , debuglevel = debuglevel
+                    )
+                    #print(f'timestep: {ts} {flowdepthvel}')          
+                    #print(f'{head_segment} {flowdepthvel[head_segment]}')          
 
 
 # ### Psuedocode
@@ -337,11 +340,11 @@ def main():
 
     #TODO: Make these commandline args
     """##NHD Subset (Brazos/Lower Colorado)"""
-    # supernetwork = 'Brazos_LowerColorado_ge5'
+    supernetwork = 'Brazos_LowerColorado_ge5'
     """##NHD CONUS order 5 and greater"""
     # supernetwork = 'CONUS_ge5'
     """These are large -- be careful"""
-    supernetwork = 'Mainstems_CONUS'
+    # supernetwork = 'Mainstems_CONUS'
     # supernetwork = 'CONUS_FULL_RES_v20'
     # supernetwork = 'CONUS_Named_Streams' #create a subset of the full resolution by reading the GNIS field
     # supernetwork = 'CONUS_Named_combined' #process the Named streams through the Full-Res paths to join the many hanging reaches
