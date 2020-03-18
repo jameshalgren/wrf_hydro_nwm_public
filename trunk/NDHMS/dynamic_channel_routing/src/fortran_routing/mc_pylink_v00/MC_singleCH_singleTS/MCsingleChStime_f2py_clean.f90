@@ -13,45 +13,45 @@ contains
         j= linkID !* current link ID
         !do k=1, ntim
             do i= 1, ncomp  !* i node (=segment) of a given link(=reach) j
-                if (k==1) then
-                !* this initialization occurs in NWM regardless of the existence upstream flow inputs
-                    qup= 0.0
-                    quc= 0.0
-                    qdp= 0.0
-                    vel=0.0
-                    depth=-999
-                else
-                    if (i>1) then
+                !if (k==1) then
+                !!* this initialization occurs in NWM regardless of the existence upstream flow inputs
+                !    qup= 0.0
+                !    quc= 0.0
+                !    qdp= 0.0
+                !    vel=0.0
+                !    depth=-999
+                !else
+                !if (i>1) then
                     !* take flow information from an upstream node of the same link(=reach)
-                        qup=Qd(1,i-1,j)     !*=Qd(k-1,i-1,j)
-                        quc=Qd(1,i-1,j)     !*=Qd(k-1,i-1,j)
-                        qdp=Qd(1,i,j)       !*=Qd(k-1,i,j)
-                    elseif ((uslinkID.ge.0).and.(i.eq.1)) then
-                    !* At the first node of the current link j, when upstream link(=reach) is available,
-                    !* take flow information from the last node of the upstream link
-                    !ncomp0=nx1(uslinkID) ** provided directly from Python
-                        !* ncomp0: the last node ID of a link upstream of link j
-                        qup=Qd(1,ncomp0,uslinkID)     !*= Qd(k-1,ncomp0,uslinkID)
-                        quc=Qd(1,ncomp0,uslinkID)     !*= Qd(k-1,ncomp0,uslinkID)
-                        qdp=Qd(1,i,j)                 !*= Qd(k-1,i,j)
-                    elseif ((uslinkID.lt.0).and.(i.eq.1)) then
-                    !* At the first node of the current link j, when upstream link(=reach)
-                    !* is not available (when uslinkID<0), takes the following approach.
-                        qup=0.0
-                        quc=0.0
-                        qdp=Qd(1,i,j)     !*= Qd(k-1,i,j)
-                    end if
+                    qup=qd(1,i,j)     !*=qd(k-1,i-1,j)
+                    quc=qd(1,i,j)     !*=qd(k-1,i-1,j)
+                    qdp=qd(1,i,j)       !*=qd(k-1,i,j)
+                !elseif ((uslinkID.gt.0).and.(i.eq.1)) then
+                !    !* At the first node of the current link j, when upstream link(=reach) is available,
+                !    !* take flow information from the last node of the upstream link
+                !    !ncomp0=nx1(uslinkID) ** provided directly from Python
+                !    !* ncomp0: the last node ID of a link upstream of link j
+                !    qup=qd(1,i,uslinkID)     !*= qd(k-1,ncomp0,uslinkID)
+                !    quc=qd(1,i,uslinkID)     !*= qd(k-1,ncomp0,uslinkID)
+                !    qdp=qd(1,i,j)                 !*= qd(k-1,i,j)
+                ! elseif ((uslinkID.lt.0).and.(i.eq.1)) then
+                !    !* At the first node of the current link j, when upstream link(=reach)
+                !    !* is not available (when uslinkID<0), takes the following approach.
+                !        qup=0.0
+                !        quc=0.0
+                !        qdp=qd(1,i,j)     !*= qd(k-1,i,j)
+                !end if
                 !*for k>1
-                    qdc=0.0
-                    vel=vela(1,i)         !*=vela(k-1,i)
-                    depth=deptha(1,i)     !*=deptha(k-1,i)
-                end if
+                qdc=0.0
+                vel=vela(1,i)         !*=vela(k-1,i)
+                depth=deptha(1,i)     !*=deptha(k-1,i)
+                !end if
 
                 ql=qlat(i)        !*=qlat(k,i)
 
-                call mcNWM()
+                call mcNWM(i)
 
-                Qd(2,i,j)= qdc      !*= Qd(k,i,j)= qdc
+                qd(2,i,j)= qdc      !*= qd(k,i,j)= qdc
                 vela(2,i)= vel      !*=vela(k,i)= vel
                 deptha(2,i)= depth  !*=deptha(k,i)= depth
             enddo   !* do i= 1, ncomp
@@ -63,7 +63,9 @@ contains
     !*                  NEXT SUBROUTINE                    *!
     !*                                                     *!
     !**---------------------------------------------------**!
-    subroutine mcNWM
+    subroutine mcNWM(iseg)
+    !TODO Return this subroutine to a single segment format and test performance
+ 
     !subroutine muskingcungeNWM(Q_d_vel,qdc0,depth0,vel0,idx0,qup0,quc0,qdp0,ql0,dt0,So0,dx0,n0,Cs0,Bw0,Tw0,TwCC0,nCC0)
         !* exactly follows SUBMUSKINGCUNGE in NWM:
         !* 1) qup and quc for a reach in upstream limit take zero values all the time
@@ -74,9 +76,11 @@ contains
 
         implicit none
 
+        integer, intent(in) :: iseg  !, refQj_0
         integer :: iter
         integer :: maxiter, tries
         real :: mindepth, aerror, rerror
+        !real :: dx, bw, tw, twcc, ncc, cs, so, n
         real :: R, Twl, h_1 , h, h_0, Qj, Qj_0
 
         !* parameters of Secant method
@@ -87,21 +91,21 @@ contains
         rerror = 1.0
         tries = 0
 
-        if(Cs .eq. 0.00000000) then
+        if(cs(iseg) .eq. 0.00000000) then
             z = 1.0
         else
-            z = 1.0/Cs          !channel side distance (m)
+            z = 1.0/cs(iseg)          !channel side distance (m)
         endif
 
-        if(Bw .gt. Tw) then   !effectively infinite deep bankful
-            bfd = Bw/0.00001
-        elseif (Bw .eq. Tw) then
-            bfd =  Bw/(2.0*z)  !bankfull depth is effectively
+        if(bw(iseg) .gt. tw(iseg)) then   !effectively infinite deep bankful
+            bfd = bw(iseg)/0.00001
+        elseif (bw(iseg) .eq. tw(iseg)) then
+            bfd =  bw(iseg)/(2.0*z)  !bankfull depth is effectively
         else
-            bfd =  (Tw - Bw)/(2.0*z)  !bankfull depth (m)
+            bfd =  (tw(iseg) - bw(iseg))/(2.0*z)  !bankfull depth (m)
         endif
 
-        if (n .le. 0.0 .or. So .le. 0.0 .or. z .le. 0.0 .or. Bw .le. 0.0) then
+        if (n(iseg) .le. 0.0 .or. so(iseg) .le. 0.0 .or. z .le. 0.0 .or. bw(iseg) .le. 0.0) then
             !print*, "Error in channel coefficients -> Muskingum cunge", n, So, z, Bw
             !call hydro_stop("In MUSKINGCUNGE() - Error in channel coefficients")
         end if
@@ -119,9 +123,9 @@ contains
 
             do while (rerror .gt. 0.01 .and. aerror .ge. mindepth .and. iter .le. maxiter)
 
-                call secant_h0(h_0, Qj_0)
+                call secant_h0(h_0, iseg, Qj_0)
 
-                call secant_h(h, Qj)
+                call secant_h(h, iseg, Qj)
 
                 if(Qj_0-Qj .ne. 0.0) then
                     h_1 = h - ((Qj * (h_0 - h))/(Qj_0 - Qj)) !update h, 3rd estimate
@@ -185,9 +189,9 @@ contains
                 qdc =  ((C1*qup)+(C2*quc)+(C3*qdp) + C4) !-- pg 295 Bedient huber
             endif
 
-            Twl = Bw + (2.0*z*h)
-            R = (h*(Bw + Twl) / 2.0) / (Bw + 2.0*(((Twl - Bw) / 2.0)**2.0 + h**2)**0.5)
-            vel =  (1./n) * (R **(2.0/3.0)) * sqrt(So)  !*average velocity in m/s
+            Twl = bw(iseg) + (2.0*z*h)
+            R = (h*(bw(iseg) + Twl) / 2.0) / (bw(iseg)+ 2.0*(((Twl - bw(iseg)) / 2.0)**2.0 + h**2)**0.5)
+            vel =  (1./n(iseg)) * (R **(2.0/3.0)) * sqrt(so(iseg))  !*average velocity in m/s
             depth = h
         else   !*no flow to route
             qdc = 0.0
@@ -200,28 +204,28 @@ contains
     !*                  NEXT SUBROUTINE                    *!
     !*                                                     *!
     !**---------------------------------------------------**!
-    subroutine secant_h0(h_0, Qj_0)
-
+    subroutine secant_h0(h_0, iseg, Qj_0)
         implicit none
 
+        integer, intent(in) :: iseg  !, refQj_0
         real, intent(in) :: h_0  !, refQj_0
         real, intent(out) :: Qj_0
         real :: Twl, AREA, WP, R, Ck, Km, X, D
 
         !**top surface water width of the channel inflow
-        Twl = Bw + 2.0*z*h_0
+        Twl = bw(iseg) + 2.0*z*h_0
 
         !**hydraulic radius, R
         if(h_0 .gt. bfd) then !**water outside of defined channel
-            AREA =  (Bw + bfd * z) * bfd
-            AREAC = (TwCC * (h_0 -bfd)) !**assume compound component is rect. chan, that's 3 times the Tw
-            WP = (Bw + 2.0 * bfd * sqrt(1.0 + z*z))
-            WPC = TwCC + (2.0 * (h_0-bfd)) !**WPC is 2 times the Tw
+            AREA =  (bw(iseg) + bfd * z) * bfd
+            AREAC = (twcc(iseg) * (h_0 -bfd)) !**assume compound component is rect. chan, that's 3 times the Tw
+            WP = (bw(iseg) + 2.0 * bfd * sqrt(1.0 + z*z))
+            WPC = twcc(iseg) + (2.0 * (h_0-bfd)) !**WPC is 2 times the Tw
             R   = (AREA + AREAC)/(WP +WPC)  !**hydraulic radius
             !print *, "warning: compound channel activated", h_0, bfd
         else
-            AREA = (Bw + h_0 * z ) * h_0
-            WP = (Bw + 2.0 * h_0 * sqrt(1.0 + z*z))
+            AREA = (bw(iseg) + h_0 * z ) * h_0
+            WP = (bw(iseg) + 2.0 * h_0 * sqrt(1.0 + z*z))
             WPC = 0.0
             if(WP .gt. 0.0) then
                 R = AREA/ WP
@@ -234,13 +238,13 @@ contains
         if(h_0 .gt. bfd) then
         !*water outside of defined channel weight the celerity by the contributing area, and
         !*assume that the mannings of the spills is 2x the manning of the channel
-            Ck = max(0.0,((sqrt(So)/n)*((5./3.)*R**(2./3.) - &
-                ((2./3.)*R**(5./3.)*(2.0*sqrt(1.0 + z*z)/(Bw+2.0*bfd*z))))*AREA &
-                + ((sqrt(So)/(nCC))*(5./3.)*(h_0-bfd)**(2./3.))*AREAC)/(AREA+AREAC))
+            Ck = max(0.0,((sqrt(so(iseg))/n(iseg))*((5./3.)*R**(2./3.) - &
+                ((2./3.)*R**(5./3.)*(2.0*sqrt(1.0 + z*z)/(bw(iseg)+2.0*bfd*z))))*AREA &
+                + ((sqrt(so(iseg))/(ncc(iseg)))*(5./3.)*(h_0-bfd)**(2./3.))*AREAC)/(AREA+AREAC))
         else
             if(h_0 .gt. 0.0) then
-                Ck = max(0.0,(sqrt(So)/n)*((5./3.)*R**(2./3.) - &
-                    ((2./3.)*R**(5./3.)*(2.0*sqrt(1.0 + z*z)/(Bw+2.0*h_0*z)))))
+                Ck = max(0.0,(sqrt(so(iseg))/n(iseg))*((5./3.)*R**(2./3.) - &
+                    ((2./3.)*R**(5./3.)*(2.0*sqrt(1.0 + z*z)/(bw(iseg)+2.0*h_0*z)))))
             else
                 Ck = 0.0
             endif
@@ -248,18 +252,18 @@ contains
 
         !**MC parameter, K
         if(Ck .gt. 0.000000) then
-            Km = max(dt,dx/Ck)
+            Km = max(dt,dx(iseg)/Ck)
         else
             Km = dt
         endif
 
         !**MC parameter, X
         if(h_0 .gt. bfd) then !water outside of defined channel
-            X = min(0.5,max(0.0,0.5*(1-(Qj_0/(2.0*TwCC*So*Ck*dx)))))
+            X = min(0.5,max(0.0,0.5*(1-(Qj_0/(2.0*twcc(iseg)*so(iseg)*Ck*dx(iseg))))))
             !X = min(0.5,max(0.0,0.5*(1-(refQj_0/(TwCC*So*Ck*dx)))))
         else
             if(Ck .gt. 0.0) then
-                X = min(0.5,max(0.0,0.5*(1-(Qj_0/(2.0*Twl*So*Ck*dx)))))
+                X = min(0.5,max(0.0,0.5*(1-(Qj_0/(2.0*Twl*so(iseg)*Ck*dx(iseg))))))
                 !X = min(0.5,max(0.0,0.5*(1-(refQj_0/(Twl*So*Ck*dx)))))
             else
                 X = 0.5
@@ -279,8 +283,8 @@ contains
         C4 =  (ql*dt)/D
 
         if((WP+WPC) .gt. 0.0) then  !avoid divide by zero
-            Qj_0 =  ((C1*qup)+(C2*quc)+(C3*qdp) + C4) - ((1/(((WP*n)+(WPC*nCC))/(WP+WPC))) * &
-                    (AREA+AREAC) * (R**(2./3.)) * sqrt(So)) !f0(x)
+            Qj_0 =  ((C1*qup)+(C2*quc)+(C3*qdp) + C4) - ((1/(((WP*n(iseg))+(WPC*ncc(iseg)))/(WP+WPC))) * &
+                    (AREA+AREAC) * (R**(2./3.)) * sqrt(so(iseg))) !f0(x)
         endif
 
     end subroutine secant_h0
@@ -289,27 +293,29 @@ contains
     !*                  NEXT SUBROUTINE                    *!
     !*                                                     *!
     !**---------------------------------------------------**!
-    subroutine secant_h(h, Qj)
+    subroutine secant_h(h, iseg, Qj)
 
         implicit none
+
+        integer, intent(in) :: iseg  !, refQj_0
 
         real,intent(in) :: h
         real,intent(out) :: Qj
         real :: Twl, AREA, WP, R, Ck, Km, X, D
 
         !--upper interval -----------
-        Twl = Bw + 2.0*z*h  !--top width of the channel inflow
+        Twl = bw(iseg) + 2.0*z*h  !--top width of the channel inflow
 
         if(h .gt. bfd) then !water outside of defined channel
-            AREA =  (Bw + bfd * z) * bfd
-            AREAC = (TwCC * (h-bfd)) !assume compound component is rect. chan, that's 3 times the Tw
-            WP = (Bw + 2.0 * bfd * sqrt(1.0 + z*z))
-            WPC = TwCC + (2.0*(h-bfd)) !the additional wetted perimeter
+            AREA =  (bw(iseg) + bfd * z) * bfd
+            AREAC = (twcc(iseg) * (h-bfd)) !assume compound component is rect. chan, that's 3 times the Tw
+            WP = (bw(iseg) + 2.0 * bfd * sqrt(1.0 + z*z))
+            WPC = twcc(iseg) + (2.0*(h-bfd)) !the additional wetted perimeter
             R   = (AREA + AREAC)/(WP +WPC)
             !print *, "warning: compound channel activated", h, bfd
         else
-            AREA = (Bw + h * z ) * h
-            WP = (Bw + 2.0 * h * sqrt(1.000000 + z*z))
+            AREA = (bw(iseg) + h * z ) * h
+            WP = (Bw (iseg)+ 2.0 * h * sqrt(1.000000 + z*z))
             WPC = 0.0
             if(WP .gt. 0.0) then
                 R = AREA/WP
@@ -319,29 +325,29 @@ contains
         endif
 
         if(h .gt. bfd) then !water outside of defined channel, assumed rectangular, 3x TW and n = 3x
-            Ck = max(0.0,((sqrt(So)/n)*((5./3.)*R**(2./3.) - &
-                ((2./3.)*R**(5./3.)*(2.0*sqrt(1.0 + z*z)/(Bw + 2.0*bfd*z))))*AREA &
-                + ((sqrt(So)/(nCC))*(5./3.)*(h-bfd)**(2./3.))*AREAC)/(AREA+AREAC))
+            Ck = max(0.0,((sqrt(so(iseg))/n(iseg))*((5./3.)*R**(2./3.) &
+                 - ((2./3.)*R**(5./3.)*(2.0*sqrt(1.0 + z*z)/(bw(iseg) + 2.0*bfd*z))))*AREA &
+                 + ((sqrt(so(iseg))/(ncc(iseg)))*(5./3.)*(h-bfd)**(2./3.))*AREAC)/(AREA+AREAC))
         else
             if(h .gt. 0.0) then !avoid divide by zero
-                Ck = max(0.0,(sqrt(So)/n)*((5./3.)*R**(2./3.) - &
-                    ((2./3.)*R**(5./3.)*(2.0 * sqrt(1.0 + z*z)/(Bw + 2.0*h*z)))))
+                Ck = max(0.0,(sqrt(so(iseg))/n(iseg))*((5./3.)*R**(2./3.) &
+                     - ((2./3.)*R**(5./3.)*(2.0 * sqrt(1.0 + z*z)/(bw(iseg)+ 2.0*h*z)))))
             else
                 Ck = 0.0
             endif
         endif
 
         if(Ck .gt. 0.0) then
-            Km = max(dt,dx/Ck)
+            Km = max(dt,dx(iseg)/Ck)
         else
             Km = dt
         endif
 
         if(h .gt. bfd) then !water outside of defined channel
-            X = min(0.5,max(0.25,0.5*(1-(((C1*qup)+(C2*quc)+(C3*qdp) + C4)/(2*TwCC*So*Ck*dx)))))
+            X = min(0.5,max(0.25,0.5*(1-(((C1*qup)+(C2*quc)+(C3*qdp) + C4)/(2*twcc(iseg)*so(iseg)*Ck*dx(iseg))))))
         else
             if(Ck .gt. 0.0) then
-                X = min(0.5,max(0.25,0.5*(1-(((C1*qup)+(C2*quc)+(C3*qdp) + C4)/(2*Twl*So*Ck*dx)))))
+                X = min(0.5,max(0.25,0.5*(1-(((C1*qup)+(C2*quc)+(C3*qdp) + C4)/(2*Twl*so(iseg)*Ck*dx(iseg))))))
             else
                 X = 0.5
             endif
@@ -364,8 +370,8 @@ contains
         endif
 
         if((WP+WPC) .gt. 0.0) then
-            Qj =  ((C1*qup)+(C2*quc)+(C3*qdp) + C4) - ((1.0000000/(((WP*n)+(WPC*nCC))/(WP+WPC))) * &
-                    (AREA+AREAC) * (R**(2./3.)) * sqrt(So)) !f(x)
+            Qj =  ((C1*qup)+(C2*quc)+(C3*qdp) + C4) - ((1.0000000/(((WP*n(iseg))+(WPC*ncc(iseg)))/(WP+WPC))) * &
+                    (AREA+AREAC) * (R**(2./3.)) * sqrt(so(iseg))) !f(x)
         endif
 
     end subroutine secant_h
