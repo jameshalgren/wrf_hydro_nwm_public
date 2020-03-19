@@ -33,8 +33,8 @@ elif not ENV_IS_CL:
     sys.path.append(os.path.join(root, r'src', r'python_framework'))
     fortran_source_dir = os.path.join(root, r'src', r'fortran_routing', r'mc_pylink_v00', r'MC_singleCH_singleTS')
     sys.path.append(fortran_source_dir)
-    # from mc_singleCh_SingleTStep import compute_mc_reach_up2down
-    import mc_sc_stime as mc
+    from mc_singleCh_SingleTStep import compute_mc_reach_up2down
+    # import mc_sc_stime as mc
 
 '''remove the following 
     try:
@@ -103,11 +103,31 @@ def compute_network(
                 #TODO: Add a flag here to switch between methods
                 compute_method = 'byreach' # Other options: 'bysegment'
                 if compute_method == 'byreach':
+                    # upstream flow per reach
+                    qup_tmp = 0
+                    #import pdb; pdb.set_trace()
+                    if reach['upstream_reaches'] == {supernetwork_data['terminal_code']}: # Headwaters
+                        qup_tmp = 0.0  # no flows
+                        # mc.var.uslinkid=0  # no upstream links  ##THIS INITIALIZATION NO LONGER NEEDED
+                    else: # Loop over upstream reaches
+                        #for us in reach['upstream_reaches']:
+                        for us in connections[reach['reach_head']]['upstreams']:
+                            #if us == 5507050 :
+                            #    import pdb; pdb.set_trace()
+                            #qup_tmp += flowdepthvel[network['reaches'][us]['reach_tail']]['flow']['curr']
+                            qup_tmp += flowdepthvel[us]['flow']['curr']
+                    reach_flowdepthvel = {seg:{'flow':{'prev':0, 'curr':0}
+                                , 'depth':{'prev':-999, 'curr':0}
+                                , 'vel':{'prev':0, 'curr':0}
+                                , 'qlat':{'prev':0, 'curr':0}} for seg in reach['segments']} 
+                    
                     compute_mc_reach_up2down(
                         head_segment = head_segment
                         , reach = reach
                         #, network = network
-                        #, connections = connections
+                        , reach_connections = connections
+                        , reach_flowdepthvel = reach_flowdepthvel
+                        , upstream_inflow = qup_tmp
                         , supernetwork_data = supernetwork_data
                         , ts = ts
                         , verbose = verbose
@@ -152,7 +172,7 @@ def compute_junction_downstream():
     pass
 
 #TODO: generalize with a direction flag
-def compute_mc_reach_up2down(
+def __USE_MODULAR_FUNCTION_INSTEAD_OF_THIS_ONE__compute_mc_reach_up2down(
         head_segment = None
         , reach = None
         #, connections = None
