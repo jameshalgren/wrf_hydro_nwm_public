@@ -56,7 +56,7 @@ def compute_network(
     global connections
     global flowdepthvel 
 
-    if verbose: print(f"\nExecuting simulation on network {terminal_segment} beginning with streams of order {network['maximum_reach_seqorder']}")
+    if verbose: print(f"Executing simulation on network {terminal_segment} beginning with streams of order {network['maximum_reach_seqorder']}")
 
     ordered_reaches = {}
     reach_flowdepthvel = {}
@@ -66,9 +66,9 @@ def compute_network(
         ordered_reaches[reach['seqorder']].append([head_segment
                   , reach
                   ])
-        reach_flowdepthvel.update({head_segment:{}})
 
         #initialize flowdepthvel dict
+        reach_flowdepthvel.update({head_segment:{}})
         reach_flowdepthvel[head_segment].update(
             {seg:{'flow':{'prev':0, 'curr':0}
                 , 'depth':{'prev':-999, 'curr':0}
@@ -211,39 +211,44 @@ def main():
 
     #STEP 3
     if showtiming: start_time = time.time()
-    if verbose: print('executing computation on ordered reaches ...')
+    executiontype = 'serial' # 'parallel'
+
+    if verbose: print('executing serial computation on ordered reaches ...')
     connections = supernetwork_values[0]
 
-    #initialize flowdepthvel dict
     number_of_time_steps = 50 # one timestep
     #nts = 1440 # number fof timestep = 1140 * 60(model timestep) = 86400 = day
     
+    #initialize flowdepthvel dict
     flowdepthvel = {connection:{'flow':np.zeros(number_of_time_steps + 1)
                                 , 'depth':np.zeros(number_of_time_steps + 1)
                                 , 'vel':np.zeros(number_of_time_steps + 1)
                                 , 'qlat':np.zeros(number_of_time_steps + 1)}
                        for connection in connections
                    } 
-    
+
     # from itertools import islice
     # def take(iterable, n):
     #     return list(islice(iterable, n))
     # import pdb; pdb.set_trace()
 
-    for terminal_segment, network in networks.items():
-        if showtiming: network_start_time = time.time()
-        compute_network(
-            terminal_segment = terminal_segment
-            , network = network
-            , supernetwork_data = supernetwork_data
-            , nts = number_of_time_steps
-            # , connections = connections
-            , verbose = False
-            # , verbose = verbose
-            , debuglevel = debuglevel
-        )
-        if verbose: print(f'{terminal_segment} completed')
-        if showtiming: print("... in %s seconds." % (time.time() - network_start_time))
+    if executiontype == 'serial':
+
+        for terminal_segment, network in networks.items():
+            if showtiming: network_start_time = time.time()
+            compute_network(
+                terminal_segment = terminal_segment
+                , network = network
+                , supernetwork_data = supernetwork_data
+                , nts = number_of_time_steps
+                # , connections = connections
+                , verbose = False
+                # , verbose = verbose
+                , debuglevel = debuglevel
+            )
+
+            if verbose: print(f'{terminal_segment} completed')
+            if showtiming: print("... in %s seconds." % (time.time() - network_start_time))
         
     if verbose: print('ordered reach computation complete')
     if showtiming: print("... in %s seconds." % (time.time() - start_time))
