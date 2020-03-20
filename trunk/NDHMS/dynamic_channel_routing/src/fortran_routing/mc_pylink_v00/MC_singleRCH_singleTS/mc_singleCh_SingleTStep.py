@@ -164,4 +164,13 @@ def compute_mc_reach_up2down(
     #end loop collect MC output 
     return reach_flowdepthvel
 
+def main():
+    pass
+#TODO: PUT 4 link test Implemenation Here
+'''
+Call Musk Cunge with test parameters. 
+When importing, call with parameters from NHD network
+'''
 
+if __name__ == '__main__':
+    main()
