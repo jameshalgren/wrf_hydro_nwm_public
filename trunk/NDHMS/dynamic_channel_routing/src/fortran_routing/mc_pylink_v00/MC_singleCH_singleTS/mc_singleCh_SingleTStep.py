@@ -34,15 +34,10 @@ def compute_mc_reach_up2down(
         , debuglevel = 0
         ):
 
-    #global connections
-    #global flowdepthvel
-    # global network
-    
     if verbose: print(f"\nreach: {head_segment} (order: {reach['seqorder']} n_segs: {len(reach['segments'])})")
     
-    filename = f'./logs/{head_segment}_{ts}.log'
-    file = open(filename, 'w+') 
-    
+    # filename = f'./logs/{head_segment}_{ts}.log'
+    # file = open(filename, 'w+') 
     
     ntim=2;       #the number of time steps necessary for variables passed to mc module to compute successfully
     nlinks=2;     #the number of links needed to define varialbe qd. ** nlinks is not used in fortran source code.
@@ -68,21 +63,6 @@ def compute_mc_reach_up2down(
     mc.var.n =np.zeros((ncomp))
     
     
-    # # upstream flow per reach passed as argument to this function
-    # upstream_inflow = 0
-    # #import pdb; pdb.set_trace()
-    # if reach['upstream_reaches'] == {supernetwork_data['terminal_code']}: # Headwaters
-    #     qup_tmp = 0.0  # no flows
-    #     mc.var.uslinkid=0  # no upstream links  
-    # else: # Loop over upstream reaches
-    #     #for us in reach['upstream_reaches']:
-    #     for us in reach_connections[reach['reach_head']]['upstreams']:
-    #         #if us == 5507050 :
-    #         #    import pdb; pdb.set_trace()
-    #         #qup_tmp += reach_flowdepthvel[network['reaches'][us]['reach_tail']]['flow']['curr']
-    #         qup_tmp += reach_flowdepthvel[us]['flow']['curr']
-    # #reach_flowdepthvel[reach['reach_head']]['flow']['curr'] = qup_tmp
-    # #print(qup_tmp)
     mc.var.qd[0,0,0]= upstream_inflow
             
     current_segment = reach['reach_head']
@@ -93,7 +73,6 @@ def compute_mc_reach_up2down(
     # writetoFile(file, writeString)
 
     next_segment = reach_connections[current_segment]['downstream'] 
-    #print(f'{current_segment}==>{next_segment} conections:{ncomp} timestep:{ts}')
     i = 0
     #input flow to upstream reach of current reach     
     while True:
@@ -126,14 +105,6 @@ def compute_mc_reach_up2down(
         cs = mc.var.cs[i]
         so = mc.var.so[i]
         
-        # add some flow
-        reach_flowdepthvel[current_segment]['qlat']['curr'] = (ts+1)*10.0      # lateral flow per segment 
-                      
-        reach_flowdepthvel[current_segment]['flow']['prev'] = reach_flowdepthvel[current_segment]['flow']['curr']
-        reach_flowdepthvel[current_segment]['depth']['prev'] = reach_flowdepthvel[current_segment]['depth']['curr']
-        reach_flowdepthvel[current_segment]['vel']['prev'] = reach_flowdepthvel[current_segment]['vel']['curr']
-        reach_flowdepthvel[current_segment]['qlat']['prev'] = reach_flowdepthvel[current_segment]['qlat']['curr']
-
         #print (f'counter = {i}')
         #if current_segment == 5559368 or i == 100:
         #    import pdb; pdb.set_trace()
@@ -184,9 +155,6 @@ def compute_mc_reach_up2down(
         # writetoFile(file, writeString)
         i += 1
         
-        #print(f'timestep: {ts} {reach_flowdepthvel[current_segment]}')
-        #import pdb; pdb.set_trace()
-            
         if current_segment == reach['reach_tail']:
             if verbose: print(f'{current_segment} (tail)')
             break
@@ -194,5 +162,6 @@ def compute_mc_reach_up2down(
         current_segment = next_segment
         next_segment = reach_connections[current_segment]['downstream'] 
     #end loop collect MC output 
+    return reach_flowdepthvel
 
 
