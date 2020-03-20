@@ -31,7 +31,7 @@ elif not ENV_IS_CL:
     sys.setrecursionlimit(4000)
     root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     sys.path.append(os.path.join(root, r'src', r'python_framework'))
-    fortran_source_dir = os.path.join(root, r'src', r'fortran_routing', r'mc_pylink_v00', r'MC_singleCH_singleTS')
+    fortran_source_dir = os.path.join(root, r'src', r'fortran_routing', r'mc_pylink_v00', r'MC_singleRCH_singleTS')
     sys.path.append(fortran_source_dir)
     from mc_singleCh_SingleTStep import compute_mc_reach_up2down
     # import mc_sc_stime as mc
@@ -231,6 +231,7 @@ def main():
     # import pdb; pdb.set_trace()
 
     for terminal_segment, network in networks.items():
+        if showtiming: network_start_time = time.time()
         compute_network(
             terminal_segment = terminal_segment
             , network = network
@@ -241,8 +242,8 @@ def main():
             # , verbose = verbose
             , debuglevel = debuglevel
         )
-        print(f'{terminal_segment}')
-        if showtiming: print("... in %s seconds." % (time.time() - start_time))
+        if verbose: print(f'{terminal_segment} completed')
+        if showtiming: print("... in %s seconds." % (time.time() - network_start_time))
         
     if verbose: print('ordered reach computation complete')
     if showtiming: print("... in %s seconds." % (time.time() - start_time))
