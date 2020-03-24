@@ -31,7 +31,9 @@ contains
         end if
         qdc=0.0
         vel=vela(1,iseg) !* 1 indicates one previous time step
+        velp_chk = vel
         depth=deptha(1,iseg)
+        depthp_chk = depth
 
         call mcNWM()
 
