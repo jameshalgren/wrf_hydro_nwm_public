@@ -232,6 +232,28 @@ def set_supernetwork_data(
             , 'layer_string' : 0
           }
 
+    elif supernetwork == 'Pocono_TEST1':
+        return {
+            'geo_file_path' : os.path.join(geo_input_folder
+                    , r'PoconoSampleRouteLink1.shp')
+            , 'key_col' : 18
+            , 'downstream_col' : 23
+            , 'length_col' : 5
+            , 'manningn_col' : 20
+            , 'manningnCC_col' : 21
+            , 'slope_col' : 10
+            , 'bottomwidth_col' : 2
+            , 'topwidth_col' : 11
+            , 'topwidthCC_col' : 12
+            , 'MusK_col' : 7
+            , 'MusX_col' : 8
+            , 'ChSlp_col' : 12
+            , 'terminal_code' : 0
+            , 'title_string' : 'Pocono Test Example'
+            , 'driver_string' : 'ESRI Shapefile'
+            , 'layer_string' : 0
+          }
+
     elif supernetwork == 'LowerColorado_CONCHOS_FULL_RES':
         return {
             'geo_file_path' : os.path.join(geo_input_folder

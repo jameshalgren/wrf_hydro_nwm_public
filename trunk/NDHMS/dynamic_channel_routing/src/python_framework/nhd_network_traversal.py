@@ -21,14 +21,15 @@ def main():
     # NOT IN GIT REPO # supernetworks.update({'Brazos_FULL_RES':{}}) 
     # NOT IN GIT REPO # supernetworks.update({'LowerColorado_FULL_RES':{}}) 
     # NOT IN GIT REPO # supernetworks.update({'LowerColorado_CONCHOS_FULL_RES':{}}) 
+    supernetworks.update({'Pocono_TEST1':{}})
     supernetworks.update({'Mainstems_CONUS':{}})
-    supernetworks.update({'CONUS_ge5':{}}) ##NHD CONUS order 5 and greater"""
+    # REMOVED FROM GIT REPO USE Mainstems Instead # supernetworks.update({'CONUS_ge5':{}}) ##NHD CONUS order 5 and greater"""
     supernetworks.update({'Brazos_LowerColorado_ge5':{}}) ##NHD Subset (Brazos/Lower Colorado)"""
     supernetworks.update({'CONUS_Named_Streams':{}})
-    # NOT IN GIT REPO # supernetworks.update({'CONUS_FULL_RES_v12':{}}) 
+    # # NOT IN GIT REPO # supernetworks.update({'CONUS_FULL_RES_v12':{}}) 
     supernetworks.update({'CONUS_FULL_RES_v20':{}}) # = False
 
-    debuglevel = -1
+    debuglevel = -3
     verbose = True
 
     for supernetwork in supernetworks:
