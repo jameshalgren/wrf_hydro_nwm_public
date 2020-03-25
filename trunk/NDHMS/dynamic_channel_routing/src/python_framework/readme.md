@@ -1,9 +1,9 @@
 
-###nhd_network_utilities Glossary of objects
+### nhd_network_utilities Glossary of objects
 and
-###nhd_reach_utilities Glossary of objects
+### nhd_reach_utilities Glossary of objects
 
-#####supernetwork_data
+##### supernetwork_data
 * Basic information about the dataset provided to create the network. 
 * This dataset is the Route-Link file for the National Water Model. 
 * The 'X_col' attributes in the dictionary indicate which columns of the dataset contain data needed for the routing computation. E.g., the `slope_col` is the column index for the table column with bed slope values. 
@@ -25,7 +25,7 @@ e.g.,
               , 'driver_string': 'ESRI Shapefile'
               , 'layer_string': 0}}
 ```
-#####supernetwork_values
+##### supernetwork_values
 the return from the `build_connections_object` function called by `do_connections`
 Returns
     #  connections, all_keys, ref_keys, headwater_keys \
@@ -34,7 +34,7 @@ Returns
     #     , visited_keys, visited_terminal_keys \
     #     , junction_count
 
-######connections
+###### connections
 Each connection is keyed with an nwm/nhd segment id and contains references to the downstream and upstream segments, the length, and the full data row from the original table. 
 {328271: {'downstream': 328275
            , 'length': 6685.0
