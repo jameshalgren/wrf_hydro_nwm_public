@@ -1,4 +1,3 @@
-import numpy as np
 debuglevel = 0
 COMPILE = True
 if COMPILE:
@@ -56,21 +55,21 @@ def singlesegment(
         
 def main ():
 
-    dt = 60.0
-    dx = 1800.0
-    bw = 112.0
-    tw = 448.0
-    twcc = 623.5999755859375
-    n_manning = 0.02800000086426735
-    n_manning_cc = 0.03136000037193298
-    cs = 1.399999976158142
-    s0 = 0.0017999999690800905
-    qlat = 40.0
-    qup = 0.04598825052380562
-    quc = 0.04598825052380562
-    qdp = 0.21487340331077576
-    velp = 0.070480190217494964
-    depthp = 0.010033470578491688
+    dt = 60.0 # Time step
+    dx = 1800.0 # segment length
+    bw = 112.0 # Trapezoidal bottom width
+    tw = 448.0 # Channel top width (at bankfull)
+    twcc = 623.5999755859375 # Flood plain width
+    n_manning = 0.02800000086426735 # manning roughness of channel
+    n_manning_cc = 0.03136000037193298 # manning roughness of floodplain
+    cs = 1.399999976158142 # channel trapezoidal sideslope
+    s0 = 0.0017999999690800905 # downstream segment bed slope
+    qlat = 40.0 # Lateral inflow in this time step
+    qup = 0.04598825052380562 # Flow from the upstream neighbor in the previous timestep
+    quc = 0.04598825052380562 # Flow from the upstream neighbor in the current timestep 
+    qdp = 0.21487340331077576 # Flow at the current segment in the previous timestep
+    velp = 0.070480190217494964 # Velocity in the current segment in the previous timestep NOT USED AS AN INPUT!!!
+    depthp = 0.010033470578491688 # Depth at the current segment in the previous timestep
 
     qdc_expected = 0.7570106983184814
     velc_expected = 0.12373604625463486
