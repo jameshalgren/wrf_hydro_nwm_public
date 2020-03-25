@@ -31,7 +31,7 @@ elif not ENV_IS_CL:
     sys.setrecursionlimit(4000)
     root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     sys.path.append(os.path.join(root, r'src', r'python_framework'))
-    fortran_source_dir = os.path.join(root, r'src', r'fortran_routing', r'mc_pylink_v00', r'MC_singleRCH_singleTS')
+    fortran_source_dir = os.path.join(root, r'src', r'fortran_routing', r'mc_pylink_v00', r'MC_singleRch_singleTS')
     sys.path.append(fortran_source_dir)
     from mc_singleCh_SingleTStep import compute_mc_reach_up2down
     # import mc_sc_stime as mc
