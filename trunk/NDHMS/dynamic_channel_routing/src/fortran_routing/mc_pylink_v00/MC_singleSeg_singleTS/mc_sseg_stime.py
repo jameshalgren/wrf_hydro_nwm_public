@@ -189,10 +189,12 @@ for k in range (0,nts):
                 mc.var.vela[0,ii]= 0.0
                 mc.var.deptha[0,ii]= -999.0
 
-        # call Fortran routines
+        # call Fortran routine
+        mc.mc.main()
+
         # print channel data
-        verbose = True
-        if verbose:
+        debuglevel = -2
+        if debuglevel <= -2:
             str = ''
             str = str + f' dt: {mc.var.dt}'
             str = str + f' dx: {mc.var.dx}'
@@ -203,13 +205,6 @@ for k in range (0,nts):
             str = str + f' ncc: {mc.var.ncc}'
             str = str + f' cs: {mc.var.cs}'
             str = str + f' so: {mc.var.so}'
-           
-            str = str + f' velp: {mc.var.vel}'
-            str = str + f' depthp: {mc.var.depth}'
-
-        mc.mc.main()
-
-        if verbose:
             str = str + f' ql: {mc.var.ql}'
             str = str + f' qup: {mc.var.qup}'
             str = str + f' quc: {mc.var.quc}'
