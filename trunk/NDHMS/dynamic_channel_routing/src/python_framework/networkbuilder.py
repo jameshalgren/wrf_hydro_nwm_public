@@ -26,7 +26,9 @@ def get_down_connections(
                         if row[key_col] in mask_set}
 
     if debuglevel <= -1: print(f'found {len(connections.keys())} segments')
-    if debuglevel <= -3: print(connections)
+    if debuglevel <= -3: 
+        if verbose: print(f"The complete 'connections' object is as follows:")
+        print(connections)
     if verbose: print('down_connections complete')
 
     return connections
