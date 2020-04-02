@@ -19,8 +19,6 @@ def recursive_junction_read (
             reach.update({'downstream_reach':connections[csegment]['downstream']})
             segmentset = set()
             segmentlist = [] # Ordered Segment List bottom to top
-            segmentset.add(csegment)
-            segmentlist.append(csegment) # Ordered Segment List to top
             usegments = connections[segment]['upstreams']
             while True: 
                 if usegments == {terminal_code}: # HEADWATERS
@@ -62,14 +60,14 @@ def recursive_junction_read (
                             , verbose = verbose
                             , debuglevel = debuglevel) 
                     break
+                network['total_segment_count'] += 1
                 if debuglevel <= -3: print(f"segs at csegment {csegment}: {network['total_segment_count']}")
                 # the terminal code will indicate a headwater
                 if debuglevel <= -4: print(usegments)
-                (csegment,) = usegments
-                usegments = connections[csegment]['upstreams']
-                network['total_segment_count'] += 1
                 segmentset.add(csegment)
                 segmentlist.append(csegment) # Ordered Segment List
+                (csegment,) = usegments
+                usegments = connections[csegment]['upstreams']
 
                 # print(usegments)
         #except:
