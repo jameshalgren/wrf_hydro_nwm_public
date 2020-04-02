@@ -93,8 +93,8 @@ def main ():
         , velp = velp
         , depthp = depthp
     )
-    print(qdc, velc, depthc)
-    print(qdc_expected, velc_expected, depthc_expected)
+    print('computed q: {} vel: {} depth: {}'.format(qdc, velc, depthc))
+    print('expected q: {} vel: {} depth: {}'.format(qdc_expected, velc_expected, depthc_expected))
             
 if __name__ == '__main__':
     main()
