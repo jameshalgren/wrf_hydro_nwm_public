@@ -240,11 +240,11 @@ def set_supernetwork_data(
             , 'downstream_col' : 23
             , 'length_col' : 5
             , 'manningn_col' : 20
-            , 'manningnCC_col' : 21
+            , 'manningncc_col' : 21
             , 'slope_col' : 10
             , 'bottomwidth_col' : 2
             , 'topwidth_col' : 11
-            , 'topwidthCC_col' : 12
+            , 'topwidthcc_col' : 12
             , 'MusK_col' : 7
             , 'MusX_col' : 8
             , 'ChSlp_col' : 12
@@ -335,8 +335,11 @@ def set_supernetwork_data(
             , 'downstream_col' : 2
             , 'length_col' : 10
             , 'manningn_col' : 11
+            , 'manningncc_col' : 20
             , 'slope_col' : 12
             , 'bottomwidth_col' : 14
+            , 'topwidth_col' : 22
+            , 'topwidthcc_col' : 21
             , 'MusK_col' : 8
             , 'MusX_col' : 9
             , 'ChSlp_col' : 13
@@ -407,8 +410,11 @@ def set_supernetwork_data(
             , 'downstream_col' : 2
             , 'length_col' : 10
             , 'manningn_col' : 11
+            , 'manningncc_col' : 20
             , 'slope_col' : 12
             , 'bottomwidth_col' : 14
+            , 'topwidth_col' : 22
+            , 'topwidthcc_col' : 21
             , 'MusK_col' : 8
             , 'MusX_col' : 9
             , 'ChSlp_col' : 13
