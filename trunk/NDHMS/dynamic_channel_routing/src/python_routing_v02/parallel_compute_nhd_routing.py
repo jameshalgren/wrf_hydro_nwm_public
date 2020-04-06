@@ -156,10 +156,15 @@ def compute_network_parallel_cluster(
     for terminal_segment, network in networks.items():
         for head_segment, reach in network['reaches'].items():
             if reach['seqorder'] not in ordered_reaches:
-                ordered_reaches.update({reach['seqorder']:[]}) #TODO: Should this be a set/dictionary?
-            ordered_reaches[reach['seqorder']].append([head_segment
-                      , reach
-                      ])
+                #ordered_reaches.update({reach['seqorder']:[]}) #TODO: Should this be a set/dictionary?
+                ordered_reaches.update({reach['seqorder']:{}}) #TODO: Should this be a set/dictionary?
+            # import pdb; pdb.set_trace()
+            ordered_reaches[reach['seqorder']].update({head_segment: {'network':terminal_segment, 
+                      'reach':reach
+                      }})
+            # ordered_reaches[reach['seqorder']].append([head_segment
+                      # , reach
+                      # ])
 
             #initialize flowdepthvel dict
             reach_flowdepthvel.update({head_segment:{}})
@@ -170,7 +175,7 @@ def compute_network_parallel_cluster(
                     , 'qlat':{'prev':0, 'curr':0}} for seg in reach['segments']} 
             )
 
-    
+    # exit()
     with multiprocessing.Pool() as netpool:
 
         num_processes = netpool._processes
@@ -181,8 +186,10 @@ def compute_network_parallel_cluster(
                 parallel_arglist = []
                 # print(order)
                 # import pdb; pdb.set_trace()
-                for i, (head_segment, reach) in enumerate(ordered_reaches[order]):
+                for head_segment, network_reach in ordered_reaches[order].items():
                     #print(f'{{{head_segment}}}:{reach}')          
+                    reach = network_reach['reach']
+                    network = networks[network_reach['network']]
 
                     #TODO: Add a flag here to switch between methods
                     compute_method = 'byreach' # Other options: 'bysegment'
@@ -209,7 +216,7 @@ def compute_network_parallel_cluster(
                             reach_flowdepthvel[head_segment][current_segment]['vel']['prev'] = reach_flowdepthvel[head_segment][current_segment]['vel']['curr']
                             reach_flowdepthvel[head_segment][current_segment]['qlat']['prev'] = reach_flowdepthvel[head_segment][current_segment]['qlat']['curr']
                         # import pdb; pdb.set_trace()
-                        parallel_arglist.append(tuple(ordered_reaches[order][i]) + (reach_connections , reach_flowdepthvel[head_segment] , qup_tmp , supernetwork_data , ts))
+                        parallel_arglist.append((head_segment, ordered_reaches[order][head_segment]['reach']) + (reach_connections , reach_flowdepthvel[head_segment] , qup_tmp , supernetwork_data , ts))
 
                 #print(f'Time: {ts} Execution Args for order {order}: {parallel_arglist}')
                 if debuglevel <=-1: print(f"Time: {ts} Executing simulation for {len(parallel_arglist)} large network reaches of order {order}")
@@ -270,9 +277,9 @@ def main():
     geo_input_folder = os.path.join(test_folder, r'input', r'geo', r'Channels')
 
     #TODO: Make these commandline args
-    supernetwork = 'Pocono_TEST1'
+    # supernetwork = 'Pocono_TEST1'
     """##NHD Subset (Brazos/Lower Colorado)"""
-    # supernetwork = 'Brazos_LowerColorado_ge5'
+    supernetwork = 'Brazos_LowerColorado_ge5'
     """##NWM CONUS Mainstems"""
     # supernetwork = 'Mainstems_CONUS'
     """These are large -- be careful"""
