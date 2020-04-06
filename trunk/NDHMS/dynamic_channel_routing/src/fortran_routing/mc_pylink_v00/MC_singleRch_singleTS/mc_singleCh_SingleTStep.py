@@ -81,7 +81,6 @@ def compute_mc_reach_up2down(
 
         # for now treating as constant per reach 
         dt=300.0 ;      mc.var.dt= dt  #60.0;
-        #import pdb; pdb.set_trace()
 
         #TODO: James Ask Dong Ha/Juzer: Does i == 0 have any meaning for these fortran arrays?
         mc.var.dx[i]=reach_connections[current_segment]['data'][supernetwork_data['length_col']] 
@@ -107,13 +106,11 @@ def compute_mc_reach_up2down(
         
         #print (f'counter = {i}')
         #if current_segment == 5559368 or i == 100:
-        #    import pdb; pdb.set_trace()
 
         mc.var.qlat[i]= reach_flowdepthvel[current_segment]['qlat']['curr']  # temporary assigned qlat 
         mc.var.qd[0,i,1]= reach_flowdepthvel[current_segment]['flow']['prev']  # temporary assigned qd
         mc.var.vela[0,i] = reach_flowdepthvel[current_segment]['vel']['prev']
         mc.var.deptha[0,i] = reach_flowdepthvel[current_segment]['depth']['prev']
-        
         
         # writeString = f'timestep: {ts} cur : {current_segment}  {dx} {bw} {tw} {n} {cs} {so} {dt}'
         # writetoFile(file, writeString)
@@ -162,7 +159,7 @@ def compute_mc_reach_up2down(
         current_segment = next_segment
         next_segment = reach_connections[current_segment]['downstream'] 
     #end loop collect MC output 
-    return reach_flowdepthvel
+    return {head_segment:reach_flowdepthvel}
 
 def main():
     pass

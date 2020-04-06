@@ -26,15 +26,17 @@ elif platform == "win32":
     # https://stackoverflow.com/questions/6596617/python-multiprocess-diff-between-windows-and-linux
 
 ENV_IS_CL = False
-if ENV_IS_CL: root = '/content/wrf_hydro_nwm_public/trunk/NDHMS/dynamic_channel_routing/'
+if ENV_IS_CL:
+    root = '/content/wrf_hydro_nwm_public/trunk/NDHMS/dynamic_channel_routing/'
 elif not ENV_IS_CL: 
     sys.setrecursionlimit(4000)
     root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    sys.path.append(os.path.join(root, r'src', r'python_framework'))
-    fortran_source_dir = os.path.join(root, r'src', r'fortran_routing', r'mc_pylink_v00', r'MC_singleRch_singleTS')
-    sys.path.append(fortran_source_dir)
-    from mc_singleCh_SingleTStep import compute_mc_reach_up2down
-    # import mc_sc_stime as mc
+sys.path.append(os.path.join(root, r'src', r'python_framework'))
+fortran_source_dir = os.path.join(root, r'src', r'fortran_routing', r'mc_pylink_v00', r'MC_singleRch_singleTS')
+sys.path.append(fortran_source_dir)
+from mc_singleCh_SingleTStep import compute_mc_reach_up2down
+# import mc_sc_stime as mc
+# print(fortran_source_dir)
 
 ## network and reach utilities
 import nhd_network_utilities as nnu
@@ -108,7 +110,7 @@ def compute_network(
                         reach_flowdepthvel[head_segment][current_segment]['vel']['prev'] = reach_flowdepthvel[head_segment][current_segment]['vel']['curr']
                         reach_flowdepthvel[head_segment][current_segment]['qlat']['prev'] = reach_flowdepthvel[head_segment][current_segment]['qlat']['curr']
 
-                    reach_flowdepthvel[head_segment].update(compute_mc_reach_up2down(
+                    reach_flowdepthvel.update(compute_mc_reach_up2down(
                         head_segment = head_segment
                         , reach = reach
                         #, network = network
@@ -172,8 +174,9 @@ def main():
     geo_input_folder = os.path.join(test_folder, r'input', r'geo', r'Channels')
 
     #TODO: Make these commandline args
+    supernetwork = 'Pocono_TEST1'
     """##NHD Subset (Brazos/Lower Colorado)"""
-    supernetwork = 'Brazos_LowerColorado_ge5'
+    # supernetwork = 'Brazos_LowerColorado_ge5'
     """##NHD CONUS order 5 and greater"""
     # supernetwork = 'CONUS_ge5'
     """These are large -- be careful"""
@@ -217,7 +220,7 @@ def main():
     connections = supernetwork_values[0]
 
     number_of_time_steps = 50 # one timestep
-    #nts = 1440 # number fof timestep = 1140 * 60(model timestep) = 86400 = day
+    # number_of_time_steps = 1440 # number fof timestep = 1140 * 60(model timestep) = 86400 = day
     
     #initialize flowdepthvel dict
     flowdepthvel = {connection:{'flow':np.zeros(number_of_time_steps + 1)

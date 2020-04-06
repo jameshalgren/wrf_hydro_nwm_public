@@ -30,29 +30,17 @@ elif platform == "win32":
     # https://stackoverflow.com/questions/6596617/python-multiprocess-diff-between-windows-and-linux
 
 ENV_IS_CL = False
-if ENV_IS_CL: root = '/content/wrf_hydro_nwm_public/trunk/NDHMS/dynamic_channel_routing/'
+if ENV_IS_CL:
+    root = '/content/wrf_hydro_nwm_public/trunk/NDHMS/dynamic_channel_routing/'
 elif not ENV_IS_CL: 
     sys.setrecursionlimit(4000)
     root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    sys.path.append(os.path.join(root, r'src', r'python_framework'))
-    fortran_source_dir = os.path.join(root, r'src', r'fortran_routing', r'mc_pylink_v00', r'MC_singleCH_singleTS')
-    sys.path.append(fortran_source_dir)
-    try:
-        import mc_sc_stime as mc
-    except:
-        import subprocess
-        fortran_compile_call = []
-        fortran_compile_call.append(r'f2py3')
-        fortran_compile_call.append(r'-c')
-        fortran_compile_call.append(r'varSingleChStime_f2py.f90')
-        fortran_compile_call.append(r'MCsingleChStime_f2py_clean.f90')
-        fortran_compile_call.append(r'-m')
-        fortran_compile_call.append(r'mc_sc_stime')
-        subprocess.run(fortran_compile_call, cwd=fortran_source_dir, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        try:
-            import mc_sc_stime as mc
-        except Exception as e:
-            print (e)
+sys.path.append(os.path.join(root, r'src', r'python_framework'))
+fortran_source_dir = os.path.join(root, r'src', r'fortran_routing', r'mc_pylink_v00', r'MC_singleRch_singleTS')
+sys.path.append(fortran_source_dir)
+from mc_singleCh_SingleTStep import compute_mc_reach_up2down
+# import mc_sc_stime as mc
+# print(fortran_source_dir)
 
 ## network and reach utilities
 import nhd_network_utilities as nnu
@@ -65,6 +53,7 @@ def compute_network(
         terminal_segment = None
         , network = None
         , supernetwork_data = None
+        , nts = None
         # , connections = None
         , verbose = False
         , debuglevel = 0
@@ -73,29 +62,78 @@ def compute_network(
     global connections
     global flowdepthvel 
 
-    if verbose: print(f"\nExecuting simulation on network {terminal_segment} beginning with streams of order {network['maximum_reach_seqorder']}")
+    if verbose: print(f"Executing simulation on network {terminal_segment} beginning with streams of order {network['maximum_reach_seqorder']}")
 
     ordered_reaches = {}
+    reach_flowdepthvel = {}
     for head_segment, reach in network['reaches'].items():
         if reach['seqorder'] not in ordered_reaches:
             ordered_reaches.update({reach['seqorder']:[]}) #TODO: Should this be a set/dictionary?
         ordered_reaches[reach['seqorder']].append([head_segment
                   , reach
                   ])
-    for x in range(network['maximum_reach_seqorder'],-1,-1):
-        for head_segment, reach in ordered_reaches[x]:
-            compute_reach_up2down(
-                head_segment = head_segment
-                , reach = reach
-                # , connections = connections
-                , supernetwork_data = supernetwork_data
-                , verbose = verbose
-                , debuglevel = debuglevel
-                )
 
-def compute_network_parallel(
-        large_networks = None
+        #initialize flowdepthvel dict
+        reach_flowdepthvel.update({head_segment:{}})
+        reach_flowdepthvel[head_segment].update(
+            {seg:{'flow':{'prev':0, 'curr':0}
+                , 'depth':{'prev':-999, 'curr':0}
+                , 'vel':{'prev':0, 'curr':0}
+                , 'qlat':{'prev':0, 'curr':0}} for seg in reach['segments']} 
+        )
+
+    for ts in range (0,nts):
+        #print(f'timestep: {ts}\n')
+
+        for order in range(network['maximum_reach_seqorder'],-1,-1):
+            for head_segment, reach in ordered_reaches[order]:
+                #print(f'{{{head_segment}}}:{reach}')          
+
+                #TODO: Add a flag here to switch between methods
+                compute_method = 'byreach' # Other options: 'bysegment'
+                if compute_method == 'byreach':
+                    # upstream flow per reach
+                    qup_tmp = 0
+                    #import pdb; pdb.set_trace()
+                    if reach['upstream_reaches'] == {supernetwork_data['terminal_code']}: # Headwaters
+                        qup_tmp = 0.0  # no flows
+                    else: # Loop over upstream reaches
+                        #for us in reach['upstream_reaches']:
+                        for us in reach['upstream_reaches']:
+                            #qup_tmp += flowdepthvel[network['reaches'][us]['reach_tail']]['flow']['curr']
+                            # import pdb; pdb.set_trace()
+                            qup_tmp += reach_flowdepthvel[us][network['reaches'][us]['reach_tail']]['flow']['curr']
+
+                    reach_connections = {key:connection for key, connection in connections.items() if key in reach['segments']}
+                    for current_segment in reach['segments']:
+                        # add some flow
+                        reach_flowdepthvel[head_segment][current_segment]['qlat']['curr'] = (ts+1)*10.0      # lateral flow per segment 
+
+                        reach_flowdepthvel[head_segment][current_segment]['flow']['prev'] = reach_flowdepthvel[head_segment][current_segment]['flow']['curr']
+                        reach_flowdepthvel[head_segment][current_segment]['depth']['prev'] = reach_flowdepthvel[head_segment][current_segment]['depth']['curr']
+                        reach_flowdepthvel[head_segment][current_segment]['vel']['prev'] = reach_flowdepthvel[head_segment][current_segment]['vel']['curr']
+                        reach_flowdepthvel[head_segment][current_segment]['qlat']['prev'] = reach_flowdepthvel[head_segment][current_segment]['qlat']['curr']
+
+                    reach_flowdepthvel[head_segment].update(compute_mc_reach_up2down(
+                        head_segment = head_segment
+                        , reach = reach
+                        #, network = network
+                        , reach_connections = reach_connections
+                        , reach_flowdepthvel = reach_flowdepthvel[head_segment]
+                        , upstream_inflow = qup_tmp
+                        , supernetwork_data = supernetwork_data
+                        , ts = ts
+                        , verbose = verbose
+                        , debuglevel = debuglevel
+                    ))
+                    #print(f'timestep: {ts} {flowdepthvel}')          
+                    #print(f'{head_segment} {flowdepthvel[head_segment]}')          
+
+
+def compute_network_parallel_cluster(
+        networks = None
         , supernetwork_data = None
+        , nts = None
         # , connections = None
         , verbose = False
         , debuglevel = 0
@@ -106,36 +144,32 @@ def compute_network_parallel(
     global num_processes
 
     overall_max = -1
-    for terminal_segment, network in large_networks.items():
+    for terminal_segment, network in networks.items():
         overall_max = max(network['maximum_reach_seqorder'], overall_max)
 
-    if verbose: print(f"Executing simulation for all large network beginning with maximum order {overall_max}")
+    if debuglevel <= -1: print(f"Executing simulation for all large network beginning with maximum order {overall_max}")
 
-    nts = 216 # number fof timestep
-    
-    #if 1 == 1:
     ordered_reaches = {}
-    ordered_reaches.update({overall_max:[]})
+    reach_flowdepthvel = {}
+    #ordered_reaches.update({overall_max:[]})
     #import pdb; pdb.set_trace()
-    for terminal_segment, network in large_networks.items():
+    for terminal_segment, network in networks.items():
         for head_segment, reach in network['reaches'].items():
             if reach['seqorder'] not in ordered_reaches:
                 ordered_reaches.update({reach['seqorder']:[]}) #TODO: Should this be a set/dictionary?
-            if reach['upstream_reaches'] == {supernetwork_data['terminal_code']}:
-                print('headwater')
-                ordered_reaches[overall_max].append([head_segment
-                          , reach
-                          , supernetwork_data
-                          , verbose
-                          , debuglevel])
-            else:
-                ordered_reaches[reach['seqorder']].append([head_segment
-                          , reach
-                          , supernetwork_data
-                          , verbose
-                          , debuglevel])
-            #import pdb; pdb.set_trace()
-            #print(ordered_reaches)
+            ordered_reaches[reach['seqorder']].append([head_segment
+                      , reach
+                      ])
+
+            #initialize flowdepthvel dict
+            reach_flowdepthvel.update({head_segment:{}})
+            reach_flowdepthvel[head_segment].update(
+                {seg:{'flow':{'prev':0, 'curr':0}
+                    , 'depth':{'prev':-999, 'curr':0}
+                    , 'vel':{'prev':0, 'curr':0}
+                    , 'qlat':{'prev':0, 'curr':0}} for seg in reach['segments']} 
+            )
+
     
     with multiprocessing.Pool() as netpool:
 
@@ -143,14 +177,52 @@ def compute_network_parallel(
         for ts in range (0,nts):
             #print(f'timestep: {ts}\n')
 
-            for x in range(overall_max,-1,-1):
-                nslist3 = ordered_reaches[x]
-                #print(f'Time: {ts} Execution Args for order {x}: {nslist3}')
-                if verbose: print(f"Time: {ts} Executing simulation for {len(nslist3)} large network reaches of order {x}")
-                results = netpool.starmap(compute_mc_reach_up2down, nslist3)
+            for order in range(overall_max,-1,-1):
+                parallel_arglist = []
+                # print(order)
+                # import pdb; pdb.set_trace()
+                for i, (head_segment, reach) in enumerate(ordered_reaches[order]):
+                    #print(f'{{{head_segment}}}:{reach}')          
 
+                    #TODO: Add a flag here to switch between methods
+                    compute_method = 'byreach' # Other options: 'bysegment'
+                    if compute_method == 'byreach':
+                        # upstream flow per reach
+                        qup_tmp = 0
+                        #import pdb; pdb.set_trace()
+                        if reach['upstream_reaches'] == {supernetwork_data['terminal_code']}: # Headwaters
+                            qup_tmp = 0.0  # no flows
+                        else: # Loop over upstream reaches
+                            #for us in reach['upstream_reaches']:
+                            for us in reach['upstream_reaches']:
+                                #qup_tmp += flowdepthvel[network['reaches'][us]['reach_tail']]['flow']['curr']
+                                # import pdb; pdb.set_trace()
+                                qup_tmp += reach_flowdepthvel[us][network['reaches'][us]['reach_tail']]['flow']['curr']
 
-# ### Psuedocode
+                        reach_connections = {key:connection for key, connection in connections.items() if key in reach['segments']}
+                        for current_segment in reach['segments']:
+                            # add some flow
+                            reach_flowdepthvel[head_segment][current_segment]['qlat']['curr'] = (ts+1)*10.0      # lateral flow per segment 
+
+                            reach_flowdepthvel[head_segment][current_segment]['flow']['prev'] = reach_flowdepthvel[head_segment][current_segment]['flow']['curr']
+                            reach_flowdepthvel[head_segment][current_segment]['depth']['prev'] = reach_flowdepthvel[head_segment][current_segment]['depth']['curr']
+                            reach_flowdepthvel[head_segment][current_segment]['vel']['prev'] = reach_flowdepthvel[head_segment][current_segment]['vel']['curr']
+                            reach_flowdepthvel[head_segment][current_segment]['qlat']['prev'] = reach_flowdepthvel[head_segment][current_segment]['qlat']['curr']
+                        # import pdb; pdb.set_trace()
+                        parallel_arglist.append(tuple(ordered_reaches[order][i]) + (reach_connections , reach_flowdepthvel[head_segment] , qup_tmp , supernetwork_data , ts))
+
+                #print(f'Time: {ts} Execution Args for order {order}: {parallel_arglist}')
+                if debuglevel <=-1: print(f"Time: {ts} Executing simulation for {len(parallel_arglist)} large network reaches of order {order}")
+                results = netpool.starmap(compute_mc_reach_up2down, parallel_arglist)
+                for result in results:
+                    # print(result)
+                    for head_segment in result:
+                        # print(head_segment)
+                        # print(reach_flowdepthvel[head_segment])
+                        reach_flowdepthvel.update(result)
+                    
+
+# ### Pseudocode
 # 
 # ```
 # Call Compute Network
@@ -184,135 +256,6 @@ def get_lateral_inflow():
 def compute_junction_downstream():
     pass
 
-#TODO: generalize with a direction flag
-def compute_mc_reach_up2down(
-        head_segment = None
-        , reach = None
-        #, connections = None
-        , supernetwork_data = None
-        , ts = 0
-        , verbose = False
-        , debuglevel = 0
-        ):
-    
-    global connections
-    global flowdepthvel
-    # global network
-    
-    if verbose: print(f"\nreach: {head_segment} (order: {reach['seqorder']} n_segs: {len(reach['segments'])})")
-    
-    ntim=2;       #the number of time steps necessary for variables passed to mc module to compute successfully
-    nlinks=2;     #the number of links needed to define varialbe qd. ** nlinks is not used in fortran source code.
-
-    mc.var.uslinkid=1
-    mc.var.linkid=2
-    ncomp0=1; mc.var.ncomp0=ncomp0  #the number of segments of a reach upstream of the current reach
-    ncomp = len(reach['segments']) ;  mc.var.ncomp= ncomp  #the number of segments of the current reach 
-    #mxseg=max(ncomp0,ncomp)    
-    #MC model outputs
-    mc.var.qd=np.zeros((ntim,ncomp,nlinks))  #will store MC output qdc (flow downstream current timestep) 
-    mc.var.vela=np.zeros((ntim,ncomp)) 
-    mc.var.deptha=np.zeros((ntim,ncomp))
-    #lateral flow
-    mc.var.qlat=np.zeros((ncomp))
-     
-    
-    
-    # upstream flow per reach
-    qup_tmp = 0
-    #import pdb; pdb.set_trace()
-    if reach['upstream_reaches'] == {supernetwork_data['terminal_code']}: # Headwaters
-        qup_tmp = (ts+1)*10.0 
-    else: # Loop over upstream reaches
-        #for us in reach['upstream_reaches']:
-        for us in connections[reach['reach_head']]['upstreams']:
-            #if us == 5507050 :
-            #    import pdb; pdb.set_trace()
-            #qup_tmp += flowdepthvel[network['reaches'][us]['reach_tail']]['flow']['curr']
-            qup_tmp += flowdepthvel[us]['flow']['curr']
-    
-    flowdepthvel[reach['reach_head']]['flow']['curr'] = qup_tmp
-    #print(qup_tmp)
-            
-    current_segment = reach['reach_head']
-    next_segment = connections[current_segment]['downstream'] 
-    #print(f'{current_segment}==>{next_segment} conections:{ncomp} timestep:{ts}')
-    i = 0
-    #input flow to upstream reach of current reach   
-    mc.var.qd[1,i,0] = qup_tmp 
-    
-    while True:
-
-        # for now treating as constant per reach 
-        dt=300.0 ;      mc.var.dt= dt  #60.0;
-
-        dx=connections[current_segment]['data'][supernetwork_data['length_col']] ;     mc.var.dx= dx  #20.0
-        bw=connections[current_segment]['data'][supernetwork_data['bottomwidth_col']];       mc.var.bw= bw #50
-        tw= 0.01*bw; mc.var.tw= tw
-        twcc=tw;     mc.var.twcc=twcc
-        n=connections[current_segment]['data'][supernetwork_data['manningn_col']] ;      mc.var.n=n #0.03
-        ncc=n;       mc.var.ncc=ncc
-        cs=connections[current_segment]['data'][supernetwork_data['ChSlp_col']] ;    mc.var.cs=cs #1.0e6
-        so=connections[current_segment]['data'][supernetwork_data['slope_col']];    mc.var.so=so #0.002
-        #ck= current_segment['data'][supernetwork['MusK_col']];   mc.var.ck = ck 
-        #cx= current_segment['data'][supernetwork['MusX_col']];   mc.var.cx = cx
-        #print (f'{current_segment}')
-               
-        flowdepthvel[current_segment]['qlat']['curr'] = (ts+1)*2.0      # lateral flow per segment
-       
-                      
-        flowdepthvel[current_segment]['flow']['prev'] = flowdepthvel[current_segment]['flow']['curr']
-        flowdepthvel[current_segment]['depth']['prev'] = flowdepthvel[current_segment]['depth']['curr']
-        flowdepthvel[current_segment]['vel']['prev'] = flowdepthvel[current_segment]['vel']['curr']
-        flowdepthvel[current_segment]['qlat']['prev'] = flowdepthvel[current_segment]['qlat']['curr']
-
-        #print (f'counter = {i}')
-        #if current_segment == 5559368 or i == 100:
-        #    import pdb; pdb.set_trace()
-
-        mc.var.qlat[i]= flowdepthvel[current_segment]['qlat']['curr']  # temporary assigned qlat 
-        mc.var.qd[0,i,1]= flowdepthvel[current_segment]['flow']['prev']  # temporary assigned qd
-        mc.var.vela[0,i] = flowdepthvel[current_segment]['vel']['prev']
-        mc.var.deptha[0,i] = flowdepthvel[current_segment]['depth']['prev']
-        
-        i += 1
-        
-        if current_segment == reach['reach_tail']:
-            if verbose: print(f'{current_segment} (tail)')
-            break
-        if verbose: print(f'{current_segment} --> {next_segment}\n')
-        current_segment = next_segment
-        next_segment = connections[current_segment]['downstream'] 
-        
-    mc.mc.main()
-
-    #print (f'{ts} end mc')
-    
-    current_segment = reach['reach_head']
-    next_segment = connections[current_segment]['downstream'] 
-    i = 0
-    while True:
-        flowdepthvel[current_segment]['flow']['curr'] = mc.var.qd[1,i,1] 
-        flowdepthvel[current_segment]['depth']['curr'] = mc.var.deptha[1,i]
-        flowdepthvel[current_segment]['vel']['curr'] = mc.var.vela[1,i]
-        d = flowdepthvel[current_segment]['depth']['curr'] 
-        q = flowdepthvel[current_segment]['flow']['curr']
-        v = flowdepthvel[current_segment]['vel']['curr']
-        ql = flowdepthvel[current_segment]['qlat']['curr']
-        #print ( f'timestep: {ts} cur : {current_segment}  {q} {d} {v} {ql}')
-        i += 1
-        
-        #print(f'timestep: {ts} {flowdepthvel[current_segment]}')
-        #import pdb; pdb.set_trace()
-        
-            
-        if current_segment == reach['reach_tail']:
-            if verbose: print(f'{current_segment} (tail)')
-            break
-        if verbose: print(f'{current_segment} --> {next_segment}\n')
-        current_segment = next_segment
-        next_segment = connections[current_segment]['downstream'] 
-
 def main():
 
     global connections
@@ -327,16 +270,15 @@ def main():
     geo_input_folder = os.path.join(test_folder, r'input', r'geo', r'Channels')
 
     #TODO: Make these commandline args
+    supernetwork = 'Pocono_TEST1'
     """##NHD Subset (Brazos/Lower Colorado)"""
-    supernetwork = 'Brazos_LowerColorado_ge5'
-    """##NHD CONUS order 5 and greater"""
-    # supernetwork = 'CONUS_ge5'
-    """These are large -- be careful"""
+    # supernetwork = 'Brazos_LowerColorado_ge5'
+    """##NWM CONUS Mainstems"""
     # supernetwork = 'Mainstems_CONUS'
+    """These are large -- be careful"""
     # supernetwork = 'CONUS_FULL_RES_v20'
     # supernetwork = 'CONUS_Named_Streams' #create a subset of the full resolution by reading the GNIS field
     # supernetwork = 'CONUS_Named_combined' #process the Named streams through the Full-Res paths to join the many hanging reaches
-
 
     if verbose: print('creating supernetwork connections set')
     if showtiming: start_time = time.time()
@@ -366,36 +308,91 @@ def main():
 
 
     #STEP 3
-    connections = supernetwork_values[0]
-    #initialize flowdepthvel dict
-    flowdepthvel = {connection:{'flow':{'prev':0, 'curr':0}
-                                , 'depth':{'prev':-999, 'curr':0}
-                                , 'vel':{'prev':0, 'curr':0}
-                                , 'qlat':{'prev':0, 'curr':0}} for connection in connections} 
-    parallel_split = -1 # -1 turns off the splitting and runs everything through the lumped execution
-
-    #STEP 3a -- Large Networks
     if showtiming: start_time = time.time()
-    if verbose: print(f'executing computation on ordered reaches for networks of order greater than {parallel_split} ...')
+    executiontype = 'parallel' # 'serial'
 
-    large_networks = {terminal_segment: network \
-                      for terminal_segment, network in networks.items() \
-                      if network['maximum_reach_seqorder'] > parallel_split}
-    # print(large_networks)
-    compute_network_parallel(
-        large_networks
-        , supernetwork_data = supernetwork_data
-        # , connections = connections
-        # , verbose = False
-        , verbose = verbose
-        , debuglevel = debuglevel
-    )
-    if verbose: print(f'ordered reach computation complete for networks of order greater than {parallel_split}')
+    connections = supernetwork_values[0]
+
+    number_of_time_steps = 50 # one timestep
+    #nts = 1440 # number fof timestep = 1140 * 60(model timestep) = 86400 = day
+    
+    #initialize flowdepthvel dict
+    flowdepthvel = {connection:{'flow':np.zeros(number_of_time_steps + 1)
+                                , 'depth':np.zeros(number_of_time_steps + 1)
+                                , 'vel':np.zeros(number_of_time_steps + 1)
+                                , 'qlat':np.zeros(number_of_time_steps + 1)}
+                       for connection in connections
+                   } 
+
+    if executiontype == 'serial':
+        if verbose: print('executing serial computation on ordered reaches ...')
+
+        for terminal_segment, network in networks.items():
+            if showtiming: network_start_time = time.time()
+            compute_network(
+                terminal_segment = terminal_segment
+                , network = network
+                , supernetwork_data = supernetwork_data
+                , nts = number_of_time_steps
+                # , connections = connections
+                , verbose = False
+                # , verbose = verbose
+                , debuglevel = debuglevel
+            )
+
+            if verbose: print(f'{terminal_segment} completed')
+            if showtiming: print("... in %s seconds." % (time.time() - network_start_time))
+        
+    elif executiontype == 'parallel':
+        
+        parallel_split = -1 # -1 turns off the splitting and runs everything through the lumped execution
+        # parallel_split = 10000 # -1 turns off the splitting and runs everything through the lumped execution
+
+        #STEP 3a -- Large Networks
+        #TODO: fix this messaging -- we are less specifically concerned with whether these are large networks and more interested in the general idea of grouping.
+        if verbose: print(f'executing computation on ordered reaches for networks of order greater than {parallel_split} ...')
+
+        parallel_network_cluster = {terminal_segment: network \
+                          for terminal_segment, network in networks.items() \
+                          if network['maximum_reach_seqorder'] > parallel_split}
+        # print(networks)
+        compute_network_parallel_cluster(
+            networks = parallel_network_cluster
+            , supernetwork_data = supernetwork_data
+            , nts = number_of_time_steps
+            # , connections = connections
+            # , verbose = False
+            , verbose = verbose
+            , debuglevel = debuglevel
+        )
+        if verbose: print(f'ordered reach computation complete for networks of order greater than {parallel_split}')
+        if verbose: print(f'calculation completed for the following networks (as labelled by their terminal segments)\n{list(parallel_network_cluster.keys())} completed')
+        if showtiming: print("... in %s seconds." % (time.time() - start_time))
+        if showtiming: print(f'... with {num_processes} cores')
+
+        ##STEP 3b -- Small Networks
+        # if parallel_split >= 0: print(r'DO NOT RUN WITH `parallel_split` >= 0')
+        parallel_network_separate = {terminal_segment: network \
+                          for terminal_segment, network in networks.items() \
+                          if network['maximum_reach_seqorder'] <= parallel_split}
+
+        if verbose: print(f'executing parallel computation on ordered reaches .... ')
+        #for terminal_segment, network in networks.items():
+        #    print(terminal_segment, network)
+        #print(tuple(([x for x in networks.keys()][i], [x for x in networks.values()][i]) for i in range(len(networks))))
+        nslist = ([terminal_segment
+                      , network
+                      , supernetwork_data #TODO: This should probably be global...
+                      , number_of_time_steps
+                      , False
+                      , debuglevel]
+                      for terminal_segment, network in parallel_network_separate.items())
+        with multiprocessing.Pool() as pool:
+            results = pool.starmap(compute_network, nslist)
+        if verbose: print(f'calculation completed for the following networks (as labelled by their terminal segments)\n{list(parallel_network_separate.keys())} completed')
+        
+    if verbose: print('ordered reach computation complete')
     if showtiming: print("... in %s seconds." % (time.time() - start_time))
-    if showtiming: print(f'... with {num_processes} cores')
-
-    ##STEP 3b -- Small Networks
-    if parallel_split >= 0: print(r'DO NOT RUN WITH `parallel_split` >= 0')
-
+    
 if __name__ == '__main__':
     main()
