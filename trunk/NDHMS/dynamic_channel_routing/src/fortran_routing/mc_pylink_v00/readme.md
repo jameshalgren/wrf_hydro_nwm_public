@@ -12,8 +12,10 @@
 * Remove the 'iseg' from the mcNWM call
 
 ## Method 3
-* Multi-timestep, multi-segment fortran
+* Multi-segment fortran
 
+## Method 4
+* Multi-timestep, multi-segment fortran
 
 # TODO:
 * Solidify test dataset and canonical output (Dong Ha)
