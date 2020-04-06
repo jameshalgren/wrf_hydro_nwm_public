@@ -179,6 +179,17 @@ def compute_network_parallel_cluster(
     with multiprocessing.Pool() as netpool:
 
         num_processes = netpool._processes
+
+        for order in range(overall_max,-1,-1):
+            for head_segment, network_reach in ordered_reaches[order].items():
+                #print(f'{{{head_segment}}}:{reach}')          
+                reach = network_reach['reach']
+
+                #TODO: Add a flag here to switch between methods
+                compute_method = 'byreach' # Other options: 'bysegment'
+                if compute_method == 'byreach':
+                    ordered_reaches[order][head_segment].update({'reach_connections':{key:connection for key, connection in connections.items() if key in reach['segments']}})
+
         for ts in range (0,nts):
             #print(f'timestep: {ts}\n')
 
@@ -206,7 +217,7 @@ def compute_network_parallel_cluster(
                                 # import pdb; pdb.set_trace()
                                 qup_tmp += reach_flowdepthvel[us][network['reaches'][us]['reach_tail']]['flow']['curr']
 
-                        reach_connections = {key:connection for key, connection in connections.items() if key in reach['segments']}
+                        #reach_connections = {key:connection for key, connection in connections.items() if key in reach['segments']}
                         for current_segment in reach['segments']:
                             # add some flow
                             reach_flowdepthvel[head_segment][current_segment]['qlat']['curr'] = (ts+1)*10.0      # lateral flow per segment 
@@ -216,7 +227,7 @@ def compute_network_parallel_cluster(
                             reach_flowdepthvel[head_segment][current_segment]['vel']['prev'] = reach_flowdepthvel[head_segment][current_segment]['vel']['curr']
                             reach_flowdepthvel[head_segment][current_segment]['qlat']['prev'] = reach_flowdepthvel[head_segment][current_segment]['qlat']['curr']
                         # import pdb; pdb.set_trace()
-                        parallel_arglist.append((head_segment, ordered_reaches[order][head_segment]['reach']) + (reach_connections , reach_flowdepthvel[head_segment] , qup_tmp , supernetwork_data , ts))
+                        parallel_arglist.append((head_segment, ordered_reaches[order][head_segment]['reach'], ordered_reaches[order][head_segment]['reach_connections']) + (reach_flowdepthvel[head_segment] , qup_tmp , supernetwork_data , ts))
 
                 #print(f'Time: {ts} Execution Args for order {order}: {parallel_arglist}')
                 if debuglevel <=-1: print(f"Time: {ts} Executing simulation for {len(parallel_arglist)} large network reaches of order {order}")
