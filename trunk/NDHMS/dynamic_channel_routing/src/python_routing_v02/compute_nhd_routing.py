@@ -174,13 +174,12 @@ def main():
     geo_input_folder = os.path.join(test_folder, r'input', r'geo', r'Channels')
 
     #TODO: Make these commandline args
-    supernetwork = 'Pocono_TEST1'
+    # supernetwork = 'Pocono_TEST1'
     """##NHD Subset (Brazos/Lower Colorado)"""
-    # supernetwork = 'Brazos_LowerColorado_ge5'
-    """##NHD CONUS order 5 and greater"""
-    # supernetwork = 'CONUS_ge5'
-    """These are large -- be careful"""
+    supernetwork = 'Brazos_LowerColorado_ge5'
+    """##NWM CONUS Mainstems"""
     # supernetwork = 'Mainstems_CONUS'
+    """These are large -- be careful"""
     # supernetwork = 'CONUS_FULL_RES_v20'
     # supernetwork = 'CONUS_Named_Streams' #create a subset of the full resolution by reading the GNIS field
     # supernetwork = 'CONUS_Named_combined' #process the Named streams through the Full-Res paths to join the many hanging reaches
