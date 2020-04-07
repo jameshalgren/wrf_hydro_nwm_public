@@ -176,9 +176,9 @@ def main():
     #TODO: Make these commandline args
     # supernetwork = 'Pocono_TEST1'
     """##NHD Subset (Brazos/Lower Colorado)"""
-    supernetwork = 'Brazos_LowerColorado_ge5'
+    # supernetwork = 'Brazos_LowerColorado_ge5'
     """##NWM CONUS Mainstems"""
-    # supernetwork = 'Mainstems_CONUS'
+    supernetwork = 'Mainstems_CONUS'
     """These are large -- be careful"""
     # supernetwork = 'CONUS_FULL_RES_v20'
     # supernetwork = 'CONUS_Named_Streams' #create a subset of the full resolution by reading the GNIS field
@@ -218,8 +218,9 @@ def main():
     if verbose: print('executing serial computation on ordered reaches ...')
     connections = supernetwork_values[0]
 
-    number_of_time_steps = 50 # one timestep
-    # number_of_time_steps = 1440 # number fof timestep = 1140 * 60(model timestep) = 86400 = day
+    number_of_time_steps = 10 # 
+    # number_of_time_steps = 50 # 
+    # number_of_time_steps = 1440 # number of timestep = 1140 * 60(model timestep) = 86400 = day
     
     #initialize flowdepthvel dict
     flowdepthvel = {connection:{'flow':np.zeros(number_of_time_steps + 1)
