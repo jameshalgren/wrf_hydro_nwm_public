@@ -332,7 +332,7 @@ def main():
     connections = supernetwork_values[0]
 
     number_of_time_steps = 50 # one timestep
-    #nts = 1440 # number fof timestep = 1140 * 60(model timestep) = 86400 = day
+    #number_of_time_steps = 1440 # number fof timestep = 1140 * 60(model timestep) = 86400 = day
     
     #initialize flowdepthvel dict
     flowdepthvel = {connection:{'flow':np.zeros(number_of_time_steps + 1)
