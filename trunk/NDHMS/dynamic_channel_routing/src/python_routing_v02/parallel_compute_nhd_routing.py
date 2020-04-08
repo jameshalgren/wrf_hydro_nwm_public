@@ -68,10 +68,12 @@ def compute_network(
     reach_flowdepthvel = {}
     for head_segment, reach in network['reaches'].items():
         if reach['seqorder'] not in ordered_reaches:
-            ordered_reaches.update({reach['seqorder']:[]}) #TODO: Should this be a set/dictionary?
-        ordered_reaches[reach['seqorder']].append([head_segment
-                  , reach
-                  ])
+            #ordered_reaches.update({reach['seqorder']:[]}) #TODO: Should this be a set/dictionary?
+            ordered_reaches.update({reach['seqorder']:{}}) #TODO: Should this be a set/dictionary?
+        #ordered_reaches[reach['seqorder']].append([head_segment
+                  #, reach
+                  #])
+        ordered_reaches[reach['seqorder']].update({head_segment: reach})
 
         #initialize flowdepthvel dict
         reach_flowdepthvel.update({head_segment:{}})
@@ -81,12 +83,15 @@ def compute_network(
                 , 'vel':{'prev':0, 'curr':0}
                 , 'qlat':{'prev':0, 'curr':0}} for seg in reach['segments']} 
         )
+        #ordered_reaches[order][head_segment].update({'reach_connections':{key:connection for key, connection in connections.items() if key in reach['segments']}})
+        # ordered_reaches[reach['seqorder']][head_segment].update({'reach_connections':{key:connections[key] for key in connections.keys() & reach['segments']}})
+        ordered_reaches[reach['seqorder']][head_segment].update({'reach_connections':{key:connections[key] for key in reach['segments']}})
 
     for ts in range (0,nts):
         #print(f'timestep: {ts}\n')
 
         for order in range(network['maximum_reach_seqorder'],-1,-1):
-            for head_segment, reach in ordered_reaches[order]:
+            for head_segment, reach in ordered_reaches[order].items():
                 #print(f'{{{head_segment}}}:{reach}')          
 
                 #TODO: Add a flag here to switch between methods
@@ -104,7 +109,6 @@ def compute_network(
                             # import pdb; pdb.set_trace()
                             qup_tmp += reach_flowdepthvel[us][network['reaches'][us]['reach_tail']]['flow']['curr']
 
-                    reach_connections = {key:connection for key, connection in connections.items() if key in reach['segments']}
                     for current_segment in reach['segments']:
                         # add some flow
                         reach_flowdepthvel[head_segment][current_segment]['qlat']['curr'] = (ts+1)*10.0      # lateral flow per segment 
@@ -114,11 +118,11 @@ def compute_network(
                         reach_flowdepthvel[head_segment][current_segment]['vel']['prev'] = reach_flowdepthvel[head_segment][current_segment]['vel']['curr']
                         reach_flowdepthvel[head_segment][current_segment]['qlat']['prev'] = reach_flowdepthvel[head_segment][current_segment]['qlat']['curr']
 
-                    reach_flowdepthvel[head_segment].update(compute_mc_reach_up2down(
+                    reach_flowdepthvel.update(compute_mc_reach_up2down(
                         head_segment = head_segment
                         , reach = reach
                         #, network = network
-                        , reach_connections = reach_connections
+                        , reach_connections = ordered_reaches[order][head_segment]['reach_connections']
                         , reach_flowdepthvel = reach_flowdepthvel[head_segment]
                         , upstream_inflow = qup_tmp
                         , supernetwork_data = supernetwork_data
@@ -334,9 +338,9 @@ def main():
 
     connections = supernetwork_values[0]
 
-    number_of_time_steps = 10 # 
-    # number_of_time_steps = 50 # 
-    #number_of_time_steps = 1440 # number of timestep = 1140 * 60(model timestep) = 86400 = day
+    # number_of_time_steps = 10 # 
+    number_of_time_steps = 50 # 
+    # number_of_time_steps = 1440 # number of timestep = 1140 * 60(model timestep) = 86400 = day
     
     #initialize flowdepthvel dict
     flowdepthvel = {connection:{'flow':np.zeros(number_of_time_steps + 1)
@@ -367,8 +371,8 @@ def main():
         
     elif executiontype == 'parallel':
         
-        parallel_split = -1 # -1 turns off the splitting and runs everything through the lumped execution
-        # parallel_split = 10000 # -1 turns off the splitting and runs everything through the lumped execution
+        # parallel_split = -1 # -1 turns off the splitting and runs everything through the lumped execution
+        parallel_split = 10000 # -1 turns off the splitting and runs everything through the lumped execution
 
         #STEP 3a -- Large Networks
         #TODO: fix this messaging -- we are less specifically concerned with whether these are large networks and more interested in the general idea of grouping.
