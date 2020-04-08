@@ -83,6 +83,18 @@ def compute_network(
                 , 'vel':{'prev':0, 'curr':0}
                 , 'qlat':{'prev':0, 'curr':0}} for seg in reach['segments']} 
         )
+        if 1 == 0: #TODO: Implement this alternate method -- a more shallow dictionary 
+                   # creates a much faster search in this highly utilized object.
+            flow_prev = flow_curr = 0
+            depth_prev = depth_curr = 0
+            vel_prev = vel_curr = 0
+            qlat_prev = qlat_curr = 0
+            reach_flowdepthvel[head_segment].update(
+                {seg:[flow_prev, flow_curr
+                    , depth_prev, depth_curr
+                    , vel_prev, vel_curr
+                    , qlat_prev, qlat_curr] for seg in reach['segments']} 
+            )
         #ordered_reaches[order][head_segment].update({'reach_connections':{key:connection for key, connection in connections.items() if key in reach['segments']}})
         # ordered_reaches[reach['seqorder']][head_segment].update({'reach_connections':{key:connections[key] for key in connections.keys() & reach['segments']}})
         ordered_reaches[reach['seqorder']][head_segment].update({'reach_connections':{key:connections[key] for key in reach['segments']}})
