@@ -50,9 +50,6 @@ def build_connections_object(
         , key_col = None
         , downstream_col = None
         , length_col = None
-        #, manningn_col = None
-        #, slope_col = None
-        #, bottomwidth_col = None
         , terminal_code = None
         , verbose = False
         , debuglevel = 0
@@ -63,9 +60,6 @@ def build_connections_object(
                     , key_col = key_col
                     , downstream_col = downstream_col
                     , length_col = length_col
-                    #, manningn_col = manningn_col
-                    #, slope_col = slope_col
-                    #, bottomwidth_col = bottomwidth_col
                     , verbose = verbose
                     , debuglevel = debuglevel)
     
@@ -95,7 +89,7 @@ def build_connections_object(
         , visited_keys, visited_terminal_keys \
         , junction_count
 
-def do_network(
+def do_connections(
         geo_file_path = None
         , title_string = None
         , layer_string = None
@@ -103,9 +97,6 @@ def do_network(
         , key_col = None
         , downstream_col = None
         , length_col = None
-        #, manningn_col = None
-        #, slope_col = None
-        #, bottomwidth_col = None
         , terminal_code = None
         , mask_file_path = None
         , mask_driver_string = None
@@ -135,81 +126,52 @@ def do_network(
             )
         #TODO: make mask dict with additional attributes, e.g., names
         mask_set = {row[mask_key_col] for row in mask_file_rows}
+    else: mask_set = {row[key_col] for row in geo_file_rows}
 
-        return build_connections_object(
-            geo_file_rows = geo_file_rows
-            , mask_set = mask_set
-            , key_col = key_col
-            , downstream_col = downstream_col
-            , length_col = length_col
-            #, manningn_col = manningn_col
-            #, slope_col = slope_col
-            #, bottomwidth_col = bottomwidth_col
-            , terminal_code = terminal_code
-            , verbose = verbose
-            , debuglevel = debuglevel
-            )
-
-    else:
-        return build_connections_object(
-            geo_file_rows = geo_file_rows
-            , key_col = key_col
-            , downstream_col = downstream_col
-            , length_col = length_col
-            #, manningn_col = manningn_col
-            #, slope_col = slope_col
-            #, bottomwidth_col = bottomwidth_col
-            , terminal_code = terminal_code
-            , verbose = verbose
-            , debuglevel = debuglevel
-            )
+    return build_connections_object(
+        geo_file_rows = geo_file_rows
+        , mask_set = mask_set
+        , key_col = key_col
+        , downstream_col = downstream_col
+        , length_col = length_col
+        , terminal_code = terminal_code
+        , verbose = verbose
+        , debuglevel = debuglevel
+        )
 
     # return connections, all_keys, ref_keys, headwater_keys \
     #     , terminal_keys, terminal_ref_keys \
-    #     , circular_keys, junction_keys
+    #     , circular_keys, junction_keys \
+    #     , visited_keys, visited_terminal_keys \
+    #     , junction_count
 
 def get_nhd_connections(
     supernetwork_data = {}
     , debuglevel = 0
     , verbose = False
     ):
-    if 'mask_file_path' in supernetwork_data:
-        #TODO: this probably means we are reading the same file twice -- fix this [maybe] by implementing an overloaded return
-        return do_network(
-            geo_file_path = supernetwork_data['geo_file_path']
-              , key_col = supernetwork_data['key_col']
-              , downstream_col = supernetwork_data['downstream_col']
-              , length_col = supernetwork_data['length_col']
-              #, manningn_col = supernetwork_data['manningn_col']
-              #, slope_col = supernetwork_data['slope_col']
-              #, bottomwidth_col = supernetwork_data['bottomwidth_col']
-              , terminal_code = supernetwork_data['terminal_code']
-              , title_string = supernetwork_data['title_string']
-              , driver_string = supernetwork_data['driver_string']
-              , layer_string = supernetwork_data['layer_string']
-              , mask_file_path = supernetwork_data['mask_file_path']
-              , mask_layer_string = supernetwork_data['mask_layer_string']
-              , mask_driver_string = supernetwork_data['mask_driver_string']
-              , mask_key_col = supernetwork_data['mask_key_col']
-              , debuglevel = debuglevel
-              , verbose = verbose
-            )
-    else:
-        return do_network(
-            geo_file_path = supernetwork_data['geo_file_path']
-              , key_col = supernetwork_data['key_col']
-              , downstream_col = supernetwork_data['downstream_col']
-              , length_col = supernetwork_data['length_col']
-              #, manningn_col = supernetwork_data['manningn_col']
-              #, slope_col = supernetwork_data['slope_col']
-              #, bottomwidth_col = supernetwork_data['bottomwidth_col']
-              , terminal_code = supernetwork_data['terminal_code']
-              , title_string = supernetwork_data['title_string']
-              , driver_string = supernetwork_data['driver_string']
-              , layer_string = supernetwork_data['layer_string']
-              , debuglevel = debuglevel
-              , verbose = verbose
-            )
+    if 'mask_file_path' not in supernetwork_data:
+        #TODO: doing things this way may mean we are reading the same file twice -- fix this [maybe] by implementing an overloaded return
+        supernetwork_data.update({'mask_file_path':None})
+        supernetwork_data.update({'mask_layer_string':None})
+        supernetwork_data.update({'mask_driver_string':None})
+        supernetwork_data.update({'mask_key_col':None})
+    return do_connections(
+        geo_file_path = supernetwork_data['geo_file_path']
+          , key_col = supernetwork_data['key_col']
+          , downstream_col = supernetwork_data['downstream_col']
+          , length_col = supernetwork_data['length_col']
+          , terminal_code = supernetwork_data['terminal_code']
+          , title_string = supernetwork_data['title_string']
+          , driver_string = supernetwork_data['driver_string']
+          , layer_string = supernetwork_data['layer_string']
+          , mask_file_path = supernetwork_data['mask_file_path']
+          , mask_layer_string = supernetwork_data['mask_layer_string']
+          , mask_driver_string = supernetwork_data['mask_driver_string']
+          , mask_key_col = supernetwork_data['mask_key_col']
+          , debuglevel = debuglevel
+          , verbose = verbose
+        )
 
 def set_supernetwork_data(
     supernetwork = ''
@@ -270,6 +232,28 @@ def set_supernetwork_data(
             , 'layer_string' : 0
           }
 
+    elif supernetwork == 'Pocono_TEST1':
+        return {
+            'geo_file_path' : os.path.join(geo_input_folder
+                    , r'PoconoSampleRouteLink1.shp')
+            , 'key_col' : 18
+            , 'downstream_col' : 23
+            , 'length_col' : 5
+            , 'manningn_col' : 20
+            , 'manningncc_col' : 21
+            , 'slope_col' : 10
+            , 'bottomwidth_col' : 2
+            , 'topwidth_col' : 11
+            , 'topwidthcc_col' : 12
+            , 'MusK_col' : 7
+            , 'MusX_col' : 8
+            , 'ChSlp_col' : 12
+            , 'terminal_code' : 0
+            , 'title_string' : 'Pocono Test Example'
+            , 'driver_string' : 'ESRI Shapefile'
+            , 'layer_string' : 0
+          }
+
     elif supernetwork == 'LowerColorado_CONCHOS_FULL_RES':
         return {
             'geo_file_path' : os.path.join(geo_input_folder
@@ -326,23 +310,62 @@ def set_supernetwork_data(
           }
 
     elif supernetwork == 'Mainstems_CONUS':
+   #      dict = set_supernetwork_data(
+   #              supernetwork = 'CONUS_FULL_RES_v20'
+   #              , geo_input_folder = geo_input_folder
+   #              )
+   #      dict.update({
+   #           'title_string' : 'CONUS "Mainstem"' #overwrites other title...
+   #           , 'mask_file_path' : os.path.join(geo_input_folder
+   #                  , r'conus_routeLink_subset.nc')
+   #            # , 'mask_file_path' : os.path.join(geo_input_folder
+   #            #       , r'downstream_reaches_v1_GCS.shp')
+   #            , 'mask_driver_string' : r'NetCDF'
+   #            # , 'mask_driver_string' : r'ESRI Shapefile'
+   #            , 'mask_layer_string' : 0
+   #            , 'mask_key_col' : 0
+   #            , 'mask_name_col' : 2 #TODO: Not used yet.
+   #          })
+   #      return dict
+
         return {
             'geo_file_path' : os.path.join(geo_input_folder
-                    , r'downstream_reaches_v1_GCS.shp')
+                    , r'conus_routeLink_subset.nc')
             , 'key_col' : 0
             , 'downstream_col' : 2
             , 'length_col' : 10
             , 'manningn_col' : 11
+            , 'manningncc_col' : 20
             , 'slope_col' : 12
             , 'bottomwidth_col' : 14
+            , 'topwidth_col' : 22
+            , 'topwidthcc_col' : 21
             , 'MusK_col' : 8
             , 'MusX_col' : 9
             , 'ChSlp_col' : 13
             , 'terminal_code' : 0
             , 'title_string' : 'CONUS "Mainstem"'
-            , 'driver_string' : 'ESRI Shapefile'
+            , 'driver_string' : 'NetCDF'
             , 'layer_string' : 0
           }
+
+  #      return {
+  #          'geo_file_path' : os.path.join(geo_input_folder
+  #                  , r'downstream_reaches_v1_GCS.shp')
+  #          , 'key_col' : 0
+  #          , 'downstream_col' : 2
+  #          , 'length_col' : 10
+  #          , 'manningn_col' : 11
+  #          , 'slope_col' : 12
+  #          , 'bottomwidth_col' : 14
+  #          , 'MusK_col' : 8
+  #          , 'MusX_col' : 9
+  #          , 'ChSlp_col' : 13
+  #          , 'terminal_code' : 0
+  #          , 'title_string' : 'CONUS "Mainstem"'
+  #          , 'driver_string' : 'ESRI Shapefile'
+  #          , 'layer_string' : 0
+  #        }
 
     elif supernetwork == 'CONUS_ge5':
         return {
@@ -387,8 +410,11 @@ def set_supernetwork_data(
             , 'downstream_col' : 2
             , 'length_col' : 10
             , 'manningn_col' : 11
+            , 'manningncc_col' : 20
             , 'slope_col' : 12
             , 'bottomwidth_col' : 14
+            , 'topwidth_col' : 22
+            , 'topwidthcc_col' : 21
             , 'MusK_col' : 8
             , 'MusX_col' : 9
             , 'ChSlp_col' : 13
