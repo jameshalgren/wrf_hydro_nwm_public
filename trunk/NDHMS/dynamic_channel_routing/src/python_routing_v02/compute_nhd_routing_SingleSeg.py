@@ -134,9 +134,9 @@ def compute_mc_reach_up2down(
     # if verbose: print(f"(n_segs: {len(reach['segments'])})")
     if verbose: print(f"\nreach: {head_segment} (order: {reach['seqorder']} n_segs: {len(reach['segments'])})")
 
-    filename = f'../../test/output/text/{head_segment}_{ts}.log'
+    filename = f'../../test/output/text/{head_segment}_{ts}.csv'
     file = open(filename, 'w+')
-    writeString = f"\nreach: {head_segment} (order: {reach['seqorder']} n_segs: {len(reach['segments'])}  isterminal: {reach['upstream_reaches'] == {supernetwork_data['terminal_code']}} )  reach tail: {reach['reach_tail']}"
+    writeString = f"\nreach: {head_segment} (order: {reach['seqorder']} n_segs: {len(reach['segments'])}  isterminal: {reach['upstream_reaches'] == {supernetwork_data['terminal_code']}} )  reach tail: {reach['reach_tail']}  upstream seg : "
 
     # upstream flow per reach
     qup_tmp = 0
@@ -149,19 +149,20 @@ def compute_mc_reach_up2down(
             # if us == 5507050 :
             #    import pdb; pdb.set_trace()
             # qup_tmp += flowdepthvel[network['reaches'][us]['reach_tail']]['flow']['curr']
-            writeString = writeString + f"\n upstream seg : {us}"
+            writeString = writeString + f" {us} "
             qup_tmp += flowdepthvel[us]['flow']['curr']
     # flowdepthvel[reach['reach_head']]['flow']['curr'] = qup_tmp
     # print(qup_tmp)
-    writetoFile(file, writeString)
-
+    # writetoFile(file, writeString)
 
     qup = qup_tmp
     quc = qup
 
     current_segment = reach['reach_head']
 
-    writeString = f'timestep: {ts} cur : {current_segment}  upstream flow: {qup_tmp}'
+    writeString = writeString + f' timestep: {ts} cur : {current_segment}  upstream flow: {qup_tmp}'
+    writetoFile(file, writeString)
+    writeString = f"  , , , , , , "
     writetoFile(file, writeString)
 
     next_segment = connections[current_segment]['downstream']
@@ -201,13 +202,13 @@ def compute_mc_reach_up2down(
 
         #writeString = f'timestep: {ts} parameters : {current_segment}  {dx} {bw} {tw} {n_manning} {cs} {s0} {dt}'
         #writetoFile(file, writeString)
-        writeString = f"timestep: {ts} pre : {current_segment}: {flowdepthvel[current_segment]['flow']['prev']} "
-        writeString = writeString + f"{flowdepthvel[current_segment]['depth']['prev']} "
-        writeString = writeString + f"{flowdepthvel[current_segment]['vel']['prev']} "
-        writeString = writeString + f"{flowdepthvel[current_segment]['qlat']['curr']} "
-        writeString = writeString + f"{qup} "
-        writeString = writeString + f"{quc}"
-        writetoFile(file, writeString)
+        writeString = f"{current_segment} , {flowdepthvel[current_segment]['flow']['prev']} "
+        writeString = writeString + f", {flowdepthvel[current_segment]['depth']['prev']} "
+        writeString = writeString + f", {flowdepthvel[current_segment]['vel']['prev']} "
+        writeString = writeString + f", {flowdepthvel[current_segment]['qlat']['curr']} "
+        writeString = writeString + f", {qup} "
+        writeString = writeString + f", {quc}"
+        #writetoFile(file, writeString)
 
         # run M-C model
         qdc, velc, depthc = singlesegment(
@@ -230,14 +231,14 @@ def compute_mc_reach_up2down(
         #print(qdc, velc, depthc)
         #print(qdc_expected, velc_expected, depthc_expected)
 
-        writeString = f'timestep: {ts} cur : {current_segment}  {qdc} {depthc} {velc} '
+        writeString = writeString + f',  {qdc},  {depthc},  {velc} '
         writetoFile(file, writeString)
         flowdepthvel[current_segment]['flow']['curr'] = qdc
         flowdepthvel[current_segment]['depth']['curr'] = depthc
         flowdepthvel[current_segment]['vel']['curr'] = velc
-        # for next
-        qup = qdc
-        quc = qdc
+        # for next segment qup / quc use the previous flow values
+        qup = flowdepthvel[current_segment]['flow']['prev']
+        quc = qup
 
         if current_segment == reach['reach_tail']:
             if verbose: print(f'{current_segment} (tail)')
