@@ -46,7 +46,7 @@ else:
 connections = None
 networks = None
 flowdepthvel = None
-WRITE_OUTPUT = False
+WRITE_OUTPUT = True
 
 ## network and reach utilities
 import nhd_network_utilities as nnu
@@ -288,7 +288,7 @@ def main():
     showtiming = True
 
     test_folder = os.path.join(root, r'test')
-    geo_input_folder = os.path.join(test_folder, r'input', r'geo', r'Channels')
+    geo_input_folder = os.path.join(test_folder, r'input', r'geo')
 
     # TODO: Make these commandline args
     """##NHD Subset (Brazos/Lower Colorado)"""

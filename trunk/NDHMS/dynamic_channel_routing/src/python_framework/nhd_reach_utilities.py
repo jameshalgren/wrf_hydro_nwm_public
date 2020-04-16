@@ -74,6 +74,9 @@ def recursive_junction_read (
             #if debuglevel <= -2: 
                 #print(f'There is a problem with connection: {segment}: {connections[segment]}')
 
+#TODO: re-implement as parallel process on terminal segments
+#TODO: NOTE: this will be a little more complicated now that the global `connections` 
+#TODO: NOTE: object is not available from the calling function. Probably requires a class.
 def network_trace(
         terminal_segment
         , order_iter

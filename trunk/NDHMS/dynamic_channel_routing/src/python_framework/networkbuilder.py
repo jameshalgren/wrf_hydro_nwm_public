@@ -241,6 +241,7 @@ def main():
     (test_connections) = get_down_connections(
                 rows = test_rows
                 , key_col = test_key_col
+                , mask_set = {row[test_key_col] for row in test_rows}
                 , downstream_col = test_downstream_col
                 , length_col = test_length_col
                 , verbose = True

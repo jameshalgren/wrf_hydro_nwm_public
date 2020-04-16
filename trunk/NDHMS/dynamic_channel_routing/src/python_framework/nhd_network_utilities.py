@@ -1,6 +1,6 @@
 import networkbuilder as networkbuilder
-import recursive_print
 import os
+import traceback
 import geopandas as gpd
 import pandas as pd
 import zipfile
@@ -19,27 +19,39 @@ def get_geo_file_table_rows(
     # implemented as class methods where those arrays are members of the class.
     if driver_string == 'NetCDF': # Use Xarray to read a netcdf table
         if debuglevel <= -1: print(f'reading -- dataset: {geo_file_path}; layer: {layer_string}; driver: {driver_string}')
-        geo_file = xr.open_dataset(geo_file_path)
-        geo_file_rows = (geo_file.to_dataframe()).values
+        try:
+            geo_file = xr.open_dataset(geo_file_path)
+            geo_file_rows = (geo_file.to_dataframe()).values
+        except Exception as e:
+            print (e)
+            if debuglevel <= -1: traceback.print_exc()
         # The xarray method for NetCDFs was implemented after the geopandas method for 
         # GIS source files. It's possible (probable?) that we are doing something 
         # inefficient by converting away from the Pandas dataframe.
         # TODO: Check the optimal use of the Pandas dataframe
-    elif driver_string == 'zip': # Use Pandas to read zipped csv
+    elif driver_string == 'zip': # Use Pandas to read zipped csv/txt
         if debuglevel <= -1: print(f'reading -- dataset: {geo_file_path}; layer: {layer_string}; driver: {driver_string}')
-        with zipfile.ZipFile(geo_file_path, 'r') as zcsv:
-            with zcsv.open(layer_string) as csv:
-                geo_file = pd.read_csv(csv)
+        try:
+            with zipfile.ZipFile(geo_file_path, 'r') as zcsv:
+                with zcsv.open(layer_string) as csv:
+                    geo_file = pd.read_csv(csv)
+        except Exception as e:
+            print (e)
+            if debuglevel <= -1: traceback.print_exc()
         geo_file_rows = geo_file.to_numpy()
     else: # Read Shapefiles, Geodatabases with Geopandas/fiona
         if debuglevel <= -1: print(f'reading -- dataset: {geo_file_path}; layer: {layer_string}; fiona driver: {driver_string}')
-        geo_file = gpd.read_file(geo_file_path, driver=driver_string, layer=layer_string)
-        geo_file_rows = geo_file.to_numpy()
+        try:
+            geo_file = gpd.read_file(geo_file_path, driver=driver_string, layer=layer_string)
+            geo_file_rows = geo_file.to_numpy()
+        except Exception as e:
+            print (e)
+            if debuglevel <= -1: traceback.print_exc()
         if debuglevel <= -2: 
             try: 
                 geo_file.plot() 
             except:
-                pass
+                print(r'cannot plot geofile (not necessarily a problem)')
     if debuglevel <= -1: print(geo_file.head()) # Preview the first 5 lines of the loaded data
 
     return geo_file_rows
@@ -175,16 +187,6 @@ def get_nhd_connections(
 
 def set_supernetwork_data(
     supernetwork = ''
-    # Note: supernetworks may contain:
-    # Brazos_FULL_RES
-    # LowerColorado_FULL_RES
-    # LowerColorado_CONCHOS_FULL_RES
-    # Mainstems_CONUS
-    # CONUS_ge5
-    # Brazos_LowerColorado_ge5
-    # CONUS_Named_Streams
-    # CONUS_FULL_RES_v12
-    # CONUS_FULL_RES_v20
     , geo_input_folder = None
     , verbose = True
     , debuglevel = 0
@@ -194,47 +196,27 @@ def set_supernetwork_data(
     # from https://www.nohrsc.noaa.gov/pub/staff/keicher/NWM_live/web/data_tools/
     # the CONUS_ge5 and Brazos_LowerColorado_ge5 datasets are included
     # in the github test folder
-    if supernetwork == 'Brazos_FULL_RES':
-        return {
-            'geo_file_path': os.path.join(geo_input_folder
-                    , r'Export_For_Test_ONLYBrazos_ALLORDERS.shp')
-            , 'key_col' : 1
-            , 'downstream_col' : 6
-            , 'length_col' : 5
-            , 'manningn_col' : 10
-            , 'slope_col' : 9
-            , 'bottomwidth_col' : 11
-            , 'MusK_col' : 7
-            , 'MusX_col' : 8
-            , 'ChSlp_col' : 12
-            , 'terminal_code' : 0
-            , 'title_string' : 'Brazos \nFull Res'
-            , 'driver_string' : 'ESRI Shapefile'
-            , 'layer_string' : 0
-          }
 
-    elif supernetwork == 'LowerColorado_FULL_RES':
-        return {
-            'geo_file_path' : os.path.join(geo_input_folder
-                    , r'Export_For_Test_ONLYLowerColorado_ALLORDERS.shp')
-            , 'key_col' : 1
-            , 'downstream_col' : 6
-            , 'length_col' : 5
-            , 'manningn_col' : 10
-            , 'slope_col' : 9
-            , 'bottomwidth_col' : 11
-            , 'MusK_col' : 7
-            , 'MusX_col' : 8
-            , 'ChSlp_col' : 12
-            , 'terminal_code' : 0
-            , 'title_string' : 'Lower Colorado\nFull Res'
-            , 'driver_string' : 'ESRI Shapefile'
-            , 'layer_string' : 0
-          }
-
+    supernetwork_options = {
+        'Pocono_TEST1'
+        , 'LowerColorado_Conchos_FULL_RES'
+        , 'Brazos_LowerColorado_ge5'
+        , 'Brazos_LowerColorado_FULL_RES'
+        , 'Brazos_LowerColorado_Named_Streams'
+        , 'CONUS_ge5'
+        , 'Mainstems_CONUS'
+        , 'CONUS_Named_Streams'
+        , 'CONUS_FULL_RES_v20'
+    }
+    if supernetwork not in supernetwork_options:
+        print('Note: please call function with supernetworks set to one of the following:')
+        for s in supernetwork_options:
+            print(f"'{s}'")
+        exit()
     elif supernetwork == 'Pocono_TEST1':
         return {
             'geo_file_path' : os.path.join(geo_input_folder
+                    , r'PoconoSampleData1' 
                     , r'PoconoSampleRouteLink1.shp')
             , 'key_col' : 18
             , 'downstream_col' : 23
@@ -254,45 +236,28 @@ def set_supernetwork_data(
             , 'layer_string' : 0
           }
 
-    elif supernetwork == 'LowerColorado_CONCHOS_FULL_RES':
-        return {
-            'geo_file_path' : os.path.join(geo_input_folder
-                    , r'Export_For_Test_ONLYLowerColorado_CONCHOS_ALLORDERS.shp')
-            , 'key_col' : 1
-            , 'downstream_col' : 6
-            , 'length_col' : 5
-            , 'manningn_col' : 10
-            , 'slope_col' : 9
-            , 'bottomwidth_col' : 11
-            , 'MusK_col' : 7
-            , 'MusX_col' : 8
-            , 'ChSlp_col' : 12
-            , 'terminal_code' : 0
-            , 'title_string' : 'Conchos sub-basin\nLower Colorado Full Res '
-            , 'driver_string' : 'ESRI Shapefile'
-            , 'layer_string' : 0
-          }
-
-    elif supernetwork == 'LowerColorado_CONCHOS_Named_Streams':
+    elif supernetwork == 'LowerColorado_Conchos_FULL_RES':
         dict = set_supernetwork_data(
-                supernetwork = 'LowerColorado_CONCHOS_FULL_RES'
+                supernetwork = 'CONUS_FULL_RES_v20'
                 , geo_input_folder = geo_input_folder
                 )
         dict.update({
-            'title_string' : 'NHD 2.0 GNIS labeled streams' #overwrites other title...
+            'title_string' : 'NHD 2.0 Conchos Basin of the LowerColorado River' #overwrites other title...
               , 'mask_file_path' : os.path.join(geo_input_folder
-                    , r'nwm_reaches_conus_20_wGNIS.zip')
+                    , r'Channels'
+                    , r'masks'
+                    , r'LowerColorado_Conchos_FULL_RES.zip')
               , 'mask_driver_string' : r'zip'
-              , 'mask_layer_string' : r'nwm_reaches_conus_20_wGNIS.csv'
-              , 'mask_key_col' : 1
-              , 'mask_name_col' : 5 #TODO: Not used yet.
+              , 'mask_layer_string' : r'LowerColorado_Conchos_FULL_RES.txt'
+              , 'mask_key_col' : 0
+              , 'mask_name_col' : 1 #TODO: Not used yet.
             })
         return dict
-
 
     elif supernetwork == 'Brazos_LowerColorado_ge5':
         return {
             'geo_file_path' : os.path.join(geo_input_folder
+                    , r'Channels'
                     , r'NHD_BrazosLowerColorado_Channels.shp')
             , 'key_col' : 2
             , 'downstream_col' : 7
@@ -309,27 +274,64 @@ def set_supernetwork_data(
             , 'layer_string' : 0
           }
 
-    elif supernetwork == 'Mainstems_CONUS':
-   #      dict = set_supernetwork_data(
-   #              supernetwork = 'CONUS_FULL_RES_v20'
-   #              , geo_input_folder = geo_input_folder
-   #              )
-   #      dict.update({
-   #           'title_string' : 'CONUS "Mainstem"' #overwrites other title...
-   #           , 'mask_file_path' : os.path.join(geo_input_folder
-   #                  , r'conus_routeLink_subset.nc')
-   #            # , 'mask_file_path' : os.path.join(geo_input_folder
-   #            #       , r'downstream_reaches_v1_GCS.shp')
-   #            , 'mask_driver_string' : r'NetCDF'
-   #            # , 'mask_driver_string' : r'ESRI Shapefile'
-   #            , 'mask_layer_string' : 0
-   #            , 'mask_key_col' : 0
-   #            , 'mask_name_col' : 2 #TODO: Not used yet.
-   #          })
-   #      return dict
+    elif supernetwork == 'Brazos_LowerColorado_FULL_RES':
+        dict = set_supernetwork_data(
+                supernetwork = 'CONUS_FULL_RES_v20'
+                , geo_input_folder = geo_input_folder
+                )
+        dict.update({
+            'title_string' : 'NHD 2.0 Brazos and LowerColorado Basins' #overwrites other title...
+              , 'mask_file_path' : os.path.join(geo_input_folder
+                    , r'Channels'
+                    , r'masks'
+                    , r'Brazos_LowerColorado_FULL_RES.zip')
+              , 'mask_driver_string' : r'zip'
+              , 'mask_layer_string' : r'Brazos_LowerColorado_FULL_RES.txt'
+              , 'mask_key_col' : 0
+              , 'mask_name_col' : 1 #TODO: Not used yet.
+            })
+        return dict
 
+    elif supernetwork == 'Brazos_LowerColorado_Named_Streams':
+        dict = set_supernetwork_data(
+                supernetwork = 'CONUS_FULL_RES_v20'
+                , geo_input_folder = geo_input_folder
+                )
+        dict.update({
+            'title_string' : 'NHD 2.0 GNIS labeled streams in the Brazos and LowerColorado Basins' #overwrites other title...
+              , 'mask_file_path' : os.path.join(geo_input_folder
+                    , r'Channels'
+                    , r'masks'
+                    , r'Brazos_LowerColorado_Named_Streams.zip')
+              , 'mask_driver_string' : r'zip'
+              , 'mask_layer_string' : r'Brazos_LowerColorado_Named_Streams.csv'
+              , 'mask_key_col' : 0
+              , 'mask_name_col' : 1 #TODO: Not used yet.
+            })
+        return dict
+
+    elif supernetwork == 'CONUS_ge5':
+        dict = set_supernetwork_data(
+                supernetwork = 'CONUS_FULL_RES_v20'
+                , geo_input_folder = geo_input_folder
+                )
+        dict.update({
+            'title_string' : 'NHD CONUS Order 5 and Greater' #overwrites other title...
+              , 'mask_file_path' : os.path.join(geo_input_folder
+                    , r'Channels'
+                    , r'masks'
+                    , r'CONUS_ge5.zip')
+              , 'mask_driver_string' : r'zip'
+              , 'mask_layer_string' : r'CONUS_ge5.txt'
+              , 'mask_key_col' : 0
+              , 'mask_name_col' : 1 #TODO: Not used yet.
+            })
+        return dict
+
+    elif supernetwork == 'Mainstems_CONUS':
         return {
             'geo_file_path' : os.path.join(geo_input_folder
+                    , r'Channels'
                     , r'conus_routeLink_subset.nc')
             , 'key_col' : 0
             , 'downstream_col' : 2
@@ -349,62 +351,28 @@ def set_supernetwork_data(
             , 'layer_string' : 0
           }
 
-  #      return {
-  #          'geo_file_path' : os.path.join(geo_input_folder
-  #                  , r'downstream_reaches_v1_GCS.shp')
-  #          , 'key_col' : 0
-  #          , 'downstream_col' : 2
-  #          , 'length_col' : 10
-  #          , 'manningn_col' : 11
-  #          , 'slope_col' : 12
-  #          , 'bottomwidth_col' : 14
-  #          , 'MusK_col' : 8
-  #          , 'MusX_col' : 9
-  #          , 'ChSlp_col' : 13
-  #          , 'terminal_code' : 0
-  #          , 'title_string' : 'CONUS "Mainstem"'
-  #          , 'driver_string' : 'ESRI Shapefile'
-  #          , 'layer_string' : 0
-  #        }
-
-    elif supernetwork == 'CONUS_ge5':
-        return {
-            'geo_file_path' : os.path.join(geo_input_folder
-                    , r'NHD_Conus_Channels.shp')
-            , 'key_col' : 1
-            , 'downstream_col' : 6
-            , 'length_col' : 5
-            , 'manningn_col' : 10
-            , 'slope_col' : 9
-            , 'bottomwidth_col' : 11
-            , 'MusK_col' : 7
-            , 'MusX_col' : 8
-            , 'ChSlp_col' : 12
-            , 'terminal_code' : 0
-            , 'title_string' : 'NHD CONUS Order 5 and Greater'
-            , 'driver_string' : 'ESRI Shapefile'
-            , 'layer_string' : 0
-          }
-
     elif supernetwork == 'CONUS_Named_Streams':
         dict = set_supernetwork_data(
                 supernetwork = 'CONUS_FULL_RES_v20'
                 , geo_input_folder = geo_input_folder
                 )
         dict.update({
-            'title_string' : 'NHD 2.0 GNIS labeled streams' #overwrites other title...
+            'title_string' : 'CONUS NWM v2.0 only GNIS labeled streams' #overwrites other title...
               , 'mask_file_path' : os.path.join(geo_input_folder
-                    , r'nwm_reaches_conus_20_wGNIS.zip')
+                    , r'Channels'
+                    , r'masks'
+                    , r'nwm_reaches_conus_v21_wgnis_name.zip')
               , 'mask_driver_string' : r'zip'
-              , 'mask_layer_string' : r'nwm_reaches_conus_20_wGNIS.csv'
-              , 'mask_key_col' : 1
-              , 'mask_name_col' : 5 #TODO: Not used yet.
+              , 'mask_layer_string' : r'nwm_reaches_conus_v21_wgnis_name.csv'
+              , 'mask_key_col' : 0
+              , 'mask_name_col' : 1 #TODO: Not used yet.
             })
         return dict
 
     elif supernetwork == 'CONUS_FULL_RES_v20':
         return {
             'geo_file_path' : os.path.join(geo_input_folder
+                    , r'Channels'
                     , r'RouteLink_NWMv2.0_20190517_cheyenne_pull.nc')
             , 'key_col' : 0
             , 'downstream_col' : 2
@@ -421,25 +389,6 @@ def set_supernetwork_data(
             , 'terminal_code' : 0
             , 'title_string' : 'CONUS Full Resolution NWM v2.0'
             , 'driver_string' : 'NetCDF'
-            , 'layer_string' : 0
-          }
-
-    elif supernetwork == 'CONUS_FULL_RES_v12':
-        return {
-            'geo_file_path' : os.path.join(geo_input_folder
-                    , r'channels_nwm_v12_routeLink_all.shp')
-            , 'key_col' : 0
-            , 'downstream_col' : 5
-            , 'length_col' : 4
-            , 'manningn_col' : 9 
-            , 'slope_col' : 8
-            , 'bottomwidth_col' : 10
-            , 'MusK_col' : 6
-            , 'MusX_col' : 7
-            , 'ChSlp_col' : 11
-            , 'terminal_code' : 0
-            , 'title_string' : 'CONUS Full Resolution NWM v1.2'
-            , 'driver_string' : 'ESRI Shapefile'
             , 'layer_string' : 0
           }
 

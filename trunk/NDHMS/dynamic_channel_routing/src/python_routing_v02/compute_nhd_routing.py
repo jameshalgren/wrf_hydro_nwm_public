@@ -175,7 +175,7 @@ def main():
     showtiming = True
 
     test_folder = os.path.join(root, r'test')
-    geo_input_folder = os.path.join(test_folder, r'input', r'geo', r'Channels')
+    geo_input_folder = os.path.join(test_folder, r'input', r'geo')
 
     #TODO: Make these commandline args
     # supernetwork = 'Pocono_TEST1'
