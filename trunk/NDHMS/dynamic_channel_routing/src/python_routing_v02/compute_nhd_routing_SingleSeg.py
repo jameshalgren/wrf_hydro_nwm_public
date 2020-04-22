@@ -163,8 +163,10 @@ def compute_mc_reach_up2down(
         # for us in reach['upstream_reaches']:
         for us in connections[reach['reach_head']]['upstreams']:
             if WRITE_OUTPUT: writeString = writeString + f" {us} "
-            qup_tmp += flowdepthvel[us]['flow']['curr']
-    # flowdepthvel[reach['reach_head']]['flow']['curr'] = qup_tmp
+            #if ts > 0:
+            qup_tmp += flowdepthvel[us]['flowval'][-1]
+            #else:
+            #    qup_tmp += 0
     # print(qup_tmp)
     # writetoFile(file, writeString)
 
@@ -202,32 +204,21 @@ def compute_mc_reach_up2down(
         if ts > 25:
             multiplier = 0
         qlat = 10.0 * (multiplier) # (ts + 1) * 10.0  # lateral flow per segment
-        flowdepthvel[current_segment]['qlat']['curr'] = qlat
-
-        flowdepthvel[current_segment]['flow']['prev'] = flowdepthvel[current_segment]['flow']['curr']
-        flowdepthvel[current_segment]['depth']['prev'] = flowdepthvel[current_segment]['depth']['curr']
-        flowdepthvel[current_segment]['vel']['prev'] = flowdepthvel[current_segment]['vel']['curr']
-        flowdepthvel[current_segment]['qlat']['prev'] = flowdepthvel[current_segment]['qlat']['curr']
+        flowdepthvel[current_segment]['qlatval'].append(qlat)
 
         # print (f'counter = {i}')
         # if current_segment == 5559368 or i == 100:
         #    import pdb; pdb.set_trace()
 
-        #qlat = flowdepthvel[current_segment]['qlat']['curr']  # temporary assigned qlat
-        qdp = flowdepthvel[current_segment]['flow']['prev']  # temporary assigned qd
-        velp = flowdepthvel[current_segment]['vel']['prev']
-        depthp = flowdepthvel[current_segment]['depth']['prev']
+        if ts > 0:
+            qdp = flowdepthvel[current_segment]['flowval'][-1]
+            velp = flowdepthvel[current_segment]['velval'][-1]
+            depthp = flowdepthvel[current_segment]['depthval'][-1]
+        else:
+            qdp = 0
+            velp = 0
+            depthp = 0
 
-        if WRITE_OUTPUT:
-            # writeString = f'timestep: {ts} parameters : {current_segment}  {dx} {bw} {tw} {n_manning} {cs} {s0} {dt}'
-            # writetoFile(file, writeString)
-            writeString = f"{current_segment} , {flowdepthvel[current_segment]['flow']['prev']} "
-            writeString = writeString + f", {flowdepthvel[current_segment]['depth']['prev']} "
-            writeString = writeString + f", {flowdepthvel[current_segment]['vel']['prev']} "
-            writeString = writeString + f", {flowdepthvel[current_segment]['qlat']['curr']} "
-            writeString = writeString + f", {qup} "
-            writeString = writeString + f", {quc}"
-            # writetoFile(file, writeString)
 
         # run M-C model
         qdc, velc, depthc = singlesegment(
@@ -235,7 +226,7 @@ def compute_mc_reach_up2down(
             , qup=qup
             , quc=quc
             , qdp=qdp
-            , qlat=flowdepthvel[current_segment]['qlat']['curr']
+            , qlat=qlat
             , dx=connections[current_segment]['data'][supernetwork_data['length_col']]
             , bw=connections[current_segment]['data'][supernetwork_data['bottomwidth_col']]
             , tw=tw
@@ -244,8 +235,8 @@ def compute_mc_reach_up2down(
             , n_manning_cc=connections[current_segment]['data'][supernetwork_data['manningn_col']]
             , cs=connections[current_segment]['data'][supernetwork_data['ChSlp_col']]
             , s0=connections[current_segment]['data'][supernetwork_data['slope_col']]
-            , velp=flowdepthvel[current_segment]['vel']['prev']
-            , depthp=flowdepthvel[current_segment]['depth']['prev']
+            , velp=velp
+            , depthp=depthp
         )
         # print(qdc, velc, depthc)
         # print(qdc_expected, velc_expected, depthc_expected)
@@ -253,16 +244,16 @@ def compute_mc_reach_up2down(
         if WRITE_OUTPUT:
             writeString = writeString + f',  {qdc},  {depthc},  {velc} '
             writetoFile(file, writeString)
-        flowdepthvel[current_segment]['flow']['curr'] = qdc
+        # for next segment qup / quc use the previous flow values
+        if ts > 0:
+            qup = flowdepthvel[current_segment]['flowval'][-1]  # input for next segment
+        else:
+            qup = 0
+        quc = qup  # input for next segment
         flowdepthvel[current_segment]['flowval'].append(qdc)
-        flowdepthvel[current_segment]['depth']['curr'] = depthc
         flowdepthvel[current_segment]['depthval'].append(depthc)
-        flowdepthvel[current_segment]['vel']['curr'] = velc
         flowdepthvel[current_segment]['velval'].append(velc)
         flowdepthvel[current_segment]['time'].append(ts)
-        # for next segment qup / quc use the previous flow values
-        qup = flowdepthvel[current_segment]['flow']['prev']  # input for next segment
-        quc = qup  # input for next segment
         if current_segment == reach['reach_tail']:
             if verbose: print(f'{current_segment} (tail)')
             break
@@ -283,7 +274,7 @@ def printarray(head_segment=None
     global flowdepthvel
 
     WRITE_OUTPUT = True
-    header = [['time', 'q', 'd', 'v']]
+    header = [['time', 'qlat', 'q', 'd', 'v']]
     current_segment = reach['reach_head']
     next_segment = connections[current_segment]['downstream']
     # print(f'{current_segment}==>{next_segment} conections:{ncomp} timestep:{ts}')
@@ -296,6 +287,7 @@ def printarray(head_segment=None
                 csvwriter = csv.writer(csvfile, delimiter=',', quoting=csv.QUOTE_ALL)
                 csvwriter.writerows(header)
                 csvwriter.writerows(zip(flowdepthvel[current_segment]['time'],
+                                        flowdepthvel[current_segment]['qlatval'],
                                         flowdepthvel[current_segment]['flowval'],
                                         flowdepthvel[current_segment]['depthval'],
                                         flowdepthvel[current_segment]['velval']))
@@ -386,10 +378,7 @@ def main():
     if showtiming: start_time = time.time()
     connections = supernetwork_values[0]
 
-    flowdepthvel = {connection: {'flow': {'prev': 0, 'curr': 0}
-        , 'depth': {'prev': 0, 'curr': 0}
-        , 'vel': {'prev': 0, 'curr': 0}
-        , 'qlat': {'prev': 0, 'curr': 0}
+    flowdepthvel = {connection: {'qlatval': []
         , 'time': []
         , 'flowval': []
         , 'depthval': []
