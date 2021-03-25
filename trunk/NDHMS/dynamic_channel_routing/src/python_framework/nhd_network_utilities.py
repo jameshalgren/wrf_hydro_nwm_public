@@ -245,15 +245,36 @@ def set_supernetwork_data(
             , 'bottomwidth_col' : 2
             , 'topwidth_col' : 11
             , 'topwidthCC_col' : 12
-            , 'MusK_col' : 7
-            , 'MusX_col' : 8
-            , 'ChSlp_col' : 12
+            , 'MusK_col' : 6
+            , 'MusX_col' : 7
+            , 'ChSlp_col' : 3
             , 'terminal_code' : 0
             , 'title_string' : 'Pocono Test Example'
             , 'driver_string' : 'ESRI Shapefile'
             , 'layer_string' : 0
           }
-
+    
+    elif supernetwork == 'Pocono_TEST2':
+        return {
+            'geo_file_path' : os.path.join(geo_input_folder
+                    , r'PoconoRouteLink_testsamp1_nwm_mc.shp')
+            , 'key_col' : 18
+            , 'downstream_col' : 23
+            , 'length_col' : 5
+            , 'manningn_col' : 20
+            , 'manningnCC_col' : 21
+            , 'slope_col' : 10
+            , 'bottomwidth_col' : 2
+            , 'topwidth_col' : 11
+            , 'topwidthCC_col' : 12
+            , 'MusK_col' : 6
+            , 'MusX_col' : 7
+            , 'ChSlp_col' : 3
+            , 'terminal_code' : 0
+            , 'title_string' : 'Pocono Test 2 Example'
+            , 'driver_string' : 'ESRI Shapefile'
+            , 'layer_string' : 0
+          }
     elif supernetwork == 'LowerColorado_CONCHOS_FULL_RES':
         return {
             'geo_file_path' : os.path.join(geo_input_folder
@@ -328,15 +349,18 @@ def set_supernetwork_data(
    #          })
    #      return dict
 
-        return {
+       return {
             'geo_file_path' : os.path.join(geo_input_folder
                     , r'conus_routeLink_subset.nc')
             , 'key_col' : 0
             , 'downstream_col' : 2
             , 'length_col' : 10
             , 'manningn_col' : 11
+              , 'manningnCC_col' : 20
             , 'slope_col' : 12
             , 'bottomwidth_col' : 14
+              , 'topwidth_col' : 22
+              , 'topwidthCC_col' : 21
             , 'MusK_col' : 8
             , 'MusX_col' : 9
             , 'ChSlp_col' : 13
@@ -344,7 +368,28 @@ def set_supernetwork_data(
             , 'title_string' : 'CONUS "Mainstem"'
             , 'driver_string' : 'NetCDF'
             , 'layer_string' : 0
-          }
+             }
+
+#         return {
+#             'geo_file_path' : os.path.join(geo_input_folder
+#                     , r'conus_routeLink_subsetnc.shp')
+#             , 'key_col' : 18
+#             , 'downstream_col' : 23
+#             , 'length_col' : 5
+#             , 'manningn_col' : 20
+#             , 'manningnCC_col' : 21
+#             , 'slope_col' : 10
+#             , 'bottomwidth_col' : 2
+#             , 'topwidth_col' : 11
+#             , 'topwidthCC_col' : 12
+#             , 'MusK_col' : 6
+#             , 'MusX_col' : 7
+#             , 'ChSlp_col' : 3
+#             , 'terminal_code' : 0
+#             , 'title_string' : 'Pocono Test Example'
+#             , 'driver_string' : 'ESRI Shapefile'
+#             , 'layer_string' : 0
+#           }
 
   #      return {
   #          'geo_file_path' : os.path.join(geo_input_folder

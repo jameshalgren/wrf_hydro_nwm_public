@@ -5,7 +5,8 @@ if 1 == 1:
     try:
         #Assume fortran module is compiled in same folder as calling python script
         #If not, a sys.path.append() call is needed to add the module path
-        import mc_sc_stime as mc
+        #import mc_sc_stime as mc
+        import mc_sseg_stime as mc
     except:
         import subprocess
         fortran_compile_call = []

@@ -22,12 +22,12 @@ def main():
     # NOT IN GIT REPO # supernetworks.update({'LowerColorado_FULL_RES':{}}) 
     # NOT IN GIT REPO # supernetworks.update({'LowerColorado_CONCHOS_FULL_RES':{}}) 
     supernetworks.update({'Pocono_TEST1':{}})
-    supernetworks.update({'Mainstems_CONUS':{}})
+    # supernetworks.update({'Mainstems_CONUS':{}})
     # REMOVED FROM GIT REPO USE Mainstems Instead # supernetworks.update({'CONUS_ge5':{}}) ##NHD CONUS order 5 and greater"""
-    supernetworks.update({'Brazos_LowerColorado_ge5':{}}) ##NHD Subset (Brazos/Lower Colorado)"""
-    supernetworks.update({'CONUS_Named_Streams':{}})
+    # supernetworks.update({'Brazos_LowerColorado_ge5':{}}) ##NHD Subset (Brazos/Lower Colorado)"""
+    # supernetworks.update({'CONUS_Named_Streams':{}})
     # # NOT IN GIT REPO # supernetworks.update({'CONUS_FULL_RES_v12':{}}) 
-    supernetworks.update({'CONUS_FULL_RES_v20':{}}) # = False
+    # supernetworks.update({'CONUS_FULL_RES_v20':{}}) # = False
 
     debuglevel = -3
     verbose = True
@@ -39,8 +39,11 @@ def main():
             , debuglevel = debuglevel
             , verbose = verbose
         )
-        if debuglevel <= -1: print(f'\n\n{supernetwork}:')
+        if debuglevel <= -1: 
+            if verbose: print(f'\n\nSupernetwork:')
+            print(f'{supernetwork}')
         if debuglevel <= -2: 
+            if verbose: print(r'All items in the above supernetwork:')
             for k,v in supernetworks[supernetwork].items():
                  print(f"{{'{k}' : {v}}}")
 
@@ -60,15 +63,15 @@ def main():
             , verbose = verbose
         )
 
-        if 1 == 0: #THE RECURSIVE PRINT IS NOT A GOOD IDEA WITH LARGE NETWORKS!!!
+        if 1 == 1: #THE RECURSIVE PRINT IS NOT A GOOD IDEA WITH LARGE NETWORKS!!!
             recursive_print.print_connections(
-                        headwater_keys = headwater_keys_NHD
-                        , down_connections = connections_NHD
-                        , up_connections = connections_NHD
-                        , terminal_code = terminal_code_NHD
-                        , terminal_keys = terminal_keys_NHD
-                        , terminal_ref_keys = terminal_ref_keys_NHD
-                        , debuglevel = -2
+                        headwater_keys = network_out_values[3]
+                        , down_connections = network_out_values[0]
+                        , up_connections = network_out_values[0]
+                        , terminal_code = supernetworks[supernetwork]['terminal_code']
+                        , terminal_keys = network_out_values[4]
+                        , terminal_ref_keys = network_out_values[5]
+                        , debuglevel = debuglevel
                         )
 
 
