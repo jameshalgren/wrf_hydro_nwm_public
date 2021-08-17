@@ -33,6 +33,8 @@ use module_hydro_stop, only: HYDRO_stop
 #endif
 implicit none
 
+integer, parameter :: prec = kind(1.0)
+
 contains
 
 ! ------------------------------------------------
@@ -157,128 +159,128 @@ use module_RT_data, only: rt_domain  !! JLM: this is only used in a c3 paramter 
 
         IMPLICIT NONE
 
-        REAL, intent(IN)       :: dt         ! routing period in  seconds
-        REAL, intent(IN)       :: qup        ! flow upstream previous timestep
-        REAL, intent(IN)       :: quc        ! flow upstream current timestep
-        REAL, intent(IN)       :: qdp        ! flow downstream previous timestep
-        REAL, intent(INOUT)    :: qdc        ! flow downstream current timestep
-        REAL, intent(IN)       :: ql         ! lateral inflow through reach (m^3/sec)
-        REAL, intent(IN)       :: Bw         ! bottom width (meters)
-        REAL, intent(IN)       :: Tw         ! top width before bankfull (meters)
-        REAL, intent(IN)       :: TwCC       ! top width of Compund (meters)
-        REAL, intent(IN)       :: nCC        ! mannings of compund
-        REAL, intent(IN)       :: ChannK     ! Channel conductivity (m/s)
-        REAL, intent(IN)       :: Cs         ! Channel side slope slope
-        REAL, intent(IN)       :: So         ! Channel bottom slope %
-        REAL, intent(IN)       :: dx         ! channel lngth (m)
-        REAL, intent(IN)       :: n          ! mannings coefficient
-        REAL, intent(INOUT)    :: vel        ! velocity (m/s)
-        REAL, intent(INOUT)    :: qloss      ! channel infiltration (m^3/sec)
+        REAL(prec), intent(IN)       :: dt         ! routing period in  seconds
+        REAL(prec), intent(IN)       :: qup        ! flow upstream previous timestep
+        REAL(prec), intent(IN)       :: quc        ! flow upstream current timestep
+        REAL(prec), intent(IN)       :: qdp        ! flow downstream previous timestep
+        REAL(prec), intent(INOUT)    :: qdc        ! flow downstream current timestep
+        REAL(prec), intent(IN)       :: ql         ! lateral inflow through reach (m^3/sec)
+        REAL(prec), intent(IN)       :: Bw         ! bottom width (meters)
+        REAL(prec), intent(IN)       :: Tw         ! top width before bankfull (meters)
+        REAL(prec), intent(IN)       :: TwCC       ! top width of Compund (meters)
+        REAL(prec), intent(IN)       :: nCC        ! mannings of compund
+        REAL(prec), intent(IN)       :: ChannK     ! Channel conductivity (m/s)
+        REAL(prec), intent(IN)       :: Cs         ! Channel side slope slope
+        REAL(prec), intent(IN)       :: So         ! Channel bottom slope %
+        REAL(prec), intent(IN)       :: dx         ! channel lngth (m)
+        REAL(prec), intent(IN)       :: n          ! mannings coefficient
+        REAL(prec), intent(INOUT)    :: vel        ! velocity (m/s)
+        REAL(prec), intent(INOUT)    :: qloss      ! channel infiltration (m^3/sec)
         INTEGER, intent(IN)    :: idx        ! channel id
-        REAL, intent(INOUT)    :: depth      ! depth of flow in channel
+        REAL(prec), intent(INOUT)    :: depth      ! depth of flow in channel
 
 !--local variables
-        REAL    :: C1, C2, C3, C4
-        REAL    :: Km             !K travel time in hrs in reach
-        REAL    :: X              !weighting factors 0<=X<=0.5
-        REAL    :: Ck             ! wave celerity (m/s)
+        REAL(prec)    :: C1, C2, C3, C4
+        REAL(prec)    :: Km             !K travel time in hrs in reach
+        REAL(prec)    :: X              !weighting factors 0<=X<=0.5
+        REAL(prec)    :: Ck             ! wave celerity (m/s)
 
 !-- channel geometry and characteristics, local variables
-        REAL    :: Twl            ! top width at simulated flow (m)
-        REAL    :: AREA,AREAC     ! Cross sectional area channel and compound m^2
-        REAL    :: Z              ! trapezoid distance (m)
-        REAL    :: R,RC           ! Hydraulic radius of channel and compound
-        REAL    :: WP,WPC         ! wetted perimmeter of channel and compound
-        REAL    :: h              ! depth of flow in channel
-        REAL    :: h_0,h_1        ! secant method estimates
-        REAL    :: bfd            ! bankfull depth (m)
-        REAL    :: Qj_0           ! secant method estimates
-        REAL    :: Qj             ! intermediate flow estimate
-        REAL    :: D,D1           ! diffusion coeff
-        REAL    :: dtr            ! required timestep, minutes
-        REAL    :: aerror,rerror  ! absolute and relative error
-        REAL    :: hp             ! courant, previous height
+        REAL(prec)    :: Twl            ! top width at simulated flow (m)
+        REAL(prec)    :: AREA,AREAC     ! Cross sectional area channel and compound m^2
+        REAL(prec)    :: Z              ! trapezoid distance (m)
+        REAL(prec)    :: R,RC           ! Hydraulic radius of channel and compound
+        REAL(prec)    :: WP,WPC         ! wetted perimmeter of channel and compound
+        REAL(prec)    :: h              ! depth of flow in channel
+        REAL(prec)    :: h_0,h_1        ! secant method estimates
+        REAL(prec)    :: bfd            ! bankfull depth (m)
+        REAL(prec)    :: Qj_0           ! secant method estimates
+        REAL(prec)    :: Qj             ! intermediate flow estimate
+        REAL(prec)    :: D,D1           ! diffusion coeff
+        REAL(prec)    :: dtr            ! required timestep, minutes
+        REAL(prec)    :: aerror,rerror  ! absolute and relative error
+        REAL(prec)    :: hp             ! courant, previous height
         INTEGER :: iter, maxiter  ! maximum number of iterations
 
 !-- additional channel infiltration parameters
-        REAL    :: WPk        ! KINEROS2 modified wetted perimeter
-        REAL    :: modK       ! KINEROS2 constant (set to 0.15, line )
+        REAL(prec)    :: WPk        ! KINEROS2 modified wetted perimeter
+        REAL(prec)    :: modK       ! KINEROS2 constant (set to 0.15, line )
 
 !-- local variables.. needed if channel is sub-divded
-        REAL    :: a,b,c,F
-        REAL    :: mindepth   !  minimum depth in channel
+        REAL(prec)    :: a,b,c,F
+        REAL(prec)    :: mindepth   !  minimum depth in channel
         INTEGER :: i,tries    !-- channel segment counter
 
         !TML-- Hard code KINEROS2 Modification Parameter
         !TML-- Set to 0.15, consistent with USDA-ARS
-        modK = 0.15
+        modK = 0.15_prec
 
         c = 0.52           !-- coefficnets for finding dx/Ckdt
-        b = 1.15
-        a = 0.0
+        b = 1.15_prec
+        a = 0.0_prec
         maxiter  = 100
-        mindepth = 0.01
-        aerror = 0.01
-        rerror = 1.0
+        mindepth = 0.01_prec
+        aerror = 0.01_prec
+        rerror = 1.0_prec
         tries = 0
 
 !-------------  locals
-        if(Cs .eq. 0.00000000) then
-         z = 1.0
+        if(Cs .eq. 0.00000000_prec) then
+         z = 1.0_prec
         else
-         z = 1.0/Cs          !channel side distance (m)
+         z = 1.0_prec/Cs          !channel side distance (m)
         endif
 
         if(Bw .gt. Tw) then   !effectively infinite deep bankful
-           bfd = Bw/0.00001
+           bfd = Bw/0.00001_prec
         elseif (Bw .eq. Tw) then
-          bfd =  Bw/(2.0*z)  !bankfull depth is effectively
+          bfd =  Bw/(2.0_prec*z)  !bankfull depth is effectively
         else
-          bfd =  (Tw - Bw)/(2.0*z)  !bankfull depth (m)
+          bfd =  (Tw - Bw)/(2.0_prec*z)  !bankfull depth (m)
         endif
         !qC = quc + ql !current upstream in reach
 
-        if (n .le. 0.0 .or. So .le. 0.0 .or. z .le. 0.0 .or. Bw .le. 0.0) then
+        if (n .le. 0.0_prec .or. So .le. 0.0_prec .or. z .le. 0.0_prec .or. Bw .le. 0.0_prec) then
           print*, "Error in channel coefficients -> Muskingum cunge", n, So, z, Bw
           call hydro_stop("In MUSKINGCUNGE() - Error in channel coefficients")
         end if
 
 !-------------  Secant Method
-        depth = max(depth, 0.0)
-        h     = (depth * 1.33) + mindepth !1.50 of  depth
-        h_0   = (depth * 0.67)            !0.50 of depth
+        depth = max(depth, 0.0_prec)
+        h     = (depth * 1.33_prec) + mindepth !1.50_prec of  depth
+        h_0   = (depth * 0.67_prec)            !0.50_prec of depth
 
-        if(ql .gt. 0.0 .or. qup .gt. 0.0 .or. qdp .gt. 0.0) then  !only solve if there's water to flux
+        if(ql .gt. 0.0_prec .or. qup .gt. 0.0_prec .or. qdp .gt. 0.0_prec) then  !only solve if there's water to flux
 
 110     continue
 
-        Qj_0  = 0.0                       !- initial flow of lower interval
+        Qj_0  = 0.0_prec                       !- initial flow of lower interval
         iter   = 0
 
-        do while (rerror .gt. 0.01 .and. aerror .ge. mindepth .and. iter .le. maxiter)
+        do while (rerror .gt. 0.01_prec .and. aerror .ge. mindepth .and. iter .le. maxiter)
 
-           WPC    = 0.0
-           AREAC  = 0.0
+           WPC    = 0.0_prec
+           AREAC  = 0.0_prec
 
           !----- lower interval  --------------------
 
-           Twl = Bw + 2.0*z*h_0      !--top surface water width of the channel inflow
+           Twl = Bw + 2.0_prec*z*h_0      !--top surface water width of the channel inflow
 
             if(h_0 .gt. bfd) then !water outside of defined channel
              AREA =  (Bw + bfd * z) * bfd
              AREAC = (TwCC * (h_0 -bfd)) !assume compound component is rect. chan, that's 3 times the Tw
-             WP = (Bw + 2.0 * bfd * sqrt(1.0 + z*z))
-             WPC = TwCC + (2.0 * (h_0-bfd)) !WPC is 2 times the Tw
-             WPk = WP + WPC*MIN((h_0/(modK*SQRT(Bw))),1.0)  ! KINEROS2 Mod.
+             WP = (Bw + 2.0_prec * bfd * sqrt(1.0_prec + z*z))
+             WPC = TwCC + (2.0_prec * (h_0-bfd)) !WPC is 2 times the Tw
+             WPk = WP + WPC*MIN((h_0/(modK*SQRT(Bw))),1.0_prec)  ! KINEROS2 Mod.
              R   = (AREA + AREAC)/(WP +WPC)  ! hydraulic radius
             else
               AREA = (Bw + h_0 * z ) * h_0
-              WP = (Bw + 2.0 * h_0 * sqrt(1.0 + z*z))
-              WPk = WP*MIN((h_0/(modK*SQRT(Bw))),1.0)  ! KINEROS2 Mod.
-              if(WP .gt. 0.0) then
+              WP = (Bw + 2.0_prec * h_0 * sqrt(1.0_prec + z*z))
+              WPk = WP*MIN((h_0/(modK*SQRT(Bw))),1.0_prec)  ! KINEROS2 Mod.
+              if(WP .gt. 0.0_prec) then
                R = AREA/ WP
               else
-               R = 0.0
+               R = 0.0_prec
               endif
 
             endif
@@ -286,170 +288,170 @@ use module_RT_data, only: rt_domain  !! JLM: this is only used in a c3 paramter 
           if(h_0 .gt. bfd) then !water outside of defined channel
             !weight the celerity by the contributing area, and assume that the mannings
             !of the spills is 2x the manning of the channel
-                Ck = max(0.0,((sqrt(So)/n)*((5./3.)*R**(2./3.) - &
-                ((2./3.)*R**(5./3.)*(2.0*sqrt(1.0 + z*z)/(Bw+2.0*bfd*z))))*AREA &
-                + ((sqrt(So)/(nCC))*(5./3.)*(h_0-bfd)**(2./3.))*AREAC)/(AREA+AREAC))
+                Ck = max(0.0_prec,((sqrt(So)/n)*((5._prec/3.)*R**(2._prec/3.) - &
+                ((2._prec/3._prec)*R**(5._prec/3._prec)*(2.0_prec*sqrt(1.0_prec + z*z)/(Bw+2.0_prec*bfd*z))))*AREA &
+                + ((sqrt(So)/(nCC))*(5._prec/3._prec)*(h_0-bfd)**(2._prec/3._prec))*AREAC)/(AREA+AREAC))
           else
-               if(h_0 .gt. 0.0) then
-                 Ck = max(0.0,(sqrt(So)/n)*((5./3.)*R**(2./3.) - &
-                 ((2./3.)*R**(5./3.)*(2.0*sqrt(1.0 + z*z)/(Bw+2.0*h_0*z)))))
+               if(h_0 .gt. 0.0_prec) then
+                 Ck = max(0.0_prec,(sqrt(So)/n)*((5._prec/3._prec)*R**(2._prec/3._prec) - &
+                 ((2._prec/3._prec)*R**(5._prec/3._prec)*(2.0_prec*sqrt(1.0_prec + z*z)/(Bw+2.0_prec*h_0*z)))))
                 else
-                 Ck = 0.0
+                 Ck = 0.0_prec
                 endif
           endif
 
-          if(Ck .gt. 0.000000) then
+          if(Ck .gt. 0.000000_prec) then
             Km = max(dt,dx/Ck)
           else
             Km = dt
           endif
 
           if(h_0 .gt. bfd) then !water outside of defined channel
-             X = min(0.5,max(0.0,0.5*(1-(Qj_0/(2.0*TwCC*So*Ck*dx)))))
+             X = min(0.5_prec,max(0.0_prec,0.5_prec*(1_prec-(Qj_0/(2.0_prec*TwCC*So*Ck*dx)))))
           else
-            if(Ck .gt. 0.0) then
-              X = min(0.5,max(0.0,0.5*(1-(Qj_0/(2.0*Twl*So*Ck*dx)))))
+            if(Ck .gt. 0.0_prec) then
+              X = min(0.5_prec,max(0.0_prec,0.5_prec*(1_prec-(Qj_0/(2.0_prec*Twl*So*Ck*dx)))))
             else
-              X = 0.5
+              X = 0.5_prec
             endif
           endif
 
-           D = (Km*(1.000 - X) + dt/2.0000)              !--seconds
-            if(D .eq. 0.0) then
+           D = (Km*(1.000_prec - X) + dt/2.0000_prec)              !--seconds
+            if(D .eq. 0.0_prec) then
               print *, "FATAL ERROR: D is 0 in MUSKINGCUNGE", Km, X, dt,D
               call hydro_stop("In MUSKINGCUNGE() - D is 0.")
            endif 
  
 
-           C1 =  (Km*X + dt/2.000000)/D
-           C2 =  (dt/2.0000 - Km*X)/D
-           C3 =  (Km*(1.00000000-X)-dt/2.000000)/D
-!          C1 =  max(0.0,min(1.0,1.0-C3))
-           if(ChannK .le. 0.0) then ! Disable channel loss for zero ChannK
+           C1 =  (Km*X + dt/2.000000_prec)/D
+           C2 =  (dt/2.0000_prec - Km*X)/D
+           C3 =  (Km*(1.00000000_prec-X)-dt/2.000000_prec)/D
+!          C1 =  max(0.0_prec,min(1.0_prec,1.0_prec-C3))
+           if(ChannK .le. 0.0_prec) then ! Disable channel loss for zero ChannK
              C4 =  (ql*dt)/D
            else
              !C4 =  (ql*dt)/D - (ChannK * dx * WPk)  !-- DY & LKR lat inflow + channel loss
              C4 =  ((ql - (ChannK * dx * WPk))*dt)/D  !-- TML: Loss adjusted by dt/D, closes water balance
            endif
 
-           if((WP+WPC) .gt. 0.0) then  !avoid divide by zero
+           if((WP+WPC) .gt. 0.0_prec) then  !avoid divide by zero
 ! Another sanity check, prevent channel loss from exceeding flow
-             if( (C4 .lt. 0.0) .and. (abs(C4) .gt. (C1*qup)+(C2*quc)+(C3*qdp)) )  then
+             if( (C4 .lt. 0.0_prec) .and. (abs(C4) .gt. (C1*qup)+(C2*quc)+(C3*qdp)) )  then
               C4 = -((C1*qup)+(C2*quc)+(C3*qdp))
              endif
-             Qj_0 =  ((C1*qup)+(C2*quc)+(C3*qdp) + C4) - ((1/(((WP*n)+(WPC*nCC))/(WP+WPC))) * &
-                    (AREA+AREAC) * (R**(2./3.)) * sqrt(So)) !f0(x)
+             Qj_0 =  ((C1*qup)+(C2*quc)+(C3*qdp) + C4) - ((1_prec/(((WP*n)+(WPC*nCC))/(WP+WPC))) * &
+                    (AREA+AREAC) * (R**(2._prec/3._prec)) * sqrt(So)) !f0(x)
            endif
-!           WPk = WP*MIN((h/(modK*SQRT(Bw))),1.0)  ! KINEROS2 Mod. This shouldn't be HERE.
+!           WPk = WP*MIN((h/(modK*SQRT(Bw))),1.0_prec)  ! KINEROS2 Mod. This shouldn't be HERE.
 
 
            !--upper interval -----------
-           WPC    = 0.0
-           AREAC  = 0.0
+           WPC    = 0.0_prec
+           AREAC  = 0.0_prec
 
-           Twl = Bw + 2.0*z*h                    !--top width of the channel inflow
+           Twl = Bw + 2.0_prec*z*h                    !--top width of the channel inflow
 
            if(h .gt. bfd) then !water outside of defined channel
              AREA =  (Bw + bfd * z) * bfd
              AREAC = (TwCC * (h-bfd)) !assume compound component is rect. chan, that's 3 times the Tw
-             WP = (Bw + 2.0 * bfd * sqrt(1.0 + z*z))
-             WPC = TwCC + (2.0*(h-bfd)) !the additional wetted perimeter
-             WPk = WP + WPC*MIN((h/(modK*SQRT(Bw))),1.0)  ! KINEROS2 Mod.
+             WP = (Bw + 2.0_prec * bfd * sqrt(1.0_prec + z*z))
+             WPC = TwCC + (2.0_prec*(h-bfd)) !the additional wetted perimeter
+             WPk = WP + WPC*MIN((h/(modK*SQRT(Bw))),1.0_prec)  ! KINEROS2 Mod.
              R   = (AREA + AREAC)/(WP +WPC)
             ! RC  = AREAC/WPC
            else
               AREA = (Bw + h * z ) * h
-              WP = (Bw + 2.0 * h * sqrt(1.000000 + z*z))
-              WPk = WP*MIN((h/(modK*SQRT(Bw))),1.0)  ! KINEROS2 Mod.
-              if(WP .gt. 0.0) then
+              WP = (Bw + 2.0_prec * h * sqrt(1.000000_prec + z*z))
+              WPk = WP*MIN((h/(modK*SQRT(Bw))),1.0_prec)  ! KINEROS2 Mod.
+              if(WP .gt. 0.0_prec) then
                R = AREA/WP
               else
-               R = 0.0
+               R = 0.0_prec
               endif
            endif
 
           if(h .gt. bfd) then !water outside of defined channel, assumed rectangular, 3x TW and n = 3x
-                Ck = max(0.0,((sqrt(So)/n)*((5./3.)*R**(2./3.) - &
-                ((2./3.)*R**(5./3.)*(2.0*sqrt(1.0 + z*z)/(Bw + 2.0*bfd*z))))*AREA &
-                + ((sqrt(So)/(nCC))*(5./3.)*(h-bfd)**(2./3.))*AREAC)/(AREA+AREAC))
+                Ck = max(0.0_prec,((sqrt(So)/n)*((5._prec/3._prec)*R**(2._prec/3._prec) - &
+                ((2._prec/3._prec)*R**(5._prec/3._prec)*(2.0_prec*sqrt(1.0_prec + z*z)/(Bw + 2.0_prec*bfd*z))))*AREA &
+                + ((sqrt(So)/(nCC))*(5._prec/3._prec)*(h-bfd)**(2._prec/3._prec))*AREAC)/(AREA+AREAC))
           else
-               if(h .gt. 0.0) then !avoid divide by zero
-                 Ck = max(0.0,(sqrt(So)/n)*((5./3.)*R**(2./3.) - &
-                 ((2./3.)*R**(5./3.)*(2.0 * sqrt(1.0 + z*z)/(Bw + 2.0*h*z)))))
+               if(h .gt. 0.0_prec) then !avoid divide by zero
+                 Ck = max(0.0_prec,(sqrt(So)/n)*((5._prec/3._prec)*R**(2._prec/3._prec) - &
+                 ((2._prec/3._prec)*R**(5._prec/3._prec)*(2.0_prec * sqrt(1.0_prec + z*z)/(Bw + 2.0_prec*h*z)))))
                else
-                 Ck = 0.0
+                 Ck = 0.0_prec
                endif
           endif
-           if(Ck .gt. 0.0) then
+           if(Ck .gt. 0.0_prec) then
             Km = max(dt,dx/Ck)
            else
             Km = dt
            endif
           if(h .gt. bfd) then !water outside of defined channel
-            X = min(0.5,max(0.25,0.5*(1-(((C1*qup)+(C2*quc)+(C3*qdp) + C4)/(2.0*TwCC*So*Ck*dx)))))
+            X = min(0.5_prec,max(0.25_prec,0.5_prec*(1_prec-(((C1*qup)+(C2*quc)+(C3*qdp) + C4)/(2.0_prec*TwCC*So*Ck*dx)))))
 
           else
 
-            if(Ck .gt. 0.0) then
-             X = min(0.5,max(0.25,0.5*(1-(((C1*qup)+(C2*quc)+(C3*qdp) + C4)/(2.0*Twl*So*Ck*dx)))))
+            if(Ck .gt. 0.0_prec) then
+             X = min(0.5_prec,max(0.25_prec,0.5_prec*(1_prec-(((C1*qup)+(C2*quc)+(C3*qdp) + C4)/(2.0_prec*Twl*So*Ck*dx)))))
             else
-             X = 0.5
+             X = 0.5_prec
             endif
 
           endif
 
-           D = (Km*(1 - X) + dt/2)              !--seconds
-            if(D .eq. 0.0) then
+           D = (Km*(1_prec - X) + dt/2_prec)              !--seconds
+            if(D .eq. 0.0_prec) then
               print *, "FATAL ERROR: D is 0 in MUSKINGCUNGE", Km, X, dt,D
               call hydro_stop("In MUSKINGCUNGE() - D is 0.")
            endif
 
-           C1 =  (Km*X + dt/2.000000)/D
-           C2 =  (dt/2.000000 - Km*X)/D
-           C3 =  (Km*(1.000000-X)-dt/2.000000)/D
-!          C1 =  max(0.0,min(1.0,1.0-C3)) !! eliminate influence of upstream current
-           if(ChannK .le. 0.0) then ! Disable channel loss for zero ChannK
+           C1 =  (Km*X + dt/2.000000_prec)/D
+           C2 =  (dt/2.000000_prec - Km*X)/D
+           C3 =  (Km*(1.000000_prec-X)-dt/2.000000_prec)/D
+!          C1 =  max(0.0_prec,min(1.0_prec,1.0_prec-C3)) !! eliminate influence of upstream current
+           if(ChannK .le. 0.0_prec) then ! Disable channel loss for zero ChannK
              C4 =  (ql*dt)/D
            else
              !C4 =  (ql*dt)/D  - (ChannK * dx * WPk)  !-- (loss units: m/s * m * m)
              C4 =  ((ql - (ChannK * dx * WPk))*dt)/D  !-- TML: Loss adjusted by dt/D, closes water balance
            endif
 
-           if( (C4 .lt. 0.0) .and. (abs(C4) .gt. (C1*qup)+(C2*quc)+(C3*qdp)))  then
+           if( (C4 .lt. 0.0_prec) .and. (abs(C4) .gt. (C1*qup)+(C2*quc)+(C3*qdp)))  then
             C4 = -((C1*qup)+(C2*quc)+(C3*qdp))
            endif
 
-           if((WP+WPC) .gt. 0.0) then
-            if( (C4 .lt. 0.0) .and. (abs(C4) .gt. (C1*qup)+(C2*quc)+(C3*qdp)))  then
+           if((WP+WPC) .gt. 0.0_prec) then
+            if( (C4 .lt. 0.0_prec) .and. (abs(C4) .gt. (C1*qup)+(C2*quc)+(C3*qdp)))  then
                C4 = -((C1*qup)+(C2*quc)+(C3*qdp))
             endif
-            Qj =  ((C1*qup)+(C2*quc)+(C3*qdp) + C4) - ((1.0000000/(((WP*n)+(WPC*nCC))/(WP+WPC))) * &
-                    (AREA+AREAC) * (R**(2./3.)) * sqrt(So)) !f(x)
+            Qj =  ((C1*qup)+(C2*quc)+(C3*qdp) + C4) - ((1.0000000_prec/(((WP*n)+(WPC*nCC))/(WP+WPC))) * &
+                    (AREA+AREAC) * (R**(2._prec/3._prec)) * sqrt(So)) !f(x)
            endif
 
-           if(Qj_0-Qj .ne. 0.0) then
+           if(Qj_0-Qj .ne. 0.0_prec) then
              h_1 = h - ((Qj * (h_0 - h))/(Qj_0 - Qj)) !update h, 3rd estimate
-              if(h_1 .lt. 0.0) then
+              if(h_1 .lt. 0.0_prec) then
                 h_1 = h
               endif
            else
              h_1 = h
            endif
 
-           if(h .gt. 0.0) then
+           if(h .gt. 0.0_prec) then
              rerror = abs((h_1 - h)/h) !relative error is new estatimate and 2nd estimate
              aerror = abs(h_1 -h)      !absolute error
            else
-             rerror = 0.0
-             aerror = 0.9
+             rerror = 0.0_prec
+             aerror = 0.9_prec
            endif
 
 !          if(idx .eq. 6276407) then
 !            print*, "err,itr,hs", rerror, iter, depth, h_0, h, h_1
 !          endif
 
-           h_0  = max(0.0,h)
-           h    = max(0.0,h_1)
+           h_0  = max(0.0_prec,h)
+           h    = max(0.0_prec,h_1)
            iter = iter + 1
 
            if( h .lt. mindepth) then  ! exit loop if depth is very small
@@ -468,8 +470,8 @@ use module_RT_data, only: rt_domain  !! JLM: this is only used in a c3 paramter 
 
            tries = tries + 1
            if(tries .le. 4) then  ! expand the search space
-             h     =  h * 1.33
-             h_0   =  h_0 * 0.67
+             h     =  h * 1.33_prec
+             h_0   =  h_0 * 0.67_prec
              maxiter = maxiter + 25 !and increase the number of allowable iterations
             goto 110
            endif
@@ -482,7 +484,7 @@ use module_RT_data, only: rt_domain  !! JLM: this is only used in a c3 paramter 
            print*, "qup,quc,qdp,ql", qup,quc,qdp,ql
            print*, "bfd,Bw,Tw,Twl", bfd,Bw,Tw,Twl
            print*, "Qmc,Qmn", (C1*qup)+(C2*quc)+(C3*qdp) + C4,((1/(((WP*n)+(WPC*nCC))/(WP+WPC))) * &
-                    (AREA+AREAC) * (R**(2./3.)) * sqrt(So))
+                    (AREA+AREAC) * (R**(2._prec/3._prec)) * sqrt(So))
          endif
 
 
@@ -498,10 +500,10 @@ use module_RT_data, only: rt_domain  !! JLM: this is only used in a c3 paramter 
 
 !yw added for test
       !DY and LKR Added to update for channel loss
-        if(((C1*qup)+(C2*quc)+(C3*qdp) + C4) .lt. 0.0) then
+        if(((C1*qup)+(C2*quc)+(C3*qdp) + C4) .lt. 0.0_prec) then
 !       MUSKINGCUNGE =  MAX( ( (C1*qup)+(C2*quc) + C4),((C1*qup)+(C3*qdp) + C4) )
-           if( (C4 .lt. 0.0) .and. (abs(C4) .gt. (C1*qup)+(C2*quc)+(C3*qdp)) )  then ! channel loss greater than water in chan
-             qdc = 0.0
+           if( (C4 .lt. 0.0_prec) .and. (abs(C4) .gt. (C1*qup)+(C2*quc)+(C3*qdp)) )  then ! channel loss greater than water in chan
+             qdc = 0.0_prec
            else
              qdc = MAX( ( (C1*qup)+(C2*quc) + C4),((C1*qup)+(C3*qdp) + C4) )
            endif
@@ -511,14 +513,14 @@ use module_RT_data, only: rt_domain  !! JLM: this is only used in a c3 paramter 
 
         endif
 
-        Twl = Bw + (2.0*z*h)
-        R = (h*(Bw + Twl) / 2.0) / (Bw + 2.0*(((Twl - Bw) / 2.0)**2.0 + h**2)**0.5)
-        vel =  (1./n) * (R **(2.0/3.0)) * sqrt(So)  ! average velocity in m/s
+        Twl = Bw + (2.0_prec*z*h)
+        R = (h*(Bw + Twl) / 2.0_prec) / (Bw + 2.0_prec*(((Twl - Bw) / 2.0_prec)**2.0_prec + h**2)**0.5_prec)
+        vel =  (1._prec/n) * (R **(2.0_prec/3.0_prec)) * sqrt(So)  ! average velocity in m/s
         depth = h
 
       else   ! no flow to route
-       qdc = 0.0
-       depth = 0.0
+       qdc = 0.0_prec
+       depth = 0.0_prec
      endif
 
       qloss = (ChannK * dx * WPk) ! TML -- Compute qloss to pass
@@ -528,7 +530,7 @@ use module_RT_data, only: rt_domain  !! JLM: this is only used in a c3 paramter 
       !print*, "qloss,dx,WP,WPk,depth,ChannK,qdc,ql,dt,D", qloss,dx,WP,WPk,depth,ChannK,qdc,ql,dt,D
       if((qloss*dt)/D > ((ql*dt)/D - C4)) then
            qloss = ql - C4*(D/dt)
-           if (qloss < 0) then
+           if (qloss < 0_prec) then
               print*, 'WARNING CHANNEL LOSS IS NEGATIVE',qloss
            endif
       endif
