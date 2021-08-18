@@ -33,7 +33,8 @@ use module_hydro_stop, only: HYDRO_stop
 #endif
 implicit none
 
-integer, parameter :: prec = kind(1.0)
+use iso_fortran_env
+integer, parameter :: prec = real64
 
 contains
 
