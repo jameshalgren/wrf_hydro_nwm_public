@@ -216,7 +216,7 @@ use module_RT_data, only: rt_domain  !! JLM: this is only used in a c3 paramter 
         !TML-- Set to 0.15, consistent with USDA-ARS
         modK = 0.15_prec
 
-        c = 0.52           !-- coefficnets for finding dx/Ckdt
+        c = 0.52_prec           !-- coefficnets for finding dx/Ckdt
         b = 1.15_prec
         a = 0.0_prec
         maxiter  = 100
@@ -289,7 +289,7 @@ use module_RT_data, only: rt_domain  !! JLM: this is only used in a c3 paramter 
           if(h_0 .gt. bfd) then !water outside of defined channel
             !weight the celerity by the contributing area, and assume that the mannings
             !of the spills is 2x the manning of the channel
-                Ck = max(0.0_prec,((sqrt(So)/n)*((5._prec/3.)*R**(2._prec/3.) - &
+                Ck = max(0.0_prec,((sqrt(So)/n)*((5._prec/3._prec)*R**(2._prec/3._prec) - &
                 ((2._prec/3._prec)*R**(5._prec/3._prec)*(2.0_prec*sqrt(1.0_prec + z*z)/(Bw+2.0_prec*bfd*z))))*AREA &
                 + ((sqrt(So)/(nCC))*(5._prec/3._prec)*(h_0-bfd)**(2._prec/3._prec))*AREAC)/(AREA+AREAC))
           else
@@ -515,7 +515,7 @@ use module_RT_data, only: rt_domain  !! JLM: this is only used in a c3 paramter 
         endif
 
         Twl = Bw + (2.0_prec*z*h)
-        R = (h*(Bw + Twl) / 2.0_prec) / (Bw + 2.0_prec*(((Twl - Bw) / 2.0_prec)**2.0_prec + h**2)**0.5_prec)
+        R = (h*(Bw + Twl) / 2.0_prec) / (Bw + 2.0_prec*(((Twl - Bw) / 2.0_prec)**2.0_prec + h**2_prec)**0.5_prec)
         vel =  (1._prec/n) * (R **(2.0_prec/3.0_prec)) * sqrt(So)  ! average velocity in m/s
         depth = h
 
